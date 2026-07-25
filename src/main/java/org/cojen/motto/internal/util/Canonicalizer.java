@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.model;
+package org.cojen.motto.internal.util;
 
 import java.lang.invoke.VarHandle;
 
@@ -31,7 +31,7 @@ import java.lang.ref.WeakReference;
  *
  * @author Brian S. O'Neill
  */
-final class Canonicalizer {
+public final class Canonicalizer {
     private final ReferenceQueue<Object> mQueue;
 
     private Entry[] mEntries;

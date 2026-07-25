@@ -14,14 +14,14 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.model;
+package org.cojen.motto.internal.util;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-final class InternSet {
+public final class InternSet {
     private static final Canonicalizer cCanonicalizer = new Canonicalizer();
 
     public static <A> A apply(A obj) {

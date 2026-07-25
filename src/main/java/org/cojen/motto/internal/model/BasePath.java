@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.model;
+package org.cojen.motto.internal.model;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -23,12 +23,16 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import org.cojen.motto.model.Path;
+
+import org.cojen.motto.internal.util.InternSet;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-abstract sealed class BasePath extends AbstractList<String> implements Path {
+public abstract sealed class BasePath extends AbstractList<String> implements Path {
     /**
      * Returns an empty path.
      */

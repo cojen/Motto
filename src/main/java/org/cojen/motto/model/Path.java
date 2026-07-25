@@ -19,6 +19,8 @@ package org.cojen.motto.model;
 import java.util.List;
 import java.util.RandomAccess;
 
+import org.cojen.motto.internal.model.BasePath;
+
 /**
  * Defines an immutable path of strings.
  *
