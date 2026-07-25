@@ -1,0 +1,228 @@
+/*
+ *  Copyright 2026 Cojen.org
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package org.cojen.motto.internal.tuple;
+
+import java.util.List;
+
+import org.cojen.maker.Maker;
+
+/**
+ * @author Brian S. O'Neill
+ * @see TypeEncoder
+ */
+public interface EncodableType {
+    public static final int T_UNSPECIFIED = 0, T_NULL = 1, T_VOID = 2, T_BOOLEAN = 3, T_CHAR = 4,
+        T_BYTE = 5, T_SHORT = 6, T_INT = 7, T_LONG = 8, T_FLOAT = 9, T_DOUBLE = 10,
+        T_STRING = 11, T_ARRAY = 12, T_CLASS = 13, T_TUPLE = 14, T_FUNCTION = 15,
+
+        // 16..19: reserved for future use
+
+        // FIXME: Define T_REFERENCE which is a simple wrapper around a public field. Is to be
+        // used for supporting lambda functions which need to access variables in the outer
+        // lexical scope. Only use references when the variable isn't effectively final. Can
+        // this create confusing side-effects? Perhaps require a `reference` modifier.
+
+        T_INDEXED = 20; // not a real type code; real type codes must have a lower value
+
+    /**
+     * Returns this type without any field names, recursively.
+     */
+    public EncodableType noFieldNames();
+
+    /**
+     * Should be overridden by types which refer to strings or other types.
+     */
+    public default void encodePrepare(TypeEncoder encoder) {
+    }
+
+    public void encode(TypeEncoder encoder);
+
+    /**
+     * Should be overridden by types which can be indexed.
+     */
+    public default void doEncode(TypeEncoder encoder) {
+        throw new UnsupportedOperationException();
+    }
+
+    private static void encodeIndexed(EncodableType type, TypeEncoder encoder) {
+        int index = encoder.lookup(type);
+        if (index >= 0) {
+            encoder.encodeUnsignedVarInt(T_INDEXED + index);
+        } else {
+            type.doEncode(encoder);
+        }
+    }
+
+    public static interface ArrayT extends EncodableType {
+        @Override
+        public default void encodePrepare(TypeEncoder encoder) {
+            if (encoder.prepare(this)) {
+                arrayElementType().encodePrepare(encoder);
+            }
+        }
+
+        @Override
+        public default void encode(TypeEncoder encoder) {
+            encodeIndexed(this, encoder);
+        }
+
+        @Override
+        public default void doEncode(TypeEncoder encoder) {
+            encoder.encodeByte(T_ARRAY);
+            arrayElementType().encode(encoder);
+        }
+
+        public EncodableType arrayElementType();
+    }
+
+    public static interface ClassT extends EncodableType {
+        @Override
+        public default void encodePrepare(TypeEncoder encoder) {
+            if (!isStringType() && encoder.prepare(this)) {
+                preparePath(encoder, packagePath());
+                preparePath(encoder, namePath());
+            }
+        }
+
+        private static void preparePath(TypeEncoder encoder, List<String> path) {
+            for (String name : path) {
+                encoder.prepare(name);
+            }
+        }
+
+        @Override
+        public default void encode(TypeEncoder encoder) {
+            if (isStringType()) {
+                encoder.encodeByte(T_STRING);
+            } else {
+                encodeIndexed(this, encoder);
+            }
+        }
+
+        @Override
+        public default void doEncode(TypeEncoder encoder) {
+            encoder.encodeByte(T_CLASS);
+            encodePath(encoder, packagePath());
+            encodePath(encoder, namePath());
+        }
+
+        private static void encodePath(TypeEncoder encoder, List<String> path) {
+            encoder.encodeUnsignedVarInt(path.size());
+            for (String name : path) {
+                encoder.encodeString(name);
+            }
+        }
+
+        public List<String> packagePath();
+
+        public List<String> namePath();
+
+        public boolean isStringType();
+    }
+
+    public static interface TupleT extends EncodableType {
+        @Override
+        public default void encodePrepare(TypeEncoder encoder) {
+            if (encoder.prepare(this)) {
+                int numElements = numElements();
+                for (int i=0; i<numElements; i++) {
+                    elementType(i).encodePrepare(encoder);
+                    String name = elementName(i);
+                    if (name != null) {
+                        encoder.prepare(name);
+                    }
+                }
+            }
+        }
+
+        @Override
+        public default void encode(TypeEncoder encoder) {
+            encodeIndexed(this, encoder);
+        }
+
+        @Override
+        public default void doEncode(TypeEncoder encoder) {
+            encoder.encodeByte(T_TUPLE);
+            int numElements = numElements();
+            encoder.encodeUnsignedVarInt(numElements);
+            for (int i=0; i<numElements; i++) {
+                elementType(i).encode(encoder);
+                encoder.encodeString(elementName(i));
+            }
+        }
+
+        public int numElements();
+
+        public EncodableType elementType(int index);
+
+        /**
+         * Returns a possibly null name.
+         */
+        public String elementName(int index);
+
+        /**
+         * Returns a non-null name, possibly mangled.
+         */
+        public default String elementFieldName(int index) {
+            if (index < 0 || index > numElements()) {
+                throw new IllegalArgumentException();
+            }
+
+            String name = elementName(index);
+
+            if (name == null) {
+                return "\\=" + index;
+            }
+
+            switch (name) {
+                case "clone", "equals", "finalize", "getClass", "hashCode",
+                    "notify", "notifyAll", "toString", "wait" ->
+                {
+                    return "\\=" + name;
+                }
+            }
+
+            return Maker.mangle(name);
+        }
+    }
+
+    public static interface FunctionT extends EncodableType {
+        @Override
+        public default void encodePrepare(TypeEncoder encoder) {
+            if (encoder.prepare(this)) {
+                inputType().noFieldNames().encodePrepare(encoder);
+                outputType().noFieldNames().encodePrepare(encoder);
+            }
+        }
+
+        @Override
+        public default void encode(TypeEncoder encoder) {
+            encodeIndexed(this, encoder);
+        }
+
+        @Override
+        public default void doEncode(TypeEncoder encoder) {
+            encoder.encodeByte(T_FUNCTION);
+            inputType().noFieldNames().encode(encoder);
+            outputType().noFieldNames().encode(encoder);
+        }
+
+        public EncodableType inputType();
+
+        public EncodableType outputType();
+    }
+}

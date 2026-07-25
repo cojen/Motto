@@ -33,6 +33,9 @@ import org.cojen.motto.internal.util.InternSet;
  * @author Brian S. O'Neill
  */
 public abstract sealed class BasePath extends AbstractList<String> implements Path {
+    public static final BasePath JAVA_LANG = from("java", "lang");
+    public static final BasePath JAVA_MATH = from("java", "math");
+
     /**
      * Returns an empty path.
      */

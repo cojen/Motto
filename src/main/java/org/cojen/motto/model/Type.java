@@ -22,67 +22,69 @@ import java.util.NoSuchElementException;
 
 import java.util.stream.Stream;
 
+import org.cojen.motto.internal.model.BaseType;
+import org.cojen.motto.internal.model.TheBooleanType;
+import org.cojen.motto.internal.model.TheByteType;
+import org.cojen.motto.internal.model.TheCharType;
+import org.cojen.motto.internal.model.TheDoubleType;
+import org.cojen.motto.internal.model.TheFloatType;
+import org.cojen.motto.internal.model.TheIntType;
+import org.cojen.motto.internal.model.TheLongType;
+import org.cojen.motto.internal.model.TheNullType;
+import org.cojen.motto.internal.model.TheShortType;
+import org.cojen.motto.internal.model.TheUnspecifiedType;
+import org.cojen.motto.internal.model.TheVoidType;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface Type extends Constable permits
-    UnspecifiedType, PrimitiveType, NullType, ClassTypeItem, ArrayType, TupleType, FunctionType
+public sealed interface Type extends Constable
+    permits BaseType, UnspecifiedType, PrimitiveType, ObjectType, TupleType, FunctionType
 {
     public static UnspecifiedType unspecified() {
-        // FIXME
-        throw null;
+        return TheUnspecifiedType.THE;
     }
 
     public static VoidType void_() {
-        // FIXME
-        throw null;
+        return TheVoidType.THE;
     }
 
     public static BooleanType boolean_() {
-        // FIXME
-        throw null;
+        return TheBooleanType.THE;
     }
 
     public static CharType char_() {
-        // FIXME
-        throw null;
+        return TheCharType.THE;
     }
 
     public static ByteType byte_() {
-        // FIXME
-        throw null;
+        return TheByteType.THE;
     }
 
     public static ShortType short_() {
-        // FIXME
-        throw null;
+        return TheShortType.THE;
     }
 
     public static IntType int_() {
-        // FIXME
-        throw null;
+        return TheIntType.THE;
     }
 
     public static LongType long_() {
-        // FIXME
-        throw null;
+        return TheLongType.THE;
     }
 
     public static FloatType float_() {
-        // FIXME
-        throw null;
+        return TheFloatType.THE;
     }
 
     public static DoubleType double_() {
-        // FIXME
-        throw null;
+        return TheDoubleType.THE;
     }
 
     public static NullType null_() {
-        // FIXME
-        throw null;
+        return TheNullType.THE;
     }
 
     /**
@@ -91,7 +93,10 @@ public sealed interface Type extends Constable permits
      * @throws IllegalStateException if the current thread scope cannot load class types
      * @throws NullPointerException if the given path or name is null
      */
-    public ClassTypeItem class_(Path packagePath, String className);
+    public static ClassTypeItem class_(Path packagePath, String className) {
+        // FIXME
+        throw null;
+    }
 
     /**
      * Returns a type for a top-level class or an inner class.
@@ -99,12 +104,7 @@ public sealed interface Type extends Constable permits
      * @throws IllegalStateException if the current thread scope cannot load class types
      * @throws NullPointerException if any given paths are null
      */
-    public ClassTypeItem class_(Path packagePath, Path namePath);
-
-    /**
-     * Returns this type as an array type.
-     */
-    public static ArrayType asArray() {
+    public static ClassTypeItem class_(Path packagePath, Path namePath) {
         // FIXME
         throw null;
     }
@@ -126,6 +126,11 @@ public sealed interface Type extends Constable permits
         // FIXME
         throw null;
     }
+
+    /**
+     * Returns this type as an array type.
+     */
+    public ArrayType asArray();
 
     /**
      * Returns the full display name for this type, which matches its source code name

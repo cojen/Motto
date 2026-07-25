@@ -16,11 +16,12 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.TheCharType;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface CharType extends PrimitiveType {
+public sealed interface CharType extends PrimitiveType permits TheCharType {
 }

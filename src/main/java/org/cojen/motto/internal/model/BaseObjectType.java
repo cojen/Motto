@@ -14,14 +14,30 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.model;
+package org.cojen.motto.internal.model;
 
-import org.cojen.motto.internal.model.TheFloatType;
+import org.cojen.motto.model.ObjectType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface FloatType extends PrimitiveType permits TheFloatType {
+public sealed interface BaseObjectType extends BaseType, ObjectType
+    permits BaseClassTypeItem, TheNullType
+{
+    @Override
+    public default boolean isPrimitive() {
+        return false;
+    }
+
+    @Override
+    public default boolean isObject() {
+        return true;
+    }
+
+    @Override
+    public default BaseObjectType box() {
+        return this;
+    }
 }

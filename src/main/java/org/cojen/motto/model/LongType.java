@@ -16,11 +16,12 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.TheLongType;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface LongType extends PrimitiveType {
+public sealed interface LongType extends PrimitiveType permits TheLongType {
 }

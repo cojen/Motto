@@ -16,11 +16,12 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.TheNullType;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface NullType extends Type {
+public sealed interface NullType extends ObjectType permits TheNullType {
 }

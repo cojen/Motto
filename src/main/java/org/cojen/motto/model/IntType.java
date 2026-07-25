@@ -16,11 +16,12 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.TheIntType;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface IntType extends PrimitiveType {
+public sealed interface IntType extends PrimitiveType permits TheIntType {
 }

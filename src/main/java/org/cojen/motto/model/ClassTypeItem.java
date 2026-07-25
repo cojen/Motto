@@ -16,13 +16,14 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseClassTypeItem;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface ClassTypeItem extends Type, Item {
+public sealed interface ClassTypeItem extends ObjectType, Item permits BaseClassTypeItem {
     @Override
     public default ClassTypeItem enclosingClass() {
         return this;

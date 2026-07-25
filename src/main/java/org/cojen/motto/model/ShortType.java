@@ -16,11 +16,12 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.TheShortType;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface ShortType extends PrimitiveType {
+public sealed interface ShortType extends PrimitiveType permits TheShortType {
 }

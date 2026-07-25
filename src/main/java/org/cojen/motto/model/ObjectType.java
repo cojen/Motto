@@ -16,12 +16,14 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.TheFloatType;
+import org.cojen.motto.internal.model.BaseObjectType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface FloatType extends PrimitiveType permits TheFloatType {
+public sealed interface ObjectType extends Type
+    permits BaseObjectType, NullType, ArrayType, ClassTypeItem
+{
 }

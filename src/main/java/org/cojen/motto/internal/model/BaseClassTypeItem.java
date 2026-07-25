@@ -14,14 +14,15 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.model;
+package org.cojen.motto.internal.model;
 
-import org.cojen.motto.internal.model.TheFloatType;
+import org.cojen.motto.model.ClassTypeItem;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface FloatType extends PrimitiveType permits TheFloatType {
+// FIXME: sealed or final "The".
+public abstract non-sealed class BaseClassTypeItem implements BaseObjectType, ClassTypeItem {
 }

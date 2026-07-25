@@ -16,11 +16,12 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.TheVoidType;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface VoidType extends PrimitiveType {
+public sealed interface VoidType extends PrimitiveType permits TheVoidType {
 }

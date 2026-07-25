@@ -22,5 +22,5 @@ package org.cojen.motto.model;
  * @author Brian S. O'Neill
  */
 // FIXME: sealed
-public non-sealed interface ArrayType extends Type {
+public non-sealed interface ArrayType extends ObjectType {
 }

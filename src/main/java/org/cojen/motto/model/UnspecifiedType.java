@@ -16,11 +16,12 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.TheUnspecifiedType;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface UnspecifiedType extends Type {
+public sealed interface UnspecifiedType extends Type permits TheUnspecifiedType {
 }

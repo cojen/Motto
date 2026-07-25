@@ -16,11 +16,12 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.TheBooleanType;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface BooleanType extends PrimitiveType {
+public sealed interface BooleanType extends PrimitiveType permits TheBooleanType {
 }

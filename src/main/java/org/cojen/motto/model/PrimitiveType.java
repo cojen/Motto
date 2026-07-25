@@ -16,13 +16,15 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BasePrimitiveType;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
 public sealed interface PrimitiveType extends Type
-    permits VoidType, BooleanType, CharType,
+    permits BasePrimitiveType, VoidType, BooleanType, CharType,
             ByteType, ShortType, IntType, LongType, FloatType, DoubleType
 {
     /**
