@@ -73,7 +73,7 @@ public final class TypeEncoder {
     private byte[] mBuffer;
     private int mSize;
 
-    public TypeEncoder() {
+    private TypeEncoder() {
         mStringMap = new LinkedHashMap<>();
         mTypeMap = new LinkedHashMap<>();
     }

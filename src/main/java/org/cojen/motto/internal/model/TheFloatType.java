@@ -16,6 +16,9 @@
 
 package org.cojen.motto.internal.model;
 
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
+
 import org.cojen.motto.model.DoubleType;
 import org.cojen.motto.model.FloatType;
 import org.cojen.motto.model.PrimitiveType;
@@ -61,6 +64,11 @@ public final class TheFloatType extends BasePrimitiveType implements FloatType {
     @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.from(float.class);
+    }
+
+    @Override
+    public ClassDesc asClassDesc() {
+        return ConstantDescs.CD_float;
     }
 
     @Override

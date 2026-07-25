@@ -25,6 +25,11 @@ import org.cojen.motto.internal.model.BaseClassTypeItem;
  */
 public sealed interface ClassTypeItem extends ObjectType, Item permits BaseClassTypeItem {
     @Override
+    public default Type enclosingType() {
+        return this;
+    }
+
+    @Override
     public default ClassTypeItem enclosingClass() {
         return this;
     }

@@ -16,16 +16,16 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseTupleType;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface TupleType extends Type {
+public sealed interface TupleType extends ObjectType permits BaseTupleType {
     public static TupleType empty() {
-        // FIXME
-        throw null;
+        return BaseTupleType.EMPTY;
     }
 
     /**

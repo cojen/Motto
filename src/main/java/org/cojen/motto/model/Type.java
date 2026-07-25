@@ -41,7 +41,7 @@ import org.cojen.motto.internal.model.TheVoidType;
  * @author Brian S. O'Neill
  */
 public sealed interface Type extends Constable
-    permits BaseType, UnspecifiedType, PrimitiveType, ObjectType, TupleType, FunctionType
+    permits BaseType, UnspecifiedType, PrimitiveType, ObjectType, FunctionType
 {
     public static UnspecifiedType unspecified() {
         return TheUnspecifiedType.THE;
@@ -128,11 +128,6 @@ public sealed interface Type extends Constable
     }
 
     /**
-     * Returns this type as an array type.
-     */
-    public ArrayType asArray();
-
-    /**
      * Returns the full display name for this type, which matches its source code name
      */
     public default String displayName() {
@@ -155,11 +150,6 @@ public sealed interface Type extends Constable
      * Returns true if this type is definitely known to be an interface.
      */
     public boolean isInterface();
-
-    /**
-     * Returns this type without any field names, recursively.
-     */
-    public Type noFieldNames();
 
     /**
      * Returns the number of fields defined explicitly in this type.
@@ -185,6 +175,35 @@ public sealed interface Type extends Constable
      * @throws UnsupportedOperationException if this type doesn't have ordered fields
      */
     public FieldItem field(int index);
+
+    /**
+     * Finds a field type by name, if the type supports ordered fields.
+     *
+     * @throws NoSuchElementException if the field doesn't exist
+     */
+    public default Type fieldType(String name) {
+        return field(name).type();
+    }
+
+    /**
+     * Finds a field type by index, if the type supports ordered fields.
+     *
+     * @throws IndexOutOfBoundsException if the field doesn't exist
+     * @throws UnsupportedOperationException if this type doesn't have ordered fields
+     */
+    public default Type fieldType(int index) {
+        return field(index).type();
+    }
+
+    /**
+     * Finds a field name by index, if the type supports ordered fields.
+     *
+     * @throws IndexOutOfBoundsException if the field doesn't exist
+     * @throws UnsupportedOperationException if this type doesn't have ordered fields
+     */
+    public default String fieldName(int index) {
+        return field(index).name();
+    }
 
     /**
      * Returns the index of a field, if the type supports ordered fields.
@@ -244,6 +263,16 @@ public sealed interface Type extends Constable
      * @throws UnsupportedOperationException if this type isn't an array
      */
     public Type arrayElementType();
+
+    /**
+     * Returns this type as an array type.
+     */
+    public ArrayType asArray();
+
+    /**
+     * Returns this type without any field names, recursively.
+     */
+    public Type noFieldNames();
 
     /**
      * If this is a primitive type, a wrapper class type is returned. Otherwise, the same type

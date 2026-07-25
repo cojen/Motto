@@ -16,13 +16,14 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.TupleFieldItem;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface FieldItem extends Item {
+public sealed interface FieldItem extends Item permits TupleFieldItem {
     /**
      * Returns a non-null field type.
      */

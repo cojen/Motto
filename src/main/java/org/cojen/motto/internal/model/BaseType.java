@@ -39,23 +39,12 @@ import org.cojen.motto.internal.tuple.EncodableType;
  * @author Brian S. O'Neill
  */
 public sealed interface BaseType extends Type, EncodableType
-    permits BaseObjectType, BasePrimitiveType, TheUnspecifiedType
+    permits BaseObjectType, BasePrimitiveType, TheUnspecifiedType, GeneratedType
 {
     @Override
     public default Optional<? extends ConstantDesc> describeConstable() {
-        // FIXME
+        // FIXME: Call asClassDesc and bootstrap using ConstantBootstraps.type.
         throw null;
-    }
-
-    @Override
-    public default ArrayType asArray() {
-        // FIXME
-        throw null;
-    }
-
-    @Override
-    public default BaseType noFieldNames() {
-        return this;
     }
 
     @Override
@@ -127,7 +116,19 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
-    public BaseType box();
+    public default TheArrayType asArray() {
+        return TheArrayType.from(this);
+    }
+
+    @Override
+    public default BaseType noFieldNames() {
+        return this;
+    }
+
+    @Override
+    public default BaseType box() {
+        return this;
+    }
 
     @Override
     public default BasePrimitiveType unbox() {

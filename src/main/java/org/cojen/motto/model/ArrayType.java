@@ -16,11 +16,12 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.TheArrayType;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface ArrayType extends ObjectType {
+public sealed interface ArrayType extends ObjectType permits TheArrayType {
 }

@@ -16,11 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.constant.ClassDesc;
-import java.lang.constant.ConstantDescs;
-
-import org.cojen.motto.model.BooleanType;
-
 import org.cojen.motto.internal.tuple.EncodableType;
 import org.cojen.motto.internal.tuple.TypeEncoder;
 
@@ -29,35 +24,30 @@ import org.cojen.motto.internal.tuple.TypeEncoder;
  *
  * @author Brian S. O'Neill
  */
-public final class TheBooleanType extends BasePrimitiveType implements BooleanType {
-    public static final TheBooleanType THE = new TheBooleanType();
-
-    private TheBooleanType() {
-    }
-
-    @Override
-    public StringBuilder appendDisplayNameTo(StringBuilder b) {
-        return b.append("boolean");
-    }
-
-    @Override
-    public BaseClassTypeItem box() {
-        // FIXME: box
-        throw null;
-    }
+abstract sealed class GeneratedType implements BaseType, EncodableType
+    permits BaseTupleType
+{
+    private volatile String mGeneratedName;
+    private volatile org.cojen.maker.Type mMakerType;
 
     @Override
     public org.cojen.maker.Type asMakerType() {
-        return org.cojen.maker.Type.from(boolean.class);
+        /* FIXME
+        var type = mMakerType;
+        if (type == null) {
+            Class<?> clazz = TypeGenerator.generate(generatedName());
+            mMakerType = type = org.cojen.maker.Type.from(clazz);
+        }
+        return type;
+        */
+        throw null;
     }
 
-    @Override
-    public ClassDesc asClassDesc() {
-        return ConstantDescs.CD_boolean;
-    }
-
-    @Override
-    public void encode(TypeEncoder encoder) {
-        encoder.encodeByte(EncodableType.T_BOOLEAN);
+    String generatedName() {
+        String name = mGeneratedName;
+        if (name == null) {
+            mGeneratedName = name = "motto/" + TypeEncoder.encodeBase64(this);
+        }
+        return name;
     }
 }

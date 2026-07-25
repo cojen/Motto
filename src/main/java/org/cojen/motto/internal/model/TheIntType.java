@@ -16,6 +16,9 @@
 
 package org.cojen.motto.internal.model;
 
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
+
 import org.cojen.motto.model.IntType;
 import org.cojen.motto.model.LongType;
 import org.cojen.motto.model.DoubleType;
@@ -63,6 +66,11 @@ public final class TheIntType extends BasePrimitiveType implements IntType {
     @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.from(int.class);
+    }
+
+    @Override
+    public ClassDesc asClassDesc() {
+        return ConstantDescs.CD_int;
     }
 
     @Override

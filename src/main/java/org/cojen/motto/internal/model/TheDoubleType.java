@@ -16,6 +16,9 @@
 
 package org.cojen.motto.internal.model;
 
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
+
 import org.cojen.motto.model.DoubleType;
 
 import org.cojen.motto.internal.tuple.EncodableType;
@@ -51,6 +54,11 @@ public final class TheDoubleType extends BasePrimitiveType implements DoubleType
     @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.from(double.class);
+    }
+
+    @Override
+    public ClassDesc asClassDesc() {
+        return ConstantDescs.CD_double;
     }
 
     @Override

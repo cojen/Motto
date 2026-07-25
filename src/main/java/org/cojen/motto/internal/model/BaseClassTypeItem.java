@@ -25,4 +25,13 @@ import org.cojen.motto.model.ClassTypeItem;
  */
 // FIXME: sealed or final "The".
 public abstract non-sealed class BaseClassTypeItem implements BaseObjectType, ClassTypeItem {
+    @Override
+    public BaseType enclosingType() {
+        return this;
+    }
+
+    @Override
+    public BaseClassTypeItem enclosingClass() {
+        return this;
+    }
 }

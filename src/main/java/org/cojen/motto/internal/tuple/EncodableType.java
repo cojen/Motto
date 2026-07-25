@@ -16,6 +16,8 @@
 
 package org.cojen.motto.internal.tuple;
 
+import java.lang.constant.ClassDesc;
+
 import java.util.List;
 
 import org.cojen.maker.Maker;
@@ -42,6 +44,11 @@ public interface EncodableType {
      * Returns this type without any field names, recursively.
      */
     public EncodableType noFieldNames();
+
+    // FIXME: String and Class should use a standard descriptor.
+    public default ClassDesc asClassDesc() {
+        return ClassDesc.ofDescriptor("Lmotto/" + TypeEncoder.encodeBase64(this) + ';');
+    }
 
     /**
      * Should be overridden by types which refer to strings or other types.
@@ -138,10 +145,10 @@ public interface EncodableType {
         @Override
         public default void encodePrepare(TypeEncoder encoder) {
             if (encoder.prepare(this)) {
-                int numElements = numElements();
-                for (int i=0; i<numElements; i++) {
-                    elementType(i).encodePrepare(encoder);
-                    String name = elementName(i);
+                int numFields = numFields();
+                for (int i=0; i<numFields; i++) {
+                    fieldType(i).encodePrepare(encoder);
+                    String name = fieldName(i);
                     if (name != null) {
                         encoder.prepare(name);
                     }
@@ -157,32 +164,32 @@ public interface EncodableType {
         @Override
         public default void doEncode(TypeEncoder encoder) {
             encoder.encodeByte(T_TUPLE);
-            int numElements = numElements();
-            encoder.encodeUnsignedVarInt(numElements);
-            for (int i=0; i<numElements; i++) {
-                elementType(i).encode(encoder);
-                encoder.encodeString(elementName(i));
+            int numFields = numFields();
+            encoder.encodeUnsignedVarInt(numFields);
+            for (int i=0; i<numFields; i++) {
+                fieldType(i).encode(encoder);
+                encoder.encodeString(fieldName(i));
             }
         }
 
-        public int numElements();
+        public int numFields();
 
-        public EncodableType elementType(int index);
+        public EncodableType fieldType(int index);
 
         /**
          * Returns a possibly null name.
          */
-        public String elementName(int index);
+        public String fieldName(int index);
 
         /**
          * Returns a non-null name, possibly mangled.
          */
-        public default String elementFieldName(int index) {
-            if (index < 0 || index > numElements()) {
+        public default String mangledFieldName(int index) {
+            if (index < 0 || index > numFields()) {
                 throw new IllegalArgumentException();
             }
 
-            String name = elementName(index);
+            String name = fieldName(index);
 
             if (name == null) {
                 return "\\=" + index;

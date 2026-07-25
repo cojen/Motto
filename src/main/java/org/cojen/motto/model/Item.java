@@ -23,9 +23,17 @@ package org.cojen.motto.model;
  */
 public sealed interface Item permits ClassTypeItem, FieldItem, CallableItem {
     /**
-     * Returns the nearest enclosing class.
+     * Returns the nearest enclosing type, which is never null.
      */
-    public ClassTypeItem enclosingClass();
+    public Type enclosingType();
+
+    /**
+     * Returns the nearest enclosing class, which is null if the item isn't enclosed by a class.
+     */
+    public default ClassTypeItem enclosingClass() {
+        Type type = enclosingType();
+        return type instanceof ClassTypeItem c ? c : null;
+    }
 
     public boolean isStatic();
 

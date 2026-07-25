@@ -31,8 +31,6 @@ public abstract sealed class DecodedType implements EncodableType {
     @Override
     public abstract DecodedType noFieldNames();
 
-    public abstract ClassDesc asClassDesc();
-
     /**
      * Used when decoding the type table and a type is referenced which hasn't been decoded yet.
      */
@@ -92,7 +90,7 @@ public abstract sealed class DecodedType implements EncodableType {
         @Override
         public ClassDesc asClassDesc() {
             return switch (mCode) {
-                case T_UNSPECIFIED, T_NULL -> ConstantDescs.CD_Object;
+                case T_UNSPECIFIED, T_NULL -> super.asClassDesc();
                 case T_VOID -> ConstantDescs.CD_Void;
                 case T_BOOLEAN -> ConstantDescs.CD_boolean;
                 case T_CHAR -> ConstantDescs.CD_char;
@@ -198,8 +196,7 @@ public abstract sealed class DecodedType implements EncodableType {
         @Override
         public ClassDesc asClassDesc() {
             if (mClassDesc == null) {
-                String desc = "Ltupl/" + TypeEncoder.encodeBase64(this) + ';';
-                mClassDesc = ClassDesc.ofDescriptor(desc);
+                mClassDesc = super.asClassDesc();
             }
             return mClassDesc;
         }
@@ -231,17 +228,17 @@ public abstract sealed class DecodedType implements EncodableType {
         }
 
         @Override
-        public int numElements() {
+        public int numFields() {
             return mTypes.size();
         }
 
         @Override
-        public DecodedType elementType(int index) {
+        public DecodedType fieldType(int index) {
             return mTypes.get(index);
         }
 
         @Override
-        public String elementName(int index) {
+        public String fieldName(int index) {
             return mNames.get(index);
         }
     }
