@@ -57,6 +57,11 @@ public final class TheUnspecifiedType implements BaseType, UnspecifiedType {
     }
 
     @Override
+    public BaseType noFieldNames() {
+        return this;
+    }
+
+    @Override
     public BaseType box() {
         return this;
     }

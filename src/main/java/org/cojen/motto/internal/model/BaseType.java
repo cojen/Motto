@@ -132,9 +132,7 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
-    public default BaseType noFieldNames() {
-        return this;
-    }
+    public BaseType noFieldNames();
 
     @Override
     public default BaseType box() {

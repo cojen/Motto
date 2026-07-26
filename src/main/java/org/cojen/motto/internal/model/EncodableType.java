@@ -227,12 +227,12 @@ public interface EncodableType {
         @Override
         public default void doEncode(TypeEncoder encoder) {
             encoder.encodeByte(T_FUNCTION);
-            inputType().noFieldNames().encode(encoder);
             outputType().noFieldNames().encode(encoder);
+            inputType().noFieldNames().encode(encoder);
         }
 
-        public EncodableType inputType();
-
         public EncodableType outputType();
+
+        public EncodableType inputType();
     }
 }

@@ -16,13 +16,14 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.TheFunctionType;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface FunctionType extends Type {
+public sealed interface FunctionType extends Type permits TheFunctionType {
     public Type outputType();
 
     public TupleType inputType();

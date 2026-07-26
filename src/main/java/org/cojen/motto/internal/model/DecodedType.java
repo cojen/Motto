@@ -244,26 +244,26 @@ public abstract sealed class DecodedType implements EncodableType {
     }
 
     public final static class FunctionT extends GeneratedT implements EncodableType.FunctionT {
-        private final DecodedType mInputType, mOutputType;
+        private final DecodedType mOutputType, mInputType;
 
-        FunctionT(DecodedType inputType, DecodedType outputType) {
-            mInputType = inputType;
+        FunctionT(DecodedType outputType, DecodedType inputType) {
             mOutputType = outputType;
+            mInputType = inputType;
         }
 
         @Override
         public DecodedType noFieldNames() {
-            return new DecodedType.FunctionT(mInputType.noFieldNames(), mOutputType.noFieldNames());
-        }
-
-        @Override
-        public DecodedType inputType() {
-            return mInputType;
+            return new DecodedType.FunctionT(mOutputType.noFieldNames(), mInputType.noFieldNames());
         }
 
         @Override
         public DecodedType outputType() {
             return mOutputType;
+        }
+
+        @Override
+        public DecodedType inputType() {
+            return mInputType;
         }
     }
 }

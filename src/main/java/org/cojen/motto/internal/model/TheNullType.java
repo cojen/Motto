@@ -57,6 +57,11 @@ public final class TheNullType implements BaseObjectType, NullType {
     }
 
     @Override
+    public BaseType noFieldNames() {
+        return this;
+    }
+
+    @Override
     public boolean isAccessibleVia(Item via) {
         return true;
     }

@@ -29,6 +29,7 @@ import org.cojen.motto.internal.model.TheByteType;
 import org.cojen.motto.internal.model.TheCharType;
 import org.cojen.motto.internal.model.TheDoubleType;
 import org.cojen.motto.internal.model.TheFloatType;
+import org.cojen.motto.internal.model.TheFunctionType;
 import org.cojen.motto.internal.model.TheIntType;
 import org.cojen.motto.internal.model.TheLongType;
 import org.cojen.motto.internal.model.TheNullType;
@@ -123,8 +124,7 @@ public sealed interface Type extends Constable
      * @throws NullPointerException if any given types are null
      */
     public static FunctionType function(Type outputType, TupleType inputType) {
-        // FIXME
-        throw null;
+        return TheFunctionType.from((BaseType) outputType, (BaseTupleType) inputType);
     }
 
     /**

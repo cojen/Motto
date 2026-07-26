@@ -52,6 +52,11 @@ public abstract sealed class BasePrimitiveType implements BaseType, PrimitiveTyp
     }
 
     @Override
+    public final BaseType noFieldNames() {
+        return this;
+    }
+
+    @Override
     public abstract BaseClassTypeItem box();
 
     @Override
