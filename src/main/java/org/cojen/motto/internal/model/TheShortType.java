@@ -26,9 +26,6 @@ import org.cojen.motto.model.LongType;
 import org.cojen.motto.model.PrimitiveType;
 import org.cojen.motto.model.ShortType;
 
-import org.cojen.motto.internal.tuple.EncodableType;
-import org.cojen.motto.internal.tuple.TypeEncoder;
-
 /**
  * 
  *

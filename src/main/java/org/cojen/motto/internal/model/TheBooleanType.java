@@ -21,9 +21,6 @@ import java.lang.constant.ConstantDescs;
 
 import org.cojen.motto.model.BooleanType;
 
-import org.cojen.motto.internal.tuple.EncodableType;
-import org.cojen.motto.internal.tuple.TypeEncoder;
-
 /**
  * 
  *

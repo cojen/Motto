@@ -16,7 +16,11 @@
 
 package org.cojen.motto.internal.model;
 
+import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDesc;
+import java.lang.constant.ConstantDescs;
+import java.lang.constant.DirectMethodHandleDesc;
+import java.lang.constant.DynamicConstantDesc;
 
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -31,7 +35,7 @@ import org.cojen.motto.model.Item;
 import org.cojen.motto.model.TupleType;
 import org.cojen.motto.model.Type;
 
-import org.cojen.motto.internal.tuple.EncodableType;
+import org.cojen.motto.runtime.ConstantBootstraps;
 
 /**
  * 
@@ -43,8 +47,15 @@ public sealed interface BaseType extends Type, EncodableType
 {
     @Override
     public default Optional<? extends ConstantDesc> describeConstable() {
-        // FIXME: Call asClassDesc and bootstrap using ConstantBootstraps.type.
-        throw null;
+        DirectMethodHandleDesc bootstrap = ConstantDescs.ofConstantBootstrap
+            (ConstantBootstraps.class.describeConstable().get(), "type",
+             Type.class.describeConstable().get(), ConstantDescs.CD_String);
+
+        String desc = asClassDesc().descriptorString();
+
+        ClassDesc type = Type.class.describeConstable().get();
+
+        return Optional.of(DynamicConstantDesc.ofNamed(bootstrap, "_", type, desc));
     }
 
     @Override

@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.internal.tuple;
+package org.cojen.motto.internal.model;
 
 import java.lang.constant.ClassDesc;
 
@@ -40,6 +40,8 @@ public interface EncodableType {
 
         T_INDEXED = 20; // not a real type code; real type codes must have a lower value
 
+    public static final String GENERATED_PREFIX = "motto";
+
     /**
      * Returns this type without any field names, recursively.
      */
@@ -47,7 +49,8 @@ public interface EncodableType {
 
     // FIXME: String and Class should use a standard descriptor.
     public default ClassDesc asClassDesc() {
-        return ClassDesc.ofDescriptor("Lmotto/" + TypeEncoder.encodeBase64(this) + ';');
+        String desc = 'L' + GENERATED_PREFIX + '/' + TypeEncoder.encodeBase64(this) + ';';
+        return ClassDesc.ofDescriptor(desc);
     }
 
     /**

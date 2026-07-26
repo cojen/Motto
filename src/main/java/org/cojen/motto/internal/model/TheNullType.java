@@ -21,9 +21,6 @@ import org.cojen.motto.model.NullType;
 import org.cojen.motto.model.ObjectType;
 import org.cojen.motto.model.Type;
 
-import org.cojen.motto.internal.tuple.EncodableType;
-import org.cojen.motto.internal.tuple.TypeEncoder;
-
 /**
  * 
  *

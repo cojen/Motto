@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.internal.tuple;
+package org.cojen.motto.internal.model;
 
 import java.nio.ByteBuffer;
 

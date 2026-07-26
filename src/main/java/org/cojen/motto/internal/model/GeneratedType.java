@@ -16,9 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import org.cojen.motto.internal.tuple.EncodableType;
-import org.cojen.motto.internal.tuple.TypeEncoder;
-
 /**
  * 
  *
@@ -32,21 +29,20 @@ abstract sealed class GeneratedType implements BaseType, EncodableType
 
     @Override
     public org.cojen.maker.Type asMakerType() {
-        /* FIXME
         var type = mMakerType;
         if (type == null) {
-            Class<?> clazz = TypeGenerator.generate(generatedName());
+            Class<?> clazz = TypeGenerator.generateFromName(generatedName());
             mMakerType = type = org.cojen.maker.Type.from(clazz);
         }
         return type;
-        */
-        throw null;
     }
 
     String generatedName() {
         String name = mGeneratedName;
         if (name == null) {
-            mGeneratedName = name = "motto/" + TypeEncoder.encodeBase64(this);
+            mGeneratedName = name = EncodableType.GENERATED_PREFIX +
+                // Use a slash separator because that's what Java class files use.
+                '/' + TypeEncoder.encodeBase64(this);
         }
         return name;
     }

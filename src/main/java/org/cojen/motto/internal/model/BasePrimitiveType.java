@@ -118,8 +118,8 @@ public abstract sealed class BasePrimitiveType implements BaseType, PrimitiveTyp
         };
     }
 
-    public static BasePrimitiveType trySelectByDescriptor(String name) {
-        return switch (name) {
+    public static BasePrimitiveType trySelectByDescriptor(String desc) {
+        return switch (desc) {
             default -> null;
             case "V" -> TheVoidType.THE;
             case "Z" -> TheBooleanType.THE;

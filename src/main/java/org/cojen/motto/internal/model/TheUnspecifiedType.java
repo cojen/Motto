@@ -20,9 +20,6 @@ import org.cojen.motto.model.Item;
 import org.cojen.motto.model.Type;
 import org.cojen.motto.model.UnspecifiedType;
 
-import org.cojen.motto.internal.tuple.EncodableType;
-import org.cojen.motto.internal.tuple.TypeEncoder;
-
 /**
  * 
  *

@@ -22,6 +22,7 @@ import java.util.NoSuchElementException;
 
 import java.util.stream.Stream;
 
+import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.TheBooleanType;
 import org.cojen.motto.internal.model.TheByteType;
@@ -115,8 +116,7 @@ public sealed interface Type extends Constable
      * @throws NullPointerException if any given types are null
      */
     public static TupleType tuple(Type... fieldTypes) {
-        // FIXME
-        throw null;
+        return BaseTupleType.from(fieldTypes);
     }
 
     /**

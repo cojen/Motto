@@ -37,8 +37,6 @@ import org.cojen.motto.model.Type;
 
 import org.cojen.motto.internal.util.InternSet;
 
-import org.cojen.motto.internal.tuple.EncodableType;
-
 /**
  * 
  *
