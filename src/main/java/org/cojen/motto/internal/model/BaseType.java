@@ -37,6 +37,8 @@ import org.cojen.motto.model.Type;
 
 import org.cojen.motto.runtime.ConstantBootstraps;
 
+import org.cojen.motto.internal.util.InternSet;
+
 /**
  * 
  *
@@ -45,6 +47,16 @@ import org.cojen.motto.runtime.ConstantBootstraps;
 public sealed interface BaseType extends Type, EncodableType
     permits BaseObjectType, BasePrimitiveType, TheUnspecifiedType, GeneratedType
 {
+    public static BaseType from(Class<?> clazz) {
+        if (clazz.isPrimitive()) {
+            return BasePrimitiveType.trySelectByDescriptor(clazz.descriptorString());
+        } else if (clazz.isArray()) {
+            return from(clazz.getComponentType()).asArray();
+        } else {
+            return InternSet.apply(new LoadedClass(clazz));
+        }
+    }
+
     @Override
     public default Optional<? extends ConstantDesc> describeConstable() {
         DirectMethodHandleDesc bootstrap = ConstantDescs.ofConstantBootstrap

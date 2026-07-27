@@ -135,33 +135,11 @@ public abstract sealed class DecodedType implements EncodableType {
 
     public final static class ClassT extends DecodedType implements EncodableType.ClassT {
         private final List<String> mPackagePath, mNamePath;
-        private final ClassDesc mClassDesc;
+        private ClassDesc mClassDesc;
 
         ClassT(List<String> packagePath, List<String> namePath) {
             mPackagePath = packagePath;
             mNamePath = namePath;
-
-            var b = new StringBuilder().append('L');
-
-            // FIXME: The descriptor elements might need to be mangled.
-
-            if (!packagePath.isEmpty()) {
-                for (String name : packagePath) {
-                    b.append(name).append('/');
-                }
-            }
-
-            {
-                int size = namePath.size();
-                for (int i=0; i<size; i++) {
-                    if (i > 0) {
-                        b.append('$');
-                    }
-                    b.append(namePath.get(i));
-                }
-            }
-
-            mClassDesc = ClassDesc.ofDescriptor(b.append(';').toString());
         }
 
         @Override
@@ -181,11 +159,14 @@ public abstract sealed class DecodedType implements EncodableType {
 
         @Override
         public boolean isStringType() {
-            return mClassDesc.descriptorString().equals("Ljava/lang/String;");
+            return asClassDesc().descriptorString().equals("Ljava/lang/String;");
         }
 
         @Override
         public ClassDesc asClassDesc() {
+            if (mClassDesc == null) {
+                mClassDesc = super.asClassDesc();
+            }
             return mClassDesc;
         }
     }

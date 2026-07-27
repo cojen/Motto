@@ -16,13 +16,14 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.TheCallSignature;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public interface CallSignature {
+public sealed interface CallSignature permits TheCallSignature {
     public Type outputType();
 
     public String name();
@@ -72,8 +73,7 @@ public interface CallSignature {
      */
     public CallSignature flatten();
 
-    // FIXME: sealed
-    public static interface Clause {
+    public static sealed interface Clause permits TheCallSignature.TheClause {
         public boolean isRequired();
 
         public boolean hasRepetition();

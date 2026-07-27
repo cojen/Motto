@@ -26,6 +26,7 @@ import java.math.BigInteger;
 import org.cojen.motto.model.Type;
 
 import org.cojen.motto.internal.model.BasePrimitiveType;
+import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.EncodableType;
 import org.cojen.motto.internal.model.TypeGenerator;
 
@@ -92,8 +93,7 @@ public final class ConstantBootstraps {
             clazz = ClassDesc.ofDescriptor(desc).resolveConstantDesc(lookup);
         }
 
-        // FIXME: Return a Type from a Class. It might be an array.
-        throw null;
+        return BaseType.from(clazz);
     }
 
     public static BigDecimal bigDecimal(MethodHandles.Lookup lookup, String name,

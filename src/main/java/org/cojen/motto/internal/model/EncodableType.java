@@ -47,7 +47,6 @@ public interface EncodableType {
      */
     public EncodableType noFieldNames();
 
-    // FIXME: String and Class should use a standard descriptor.
     public default ClassDesc asClassDesc() {
         String desc = 'L' + GENERATED_PREFIX + '/' + TypeEncoder.encodeBase64(this) + ';';
         return ClassDesc.ofDescriptor(desc);
@@ -79,6 +78,11 @@ public interface EncodableType {
 
     public static interface ArrayT extends EncodableType {
         @Override
+        public default ClassDesc asClassDesc() {
+            return arrayElementType().asClassDesc().arrayType();
+        }
+
+        @Override
         public default void encodePrepare(TypeEncoder encoder) {
             if (encoder.prepare(this)) {
                 arrayElementType().encodePrepare(encoder);
@@ -100,6 +104,32 @@ public interface EncodableType {
     }
 
     public static interface ClassT extends EncodableType {
+        @Override
+        public default ClassDesc asClassDesc() {
+            List<String> packagePath = packagePath();
+            List<String> namePath = namePath();
+
+            var b = new StringBuilder().append('L');
+
+            if (!packagePath.isEmpty()) {
+                for (String name : packagePath) {
+                    b.append(Maker.mangle(name)).append('/');
+                }
+            }
+
+            {
+                int size = namePath.size();
+                for (int i=0; i<size; i++) {
+                    if (i > 0) {
+                        b.append('$');
+                    }
+                    b.append(Maker.mangle(namePath.get(i)));
+                }
+            }
+
+            return ClassDesc.ofDescriptor(b.append(';').toString());
+        }
+
         @Override
         public default void encodePrepare(TypeEncoder encoder) {
             if (!isStringType() && encoder.prepare(this)) {

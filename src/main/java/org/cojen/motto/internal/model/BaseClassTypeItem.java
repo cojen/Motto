@@ -16,6 +16,11 @@
 
 package org.cojen.motto.internal.model;
 
+import java.lang.constant.ClassDesc;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import java.util.stream.Stream;
@@ -36,10 +41,23 @@ import org.cojen.motto.model.Type;
  */
 public abstract sealed class BaseClassTypeItem extends BaseItem
     implements BaseObjectType, ClassTypeItem, EncodableType.ClassT
-    permits ExternalClass, NewClass
+    permits ExternalClass, LoadedClass, NewClass
 {
-    BaseClassTypeItem(int modifierBits) {
+    private final BasePath mPackagePath, mNamePath;
+
+    private ClassDesc mClassDesc;
+
+    private BaseClassTypeItem mSuperType;
+    private Set<BaseClassTypeItem> mSuperInterfaces;
+
+    private Map<String, TheFieldItem> mFieldMap;
+    private Map<String, Map<TheCallSignature, TheCallableItem>> mMethodMap;
+    private Map<String, BaseClassTypeItem> mInnerClassesMap;
+
+    BaseClassTypeItem(int modifierBits, BasePath packagePath, BasePath namePath) {
         super(modifierBits);
+        mPackagePath = Objects.requireNonNull(packagePath);
+        mNamePath = Objects.requireNonNull(namePath);
     }
 
     @Override
@@ -54,26 +72,22 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public BaseClassTypeItem superType() {
-        // FIXME
-        throw null;
+        return mSuperType;
     }
 
     @Override
     public Set<? extends BaseClassTypeItem> interfaces() {
-        // FIXME
-        throw null;
+        return mSuperInterfaces;
     }
 
     @Override
-    public BasePath packagePath() {
-        // FIXME
-        throw null;
+    public final BasePath packagePath() {
+        return mPackagePath;
     }
 
     @Override
-    public BasePath namePath() {
-        // FIXME
-        throw null;
+    public final BasePath namePath() {
+        return mNamePath;
     }
 
     /**
@@ -97,6 +111,14 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         namePath.appendMangledTo(b, '$');
 
         return b.toString();
+    }
+
+    @Override
+    public final ClassDesc asClassDesc() {
+        if (mClassDesc == null) {
+            mClassDesc = EncodableType.ClassT.super.asClassDesc();
+        }
+        return mClassDesc;
     }
 
     @Override
@@ -159,15 +181,13 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public TheFieldItem field(int index) {
-        // FIXME
-        throw null;
+    public final TheFieldItem field(int index) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public int fieldIndex(String name) {
-        // FIXME
-        throw null;
+    public final int fieldIndex(String name) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -297,5 +317,16 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         } else if ((modifiers & Modifiers.ABSTRACT) != 0) {
             cm.abstract_();
         }
+    }
+
+    /**
+     * @param superType optional (only for java.lang.Object)
+     * @param interfaces optional
+     */
+    public final void setSuperTypes(BaseClassTypeItem superType,
+                                    Set<BaseClassTypeItem> interfaces)
+    {
+        mSuperType = superType;
+        mSuperInterfaces = interfaces == null ? Set.of() : interfaces;
     }
 }

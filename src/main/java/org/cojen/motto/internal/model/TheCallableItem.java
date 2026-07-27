@@ -49,7 +49,7 @@ public final class TheCallableItem extends BaseItem implements CallableItem {
     }
 
     @Override
-    public org.cojen.motto.model.CallSignature signature() {
+    public TheCallSignature signature() {
         // FIXME
         throw null;
     }

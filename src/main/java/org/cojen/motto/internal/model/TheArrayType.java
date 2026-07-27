@@ -101,11 +101,6 @@ public final class TheArrayType implements BaseObjectType, ArrayType, EncodableT
     }
 
     @Override
-    public ClassDesc asClassDesc() {
-        return mElementType.asClassDesc().arrayType();
-    }
-
-    @Override
     public void encodePrepare(TypeEncoder encoder) {
         ArrayT.super.encodePrepare(encoder);
     }

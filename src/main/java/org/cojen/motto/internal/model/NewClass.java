@@ -22,8 +22,8 @@ package org.cojen.motto.internal.model;
  * @author Brian S. O'Neill
  */
 public final class NewClass extends BaseClassTypeItem {
-    NewClass(int modifierBits) {
-        super(modifierBits);
+    NewClass(int modifierBits, BasePath packagePath, BasePath namePath) {
+        super(modifierBits, packagePath, namePath);
     }
 
     @Override

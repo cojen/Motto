@@ -32,7 +32,7 @@ import static org.cojen.motto.internal.model.Modifiers.*;
 public abstract sealed class BaseItem implements Item
     permits BaseClassTypeItem, TheCallableItem, TheFieldItem
 {
-    private final int mModifierBits;
+    private int mModifierBits;
 
     /**
      * @see Modifiers
@@ -41,8 +41,12 @@ public abstract sealed class BaseItem implements Item
         mModifierBits = modifierBits;
     }
 
-    public final int modifierBits() {
+    public int modifierBits() {
         return mModifierBits;
+    }
+
+    protected final void setModifierBits(int modifierBits) {
+        mModifierBits = modifierBits;
     }
 
     @Override
@@ -53,34 +57,34 @@ public abstract sealed class BaseItem implements Item
 
     @Override
     public final boolean isStatic() {
-        return (mModifierBits & STATIC) != 0;
+        return (modifierBits() & STATIC) != 0;
     }
 
     @Override
     public final boolean isFinal() {
-        return (mModifierBits & FINAL) != 0;
+        return (modifierBits() & FINAL) != 0;
     }
 
     @Override
     public final boolean isPrivate() {
-        return (mModifierBits & (PUBLIC | INTERNAL | PROTECTED)) == 0;
+        return (modifierBits() & (PUBLIC | INTERNAL | PROTECTED)) == 0;
     }
 
     public final boolean isBridge() {
-        return (mModifierBits & BRIDGE) != 0;
+        return (modifierBits() & BRIDGE) != 0;
     }
 
     public final boolean isPseudo() {
-        return (mModifierBits & PSEUDO) != 0;
+        return (modifierBits() & PSEUDO) != 0;
     }
 
     public final boolean isMacro() {
-        return (mModifierBits & MACRO) != 0;
+        return (modifierBits() & MACRO) != 0;
     }
 
     @Override
     public boolean isAccessibleVia(Item via) {
-        int modifierBits = mModifierBits;
+        int modifierBits = modifierBits();
 
         if ((modifierBits & PUBLIC) != 0) {
             // FIXME: All parents must be public too. Ignore inheritance stuff. A public method
