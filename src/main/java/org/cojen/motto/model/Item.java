@@ -16,12 +16,14 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseItem;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface Item permits ClassTypeItem, FieldItem, CallableItem {
+public sealed interface Item permits BaseItem, ClassTypeItem, FieldItem, CallableItem {
     /**
      * Returns the nearest enclosing type, which is never null.
      */

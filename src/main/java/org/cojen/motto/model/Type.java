@@ -271,6 +271,9 @@ public sealed interface Type extends Constable
 
     /**
      * Returns this type without any field names, recursively.
+     *
+     * @throws UnsupportedOperationException if this type has fields and it requires that
+     * fields have names
      */
     public Type noFieldNames();
 

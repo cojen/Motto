@@ -16,6 +16,8 @@
 
 package org.cojen.motto.model;
 
+import java.util.Set;
+
 import org.cojen.motto.internal.model.BaseClassTypeItem;
 
 /**
@@ -33,6 +35,17 @@ public sealed interface ClassTypeItem extends ObjectType, Item permits BaseClass
     public default ClassTypeItem enclosingClass() {
         return this;
     }
+
+    /**
+     * Returns the superclass of this class, which should only be null if this class is
+     * java.lang.Object.
+     */
+    public ClassTypeItem superType();
+
+    /**
+     * Returns the non-null set of interfaces that this class implements.
+     */
+    public Set<? extends ClassTypeItem> interfaces();
 
     /**
      * Returns the package path for this type.
