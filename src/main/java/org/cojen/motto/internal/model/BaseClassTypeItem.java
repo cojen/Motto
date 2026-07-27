@@ -20,10 +20,11 @@ import java.util.Set;
 
 import java.util.stream.Stream;
 
-import org.cojen.motto.model.CallableItem;
+import org.cojen.maker.ClassMaker;
+import org.cojen.maker.Maker;
+
 import org.cojen.motto.model.CallSignature;
 import org.cojen.motto.model.ClassTypeItem;
-import org.cojen.motto.model.FieldItem;
 import org.cojen.motto.model.ObjectType;
 import org.cojen.motto.model.PrimitiveType;
 import org.cojen.motto.model.Type;
@@ -42,7 +43,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public final BaseType enclosingType() {
+    public final BaseClassTypeItem enclosingType() {
         return this;
     }
 
@@ -75,8 +76,31 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         throw null;
     }
 
+    /**
+     * Returns a fully qualified class name, dot separated, with mangling of special
+     * characters.
+     */
+    public final String fullMangledName() {
+        BasePath packagePath = packagePath();
+        BasePath namePath = namePath();
+
+        if (packagePath.isEmpty() && namePath.size() == 1) {
+            return Maker.mangle(namePath.getFirst());
+        }
+
+        var b = new StringBuilder();
+
+        if (!packagePath.isEmpty()) {
+            packagePath.appendMangledTo(b, '.').append('.');
+        }
+
+        namePath.appendMangledTo(b, '$');
+
+        return b.toString();
+    }
+
     @Override
-    public boolean isStringType() {
+    public final boolean isStringType() {
         if (packagePath().equals(BasePath.JAVA_LANG)) {
             BasePath namePath = namePath();
             return namePath.size() == 1 && namePath.getFirst().equals("String");
@@ -91,7 +115,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public BaseClassTypeItem nestType() {
+    public final BaseClassTypeItem nestType() {
         BaseClassTypeItem thisType = this;
         while (true) {
             BaseClassTypeItem outerType = thisType.outerType();
@@ -103,7 +127,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public StringBuilder appendDisplayNameTo(StringBuilder b) {
+    public final StringBuilder appendDisplayNameTo(StringBuilder b) {
         BasePath packagePath = packagePath();
         if (!packagePath.isEmpty()) {
             packagePath.appendTo(b).append('.');
@@ -112,7 +136,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public boolean isInterface() {
+    public final boolean isInterface() {
         return (modifierBits() & Modifiers.INTERFACE) != 0;
     }
 
@@ -123,19 +147,19 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public Stream<? extends FieldItem> fields() {
+    public Stream<? extends TheFieldItem> fields() {
         // FIXME
         throw null;
     }
 
     @Override
-    public FieldItem field(String name) {
+    public TheFieldItem field(String name) {
         // FIXME
         throw null;
     }
 
     @Override
-    public FieldItem field(int index) {
+    public TheFieldItem field(int index) {
         // FIXME
         throw null;
     }
@@ -153,19 +177,19 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public Stream<? extends CallableItem> methods() {
+    public Stream<? extends TheCallableItem> methods() {
         // FIXME
         throw null;
     }
 
     @Override
-    public Stream<? extends CallableItem> methods(String name) {
+    public Stream<? extends TheCallableItem> methods(String name) {
         // FIXME
         throw null;
     }
 
     @Override
-    public CallableItem method(CallSignature sig) {
+    public TheCallableItem method(CallSignature sig) {
         // FIXME
         throw null;
     }
@@ -177,13 +201,13 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public Stream<? extends CallableItem> constructors() {
+    public Stream<? extends TheCallableItem> constructors() {
         // FIXME
         throw null;
     }
 
     @Override
-    public CallableItem constructor(CallSignature sig) {
+    public TheCallableItem constructor(CallSignature sig) {
         // FIXME
         throw null;
     }
@@ -261,5 +285,17 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         }
 
         return code;
+    }
+
+    void applyModifiers(ClassMaker cm) {
+        super.applyModifiers(cm);
+
+        int modifiers = modifierBits();
+
+        if ((modifiers & Modifiers.INTERFACE) != 0) {
+            cm.interface_();
+        } else if ((modifiers & Modifiers.ABSTRACT) != 0) {
+            cm.abstract_();
+        }
     }
 }

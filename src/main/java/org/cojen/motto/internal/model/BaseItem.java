@@ -20,6 +20,8 @@ import org.cojen.motto.model.ClassTypeItem;
 import org.cojen.motto.model.Item;
 import org.cojen.motto.model.Type;
 
+import org.cojen.maker.Maker;
+
 import static org.cojen.motto.internal.model.Modifiers.*;
 
 /**
@@ -27,7 +29,9 @@ import static org.cojen.motto.internal.model.Modifiers.*;
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed class BaseItem implements Item permits BaseClassTypeItem {
+public abstract sealed class BaseItem implements Item
+    permits BaseClassTypeItem, TheCallableItem, TheFieldItem
+{
     private final int mModifierBits;
 
     /**
@@ -116,5 +120,31 @@ public abstract sealed class BaseItem implements Item permits BaseClassTypeItem 
         }
 
         return false;
+    }
+
+    void applyModifiers(Maker maker) {
+        int modifiers = modifierBits();
+
+        if ((modifiers & Modifiers.PUBLIC) != 0) {
+            maker.public_();
+        } else if ((modifiers & Modifiers.INTERNAL) != 0) {
+            // Nothing to do.
+        } else if ((modifiers & Modifiers.PROTECTED) != 0) {
+            maker.protected_();
+        } else {
+            maker.private_();
+        }
+
+        if ((modifiers & Modifiers.STATIC) != 0) {
+            maker.static_();
+        }
+
+        if ((modifiers & Modifiers.FINAL) != 0) {
+            maker.final_();
+        }
+
+        if ((modifiers & Modifiers.SYNTHETIC) != 0) {
+            maker.synthetic();
+        }
     }
 }

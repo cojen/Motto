@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import org.cojen.maker.Maker;
+
 import org.cojen.motto.model.Path;
 
 import org.cojen.motto.internal.util.InternSet;
@@ -156,6 +158,24 @@ public abstract sealed class BasePath extends AbstractList<String> implements Pa
      */
     public BasePath canonical() {
         return this;
+    }
+
+    /**
+     * Append the path elements with '.' separators.
+     */
+    public final StringBuilder appendMangledTo(StringBuilder b) {
+        return appendTo(b, '.');
+    }
+
+    public final StringBuilder appendMangledTo(StringBuilder b, char separator) {
+        int size = size();
+        for (int i=0; i<size; i++) {
+            if (i > 0) {
+                b.append(separator);
+            }
+            b.append(Maker.mangle(get(i)));
+        }
+        return b;
     }
 
     @Override

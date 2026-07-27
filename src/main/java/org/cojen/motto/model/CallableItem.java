@@ -16,12 +16,13 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.TheCallableItem;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface CallableItem extends Item {
+public sealed interface CallableItem extends Item permits TheCallableItem {
     public CallSignature signature();
 }
