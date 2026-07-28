@@ -16,12 +16,13 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseDeclarationAction;
+
 /**
  * Defines a no-op action which simply declares a variable.
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface DeclarationAction extends Action {
+public sealed interface DeclarationAction extends Action permits BaseDeclarationAction {
     public Binding binding();
 }

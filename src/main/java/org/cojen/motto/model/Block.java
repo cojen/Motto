@@ -16,13 +16,14 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseBlock;
+
 /**
  * Defines an executable block of code within a larger code body.
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public interface Block extends Iterable<Action> {
+public sealed interface Block extends Iterable<Action> permits BaseBlock {
     /**
      * Returns a new block which isn't attached to anything until it becomes a destination for
      * a jump or branch action.

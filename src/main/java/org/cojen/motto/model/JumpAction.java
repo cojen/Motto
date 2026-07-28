@@ -16,12 +16,13 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseJumpAction;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface JumpAction extends Action {
+public sealed interface JumpAction extends Action permits BaseJumpAction {
     public Block destination();
 }

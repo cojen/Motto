@@ -1,0 +1,144 @@
+/*
+ *  Copyright 2026 Cojen.org
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package org.cojen.motto.internal.model;
+
+import java.util.Map;
+import java.util.Objects;
+
+import org.cojen.motto.model.CallAction;
+
+/**
+ * 
+ *
+ * @author Brian S. O'Neill
+ */
+public sealed abstract class BaseCallAction extends FlowAction implements CallAction {
+    private final BaseCallableItem mCallable;
+    private final BaseBinding mOutput;
+    private final BaseBinding[] mInputs;
+    private final BaseClauseArgument[] mClauses;
+
+    BaseCallAction(int position, BaseCallableItem callable,
+                   BaseBinding output, BaseBinding... inputs)
+    {
+        this(position, callable, output, inputs, (BaseClauseArgument[]) null);
+    }
+
+    BaseCallAction(int position, BaseCallableItem callable,
+                   BaseBinding output, BaseBinding[] inputs, BaseClauseArgument... clauses)
+    {
+        super(position);
+        mCallable = Objects.requireNonNull(callable);
+        mOutput = Objects.requireNonNull(output);
+        mInputs = Objects.requireNonNull(inputs);
+        mClauses = clauses;
+    }
+
+    @Override
+    public final BaseCallableItem callable() {
+        return mCallable;
+    }
+
+    @Override
+    public final BaseBinding output() {
+        return mOutput;
+    }
+
+    @Override
+    public final int numInputs() {
+        return mInputs.length;
+    }
+
+    @Override
+    public final BaseBinding input(int index) {
+        return mInputs[index];
+    }
+
+    public final int numClauses() {
+        return mClauses == null ? 0 : mClauses.length;
+    }
+
+    public final BaseClauseArgument clause(int index) {
+        if (mClauses == null) {
+            throw new IndexOutOfBoundsException();
+        }
+        return mClauses[index];
+    }
+
+    @Override
+    final void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
+        for (BaseBinding input : mInputs) {
+            input.trackBlockLocalSource(map);
+        }
+
+        mOutput.trackBlockLocalTarget(map);
+    }
+
+    public static final class Direct extends BaseCallAction implements CallAction.Direct {
+        public Direct(int position, BaseCallableItem callable,
+                      BaseBinding output, BaseBinding... inputs)
+        {
+            super(position, callable, output, inputs);
+        }
+
+        public Direct(int position, BaseCallableItem callable,
+                      BaseBinding output, BaseBinding[] inputs, BaseClauseArgument... clauses)
+        {
+            super(position, callable, output, inputs, clauses);
+        }
+
+        @Override
+        public <R> R accept(ActionVisitor<R> visitor) {
+            return visitor.visit(this);
+        }
+    }
+
+    public static final class New extends BaseCallAction implements CallAction.New {
+        /**
+         * @param callable constructor to call; its output will be dropped; the first input
+         * must be a "this" instance
+         * @param inputs constructor inputs, excluding the "this" instance
+         */
+        public New(int position, BaseCallableItem callable,
+                   BaseBinding output, BaseBinding... inputs)
+        {
+            super(position, callable, output, inputs);
+        }
+
+        @Override
+        public <R> R accept(ActionVisitor<R> visitor) {
+            return visitor.visit(this);
+        }
+    }
+
+    public static final class Virtual extends BaseCallAction implements CallAction.Virtual {
+        /**
+         * @param callable method to call; this first input is a "this" instance
+         * @param inputs method inputs, starting with the "this" instance
+         */
+        public Virtual(int position, BaseCallableItem callable,
+                       BaseBinding output, BaseBinding... inputs)
+        {
+            super(position, callable, output, inputs);
+        }
+
+        @Override
+        public <R> R accept(ActionVisitor<R> visitor) {
+            return visitor.visit(this);
+        }
+    }
+}

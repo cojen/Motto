@@ -22,8 +22,6 @@ import java.util.NoSuchElementException;
 
 import java.util.stream.Stream;
 
-import org.cojen.motto.internal.model.BaseTupleType;
-import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseBooleanType;
 import org.cojen.motto.internal.model.BaseByteType;
 import org.cojen.motto.internal.model.BaseCharType;
@@ -34,6 +32,8 @@ import org.cojen.motto.internal.model.BaseIntType;
 import org.cojen.motto.internal.model.BaseLongType;
 import org.cojen.motto.internal.model.BaseNullType;
 import org.cojen.motto.internal.model.BaseShortType;
+import org.cojen.motto.internal.model.BaseTupleType;
+import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
 

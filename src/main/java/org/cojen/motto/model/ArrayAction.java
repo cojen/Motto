@@ -16,13 +16,15 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseArrayAction;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
 public sealed interface ArrayAction extends Action
-    permits ArrayAction.New, ArrayAction.Get, ArrayAction.Set
+    permits ArrayAction.New, ArrayAction.Get, ArrayAction.Set, BaseArrayAction
 {
     // FIXME: sealed
     public static non-sealed interface New extends ArrayAction {

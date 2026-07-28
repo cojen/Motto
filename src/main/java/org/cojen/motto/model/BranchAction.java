@@ -16,13 +16,14 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseBranchAction;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface BranchAction extends Action {
+public sealed interface BranchAction extends Action permits BaseBranchAction {
     public Binding condition();
 
     public Block whenTrue();

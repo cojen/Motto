@@ -16,16 +16,17 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseTupleAction;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
 public sealed interface TupleAction extends Action
-    permits TupleAction.New, TupleAction.Get, TupleAction.Set
+    permits TupleAction.New, TupleAction.Get, TupleAction.Set, BaseTupleAction
 {
-    // FIXME: sealed
-    public static non-sealed interface New extends TupleAction {
+    public static sealed interface New extends TupleAction permits BaseTupleAction.New {
         public TupleType type();
 
         public Binding output();
@@ -35,8 +36,7 @@ public sealed interface TupleAction extends Action
         public Binding input(int index);
     }
 
-    // FIXME: sealed
-    public static non-sealed interface Get extends TupleAction {
+    public static sealed interface Get extends TupleAction permits BaseTupleAction.Get {
         public Binding tuple();
 
         public Binding output();
@@ -44,8 +44,7 @@ public sealed interface TupleAction extends Action
         public Binding index();
     }
 
-    // FIXME: sealed
-    public static non-sealed interface Set extends TupleAction {
+    public static sealed interface Set extends TupleAction permits BaseTupleAction.Set {
         public Binding tuple();
 
         public Binding index();

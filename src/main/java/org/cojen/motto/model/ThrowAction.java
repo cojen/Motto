@@ -16,12 +16,13 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseThrowAction;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface ThrowAction extends Action {
+public sealed interface ThrowAction extends Action permits BaseThrowAction {
     public Binding exception();
 }

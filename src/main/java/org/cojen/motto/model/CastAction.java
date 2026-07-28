@@ -16,13 +16,14 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseCastAction;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface CastAction extends Action {
+public sealed interface CastAction extends Action permits BaseCastAction {
     public Binding target();
 
     public Binding source();

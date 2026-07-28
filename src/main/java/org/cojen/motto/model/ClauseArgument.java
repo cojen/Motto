@@ -16,14 +16,15 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseClauseArgument;
+
 /**
  * @author Brian S. O'Neill
  * @see Block#callDirect
  */
 // Note: This can best be modeled using a method clause. Yes, use a clause to define a clause.
 // The Block.callDirect method supports 0 or more `clause` clauses.
-// FIXME: sealed
-public interface ClauseArgument {
+public sealed interface ClauseArgument permits BaseClauseArgument {
     public static ClauseArgument from(String name, Binding... inputs) {
         // FIXME
         throw null;

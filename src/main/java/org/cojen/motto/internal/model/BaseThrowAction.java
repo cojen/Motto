@@ -14,33 +14,37 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.model;
+package org.cojen.motto.internal.model;
 
-import org.cojen.motto.internal.model.BaseCallAction;
+import java.util.Map;
+
+import org.cojen.motto.model.ThrowAction;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface CallAction extends Action
-    permits CallAction.Direct, CallAction.Virtual, BaseCallAction
-{
-    public CallableItem callable();
+public final class BaseThrowAction extends TerminalAction implements ThrowAction {
+    private final BaseBinding mException;
 
-    public Binding output();
-
-    public int numInputs();
-
-    public Binding input(int index);
-
-    public static sealed interface Direct extends CallAction permits New, BaseCallAction.Direct {
-        public CallableItem callable();
+    BaseThrowAction(int position, BaseBinding exception) {
+        super(position);
+        mException = exception;
     }
 
-    public static sealed interface New extends Direct permits BaseCallAction.New {
+    @Override
+    public <R> R accept(ActionVisitor<R> visitor) {
+        return visitor.visit(this);
     }
 
-    public static sealed interface Virtual extends CallAction permits BaseCallAction.Virtual {
+    @Override
+    public BaseBinding exception() {
+        return mException;
+    }
+
+    @Override
+    void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
+        mException.trackBlockLocalSource(map);
     }
 }

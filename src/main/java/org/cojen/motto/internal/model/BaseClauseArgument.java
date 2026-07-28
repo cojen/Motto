@@ -14,17 +14,31 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.model;
+package org.cojen.motto.internal.model;
 
-import org.cojen.motto.internal.model.BaseConvertAction;
+import org.cojen.motto.model.ClauseArgument;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface ConvertAction extends Action permits BaseConvertAction {
-    public Binding target();
+public final class BaseClauseArgument implements ClauseArgument {
+    @Override
+    public String name() {
+        // FIXME
+        throw null;
+    }
 
-    public Binding source();
+    @Override
+    public int numInputs() {
+        // FIXME
+        throw null;
+    }
+
+    @Override
+    public BaseBinding input(int index) {
+        // FIXME
+        throw null;
+    }
 }

@@ -16,12 +16,13 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseYieldAction;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface YieldAction extends Action {
+public sealed interface YieldAction extends Action permits BaseYieldAction {
     public Binding result();
 }

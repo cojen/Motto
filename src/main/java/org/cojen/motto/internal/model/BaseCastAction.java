@@ -14,17 +14,23 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.model;
+package org.cojen.motto.internal.model;
 
-import org.cojen.motto.internal.model.BaseConvertAction;
+import org.cojen.motto.model.CastAction;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface ConvertAction extends Action permits BaseConvertAction {
-    public Binding target();
+// FIXME: sealed
+public abstract non-sealed class BaseCastAction extends FlowAction implements CastAction {
+    BaseCastAction(int position) {
+        super(position);
+    }
 
-    public Binding source();
+    @Override
+    public <R> R accept(ActionVisitor<R> visitor) {
+        return visitor.visit(this);
+    }
 }

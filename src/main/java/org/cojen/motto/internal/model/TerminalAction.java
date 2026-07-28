@@ -14,17 +14,17 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.model;
-
-import org.cojen.motto.internal.model.BaseConvertAction;
+package org.cojen.motto.internal.model;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface ConvertAction extends Action permits BaseConvertAction {
-    public Binding target();
-
-    public Binding source();
+abstract sealed class TerminalAction extends BaseAction
+    permits BaseBranchAction, BaseJumpAction, BaseThrowAction
+{
+    TerminalAction(int position) {
+        super(position);
+    }
 }

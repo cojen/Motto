@@ -16,13 +16,14 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseBinding;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public interface Binding {
+public sealed interface Binding permits BaseBinding {
     /**
      * Returns a binding whose type is void, and anything copied into it is dropped.
      */

@@ -16,13 +16,14 @@
 
 package org.cojen.motto.model;
 
+import org.cojen.motto.internal.model.BaseCopyAction;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public non-sealed interface CopyAction extends Action {
+public sealed interface CopyAction extends Action permits BaseCopyAction {
     public Binding target();
 
     public Binding source();

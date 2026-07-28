@@ -14,17 +14,20 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.model;
-
-import org.cojen.motto.internal.model.BaseConvertAction;
+package org.cojen.motto.internal.model;
 
 /**
- * 
+ * A FlowAction simply flows into another action.
  *
  * @author Brian S. O'Neill
  */
-public sealed interface ConvertAction extends Action permits BaseConvertAction {
-    public Binding target();
+public abstract sealed class FlowAction extends BaseAction
+    permits BaseArrayAction, BaseCallAction, BaseCastAction, BaseConvertAction, BaseCopyAction,
+        BaseDeclarationAction, BaseTupleAction
+{
+    public BaseAction next;
 
-    public Binding source();
+    FlowAction(int position) {
+        super(position);
+    }
 }
