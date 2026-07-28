@@ -22,7 +22,7 @@ package org.cojen.motto.model;
  * @author Brian S. O'Neill
  */
 // FIXME: sealed
-public interface BranchAction extends Action {
+public non-sealed interface BranchAction extends Action {
     public Binding condition();
 
     public Block whenTrue();

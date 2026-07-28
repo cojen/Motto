@@ -22,6 +22,6 @@ package org.cojen.motto.model;
  * @author Brian S. O'Neill
  */
 // FIXME: sealed
-public interface YieldAction extends Action {
+public non-sealed interface YieldAction extends Action {
     public Binding result();
 }

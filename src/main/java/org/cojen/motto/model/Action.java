@@ -21,8 +21,10 @@ package org.cojen.motto.model;
  *
  * @author Brian S. O'Neill
  */
-// FIXME: sealed
-public interface Action {
+public sealed interface Action
+    permits ArrayAction, BranchAction, CallAction, CastAction, ConvertAction,
+            CopyAction, DeclarationAction, JumpAction, ThrowAction, TupleAction, YieldAction
+{
     /**
      * Returns the source code line for this action, or 0 if not applicable.
      */

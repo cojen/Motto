@@ -22,7 +22,7 @@ package org.cojen.motto.model;
  * @author Brian S. O'Neill
  */
 // FIXME: sealed
-public interface CastAction extends Action {
+public non-sealed interface CastAction extends Action {
     public Binding target();
 
     public Binding source();

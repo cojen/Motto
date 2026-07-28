@@ -22,6 +22,6 @@ package org.cojen.motto.model;
  * @author Brian S. O'Neill
  */
 // FIXME: sealed
-public interface JumpAction extends Action {
+public non-sealed interface JumpAction extends Action {
     public Block destination();
 }

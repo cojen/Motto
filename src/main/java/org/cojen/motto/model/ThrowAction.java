@@ -22,6 +22,6 @@ package org.cojen.motto.model;
  * @author Brian S. O'Neill
  */
 // FIXME: sealed
-public interface ThrowAction extends Action {
+public non-sealed interface ThrowAction extends Action {
     public Binding exception();
 }
