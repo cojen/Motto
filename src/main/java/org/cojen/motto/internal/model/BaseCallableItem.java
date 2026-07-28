@@ -21,21 +21,34 @@ import java.util.Objects;
 import org.cojen.maker.MethodMaker;
 
 import org.cojen.motto.model.CallableItem;
+import org.cojen.motto.model.Item;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public final class TheCallableItem extends BaseItem implements CallableItem {
+public sealed class BaseCallableItem extends BaseItem implements CallableItem {
+    public static BaseCallableItem from(int modifierBits, BaseClassTypeItem enclosingClass,
+                                        TheCallSignature signature)
+    {
+        return (modifierBits & Modifiers.MACRO) == 0
+            ? new BaseCallableItem(modifierBits, enclosingClass, signature)
+            : new BaseCallableItem.Macro(modifierBits, enclosingClass, signature);
+    }
+
     private final BaseClassTypeItem mEnclosingClass;
+    private final TheCallSignature mSignature;
 
     /**
      * @see Modifiers
      */
-    TheCallableItem(int modifierBits, BaseClassTypeItem enclosingClass) {
+    private BaseCallableItem(int modifierBits, BaseClassTypeItem enclosingClass,
+                             TheCallSignature signature)
+    {
         super(modifierBits);
         mEnclosingClass = Objects.requireNonNull(enclosingClass);
+        mSignature = Objects.requireNonNull(signature);
     }
 
     @Override
@@ -49,9 +62,21 @@ public final class TheCallableItem extends BaseItem implements CallableItem {
     }
 
     @Override
+    public final boolean isAccessibleVia(Item via) {
+        return super.isAccessibleVia(via)
+            && mSignature.outputType().isAccessibleVia(via)
+            && mSignature.inputType().isAccessibleVia(via);
+    }
+
     public TheCallSignature signature() {
-        // FIXME
-        throw null;
+        return mSignature;
+    }
+
+    /**
+     * @see CallSignature#forMacro
+     */
+    public TheCallSignature macroSignature() {
+        throw new UnsupportedOperationException();
     }
 
     void applyModifiers(MethodMaker mm) {
@@ -73,6 +98,25 @@ public final class TheCallableItem extends BaseItem implements CallableItem {
 
         if ((modifiers & Modifiers.BRIDGE) != 0) {
             mm.bridge();
+        }
+    }
+
+    public static final class Macro extends BaseCallableItem {
+        private final TheCallSignature mMacroSignature;
+
+        private Macro(int modifierBits, BaseClassTypeItem enclosingClass,
+                      TheCallSignature signature)
+        {
+            super(modifierBits, enclosingClass, signature);
+            mMacroSignature = signature.forMacro();
+        }
+
+        /**
+         * @see CallSignature#forMacro
+         */
+        @Override
+        public TheCallSignature macroSignature() {
+            return mMacroSignature;
         }
     }
 }

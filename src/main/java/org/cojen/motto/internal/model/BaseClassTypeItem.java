@@ -20,6 +20,7 @@ import java.lang.constant.ClassDesc;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 
@@ -32,6 +33,7 @@ import org.cojen.motto.model.CallSignature;
 import org.cojen.motto.model.ClassTypeItem;
 import org.cojen.motto.model.ObjectType;
 import org.cojen.motto.model.PrimitiveType;
+import org.cojen.motto.model.TupleType;
 import org.cojen.motto.model.Type;
 
 /**
@@ -51,13 +53,20 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     private Set<BaseClassTypeItem> mSuperInterfaces;
 
     private Map<String, TheFieldItem> mFieldMap;
-    private Map<String, Map<TheCallSignature, TheCallableItem>> mMethodMap;
-    private Map<String, BaseClassTypeItem> mInnerClassesMap;
+    private Map<String, Map<TheCallSignature, BaseCallableItem>> mMethodMap;
+    private Map<TheCallSignature, BaseCallableItem> mConstructorMap;
+    //private Map<String, BaseClassTypeItem> mInnerClassesMap;
 
     BaseClassTypeItem(int modifierBits, BasePath packagePath, BasePath namePath) {
         super(modifierBits);
+
         mPackagePath = Objects.requireNonNull(packagePath);
         mNamePath = Objects.requireNonNull(namePath);
+
+        mFieldMap = Map.of();
+        mMethodMap = Map.of();
+        mConstructorMap = Map.of();
+        //mInnerClassesMap = Map.of();
     }
 
     @Override
@@ -164,20 +173,21 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public int numFields() {
-        // FIXME
-        throw null;
+        return mFieldMap.size();
     }
 
     @Override
     public Stream<? extends TheFieldItem> fields() {
-        // FIXME
-        throw null;
+        return mFieldMap.values().stream();
     }
 
     @Override
     public TheFieldItem field(String name) {
-        // FIXME
-        throw null;
+        TheFieldItem field = mFieldMap.get(name);
+        if (field == null) {
+            throw new NoSuchElementException();
+        }
+        return field;
     }
 
     @Override
@@ -190,46 +200,167 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Attempt to add a field.
+     *
+     * @return null if a conflicting field definition already exists
+     */
+    public TheFieldItem tryAddField(int modifierBits, BaseType type, String name) {
+        var field = new TheFieldItem(modifierBits, this, type, name);
+
+        Map<String, TheFieldItem> map = mFieldMap;
+
+        if (map.isEmpty()) {
+            mFieldMap = map = new LinkedHashMap<>();
+            map.put(name, field);
+            return field;
+        } else {
+            return map.putIfAbsent(name, field) == null ? field : null;
+        }
+    }
+
     @Override
     public int numMethods() {
-        // FIXME
-        throw null;
+        return (int) methods().count();
     }
 
     @Override
-    public Stream<? extends TheCallableItem> methods() {
-        // FIXME
-        throw null;
+    public Stream<? extends BaseCallableItem> methods() {
+        return mMethodMap.values().stream().flatMap(byName -> byName.values().stream());
     }
 
     @Override
-    public Stream<? extends TheCallableItem> methods(String name) {
-        // FIXME
-        throw null;
+    public Stream<? extends BaseCallableItem> methods(String name) {
+        Map<TheCallSignature, BaseCallableItem> byName = mMethodMap.get(name);
+       return byName == null ? Stream.empty() : byName.values().stream();
     }
 
     @Override
-    public TheCallableItem method(CallSignature sig) {
-        // FIXME
-        throw null;
+    public BaseCallableItem method(CallSignature sig) {
+        Map<TheCallSignature, BaseCallableItem> byName = mMethodMap.get(sig.name());
+
+        if (byName == null) {
+            throw new NoSuchElementException();
+        }
+
+        sig = sig.noFieldNames();
+
+        BaseCallableItem item = byName.get(sig);
+
+        if (item != null && item.signature().noFieldNames().equals(sig)) {
+            return item;
+        }
+
+        // Try to find a matching instance method. The first input element must be "this", but
+        // it doesn't appear in the map keys.
+
+        TupleType inputType = sig.inputType();
+
+        if (inputType.numFields() == 0 || !inputType.fieldType(0).equals(this) ||
+            !(sig instanceof TheCallSignature baseSig))
+        {
+            throw new NoSuchElementException();
+        }
+
+        item = byName.get(baseSig.trimFirst());
+
+        if (item != null && !item.isStatic() && item.signature().noFieldNames().equals(sig)) {
+            return item;
+        }
+
+        throw new NoSuchElementException();
+    }
+
+    /**
+     * Attempt to add a method, which initially doesn't have any code.
+     *
+     * @return null if a conflicting method definition already exists
+     * @throws IllegalArgumentException if adding an instance method and the first
+     * parameter isn't named "this"
+     */
+    public final BaseCallableItem tryAddMethod(int modifierBits, BaseType outputType,
+                                               String name, BaseTupleType inputType)
+    {
+        var sig = TheCallSignature.from(outputType, name, inputType, true);
+
+        return tryAddMethod(modifierBits, sig);
+    }
+
+    /**
+     * Attempt to add a method, which initially doesn't have any code.
+     *
+     * @return null if a conflicting method definition already exists
+     * @throws IllegalArgumentException if adding an instance method and the first
+     * parameter isn't named "this"
+     */
+    public final BaseCallableItem tryAddMethod(int modifierBits, TheCallSignature sig) {
+        TheCallSignature key = sig.noFieldNames();
+
+        if ((modifierBits & Modifiers.STATIC) == 0) {
+            validateThis(sig.inputType());
+            key = key.trimFirst();
+        }
+
+        BaseCallableItem method = BaseCallableItem.from(modifierBits, this, sig);
+
+        Map<String, Map<TheCallSignature, BaseCallableItem>> map = mMethodMap;
+
+        if (map.isEmpty()) {
+            mMethodMap = map = new LinkedHashMap<>();
+        }
+
+        String name = sig.name();
+        Map<TheCallSignature, BaseCallableItem> byName = map.get(name);
+
+        if (byName == null) {
+            byName = new LinkedHashMap<>();
+            map.put(name, byName);
+        }
+
+        return byName.putIfAbsent(key, method) == null ? method : null;
     }
 
     @Override
     public int numConstructors() {
-        // FIXME
-        throw null;
+        return mConstructorMap.size();
     }
 
     @Override
-    public Stream<? extends TheCallableItem> constructors() {
-        // FIXME
-        throw null;
+    public Stream<? extends BaseCallableItem> constructors() {
+        return mConstructorMap.values().stream();
     }
 
     @Override
-    public TheCallableItem constructor(CallSignature sig) {
-        // FIXME
-        throw null;
+    public BaseCallableItem constructor(CallSignature sig) {
+        BaseCallableItem ctor = mConstructorMap.get(sig);
+        if (ctor == null) {
+            throw new NoSuchElementException();
+        }
+        return ctor;
+    }
+
+    /**
+     * Attempt to add a constructor, which initially doesn't have any code.
+     *
+     * @param inputType the first parameter must be named "this", with the correct type
+     * @return null if a conflicting constructor definition already exists
+     * @throws IllegalArgumentException the first parameter isn't named "this"
+     */
+    public final BaseCallableItem tryAddConstructor(int modifierBits, BaseTupleType inputType) {
+        var sig = TheCallSignature.from(TheVoidType.THE, "", validateThis(inputType), true);
+
+        var ctor = BaseCallableItem.from(modifierBits, this, sig);
+
+        Map<TheCallSignature, BaseCallableItem> map = mConstructorMap;
+        TheCallSignature key = sig.noFieldNames();
+
+        if (map.isEmpty()) {
+            mConstructorMap = map = new LinkedHashMap<>();
+            map.put(key, ctor);
+            return ctor;
+        } else {
+            return map.putIfAbsent(key, ctor) == null ? ctor : null;
+        }
     }
 
     @Override
@@ -328,5 +459,22 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     {
         mSuperType = superType;
         mSuperInterfaces = interfaces == null ? Set.of() : interfaces;
+
+    }
+
+    /**
+     * Validates that the first input element is a "this" parameter.
+     *
+     * @return the given inputType
+     * @throws IllegalArgumentException if the first input element isn't "this", of the same
+     * type as the this
+     */
+    private final BaseTupleType validateThis(BaseTupleType inputType) {
+        if (inputType.numFields() == 0 || !inputType.fieldType(0).equals(this) ||
+            !"this".equals(inputType.fieldName(0)))
+        {
+            throw new IllegalArgumentException();
+        }
+        return inputType;
     }
 }

@@ -16,13 +16,13 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.TheCallableItem;
+import org.cojen.motto.internal.model.BaseCallableItem;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface CallableItem extends Item permits TheCallableItem {
+public sealed interface CallableItem extends Item permits BaseCallableItem {
     public CallSignature signature();
 }

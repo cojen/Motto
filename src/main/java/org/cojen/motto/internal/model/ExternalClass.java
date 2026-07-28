@@ -118,19 +118,19 @@ public final class ExternalClass extends BaseClassTypeItem
     }
 
     @Override
-    public Stream<? extends TheCallableItem> methods() {
+    public Stream<? extends BaseCallableItem> methods() {
         load();
         return super.methods();
     }
 
     @Override
-    public Stream<? extends TheCallableItem> methods(String name) {
+    public Stream<? extends BaseCallableItem> methods(String name) {
         load();
         return super.methods(name);
     }
 
     @Override
-    public TheCallableItem method(CallSignature sig) {
+    public BaseCallableItem method(CallSignature sig) {
         load();
         return super.method(sig);
     }
@@ -142,13 +142,13 @@ public final class ExternalClass extends BaseClassTypeItem
     }
 
     @Override
-    public Stream<? extends TheCallableItem> constructors() {
+    public Stream<? extends BaseCallableItem> constructors() {
         load();
         return super.constructors();
     }
 
     @Override
-    public TheCallableItem constructor(CallSignature sig) {
+    public BaseCallableItem constructor(CallSignature sig) {
         load();
         return super.constructor(sig);
     }
@@ -210,7 +210,7 @@ public final class ExternalClass extends BaseClassTypeItem
         });
     }
 
-    private static Object[] makerParamsFor(TheCallableItem item, TheCallSignature sig,
+    private static Object[] makerParamsFor(BaseCallableItem item, TheCallSignature sig,
                                            ClassMaker cm)
     {
         BaseTupleType inputType = sig.inputType();
@@ -275,8 +275,7 @@ public final class ExternalClass extends BaseClassTypeItem
         for (FieldModel field : model.fields()) {
             BaseType fieldType = toType(field.fieldTypeSymbol());
             String fieldName = Maker.demangle(field.fieldName().stringValue());
-            // FIXME: tryAddField
-            //tryAddField(Modifiers.from(field), fieldType, fieldName);
+            tryAddField(Modifiers.from(field), fieldType, fieldName);
         }
 
         for (MethodModel method : model.methods()) {
@@ -298,16 +297,14 @@ public final class ExternalClass extends BaseClassTypeItem
             }
 
             if (mname.equals("<init>")) {
-                // FIXME: tryAddConstructor
-                //tryAddConstructor(modifierBits, params);
+                tryAddConstructor(modifierBits, params);
             } else {
                 // FIXME: Look for MacroMethod attribute. If found and is valid, update
                 // modifierBits before calling tryAddMethod. If tryAddMethod is successful,
                 // then call macroImpl.
                 BaseType returnType = toType(methodType.returnType());
                 mname = Maker.demangle(mname);
-                // FIXME: tryAddMethod
-                //tryAddMethod(modifierBits, returnType, mname, params);
+                tryAddMethod(modifierBits, returnType, mname, params);
             }
         }
 

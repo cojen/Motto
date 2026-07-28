@@ -81,7 +81,7 @@ public final class TheCallSignature implements CallSignature {
     private final int mFlags;
     private final TheClause[] mClauses;
 
-    private volatile TheCallSignature mNoFieldNames, mFlattened;
+    private volatile TheCallSignature mNoFieldNames, mFlattened, mTrimmed;
 
     private TheCallSignature(BaseType outputType, String name, BaseTupleType inputType,
                              int flags, TheClause... clauses)
@@ -291,6 +291,21 @@ public final class TheCallSignature implements CallSignature {
             list.add(existing);
             list.add(obj);
         }
+    }
+
+    /**
+     * Returns a signature with the first input element removed.
+     */
+    TheCallSignature trimFirst() {
+        TheCallSignature trimmed = mTrimmed;
+
+        if (trimmed == null) {
+            trimmed = new TheCallSignature
+                (mOutputType, mName, mInputType.trimFirst(), mFlags, mClauses);
+            mTrimmed = trimmed = InternSet.apply(trimmed);
+        }
+
+        return trimmed;
     }
 
     @Override
