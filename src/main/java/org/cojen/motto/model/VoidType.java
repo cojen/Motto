@@ -16,12 +16,12 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.TheVoidType;
+import org.cojen.motto.internal.model.BaseVoidType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface VoidType extends PrimitiveType permits TheVoidType {
+public sealed interface VoidType extends PrimitiveType permits BaseVoidType {
 }

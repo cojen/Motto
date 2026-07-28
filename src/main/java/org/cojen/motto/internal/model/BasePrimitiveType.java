@@ -28,8 +28,8 @@ import org.cojen.motto.model.Type;
  * @author Brian S. O'Neill
  */
 public abstract sealed class BasePrimitiveType implements BaseType, PrimitiveType
-    permits TheVoidType, TheBooleanType, TheCharType,
-            TheByteType, TheShortType, TheIntType, TheLongType, TheFloatType, TheDoubleType
+    permits BaseVoidType, BaseBooleanType, BaseCharType,
+        BaseByteType, BaseShortType, BaseIntType, BaseLongType, BaseFloatType, BaseDoubleType
 {
     @Override
     public final boolean isPrimitive() {
@@ -111,30 +111,30 @@ public abstract sealed class BasePrimitiveType implements BaseType, PrimitiveTyp
     public static BasePrimitiveType trySelectByName(String name) {
         return switch (name) {
             default -> null;
-            case "void"    -> TheVoidType.THE;
-            case "boolean" -> TheBooleanType.THE;
-            case "char"    -> TheCharType.THE;
-            case "byte"    -> TheByteType.THE;
-            case "short"   -> TheShortType.THE;
-            case "int"     -> TheIntType.THE;
-            case "long"    -> TheLongType.THE;
-            case "float"   -> TheFloatType.THE;
-            case "double"  -> TheDoubleType.THE;
+            case "void"    -> BaseVoidType.THE;
+            case "boolean" -> BaseBooleanType.THE;
+            case "char"    -> BaseCharType.THE;
+            case "byte"    -> BaseByteType.THE;
+            case "short"   -> BaseShortType.THE;
+            case "int"     -> BaseIntType.THE;
+            case "long"    -> BaseLongType.THE;
+            case "float"   -> BaseFloatType.THE;
+            case "double"  -> BaseDoubleType.THE;
         };
     }
 
     public static BasePrimitiveType trySelectByDescriptor(String desc) {
         return switch (desc) {
             default -> null;
-            case "V" -> TheVoidType.THE;
-            case "Z" -> TheBooleanType.THE;
-            case "C" -> TheCharType.THE;
-            case "B" -> TheByteType.THE;
-            case "S" -> TheShortType.THE;
-            case "I" -> TheIntType.THE;
-            case "J" -> TheLongType.THE;
-            case "F" -> TheFloatType.THE;
-            case "D" -> TheDoubleType.THE;
+            case "V" -> BaseVoidType.THE;
+            case "Z" -> BaseBooleanType.THE;
+            case "C" -> BaseCharType.THE;
+            case "B" -> BaseByteType.THE;
+            case "S" -> BaseShortType.THE;
+            case "I" -> BaseIntType.THE;
+            case "J" -> BaseLongType.THE;
+            case "F" -> BaseFloatType.THE;
+            case "D" -> BaseDoubleType.THE;
         };
     }
 }

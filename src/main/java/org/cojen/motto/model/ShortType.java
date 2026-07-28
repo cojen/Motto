@@ -16,12 +16,12 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.TheShortType;
+import org.cojen.motto.internal.model.BaseShortType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface ShortType extends PrimitiveType permits TheShortType {
+public sealed interface ShortType extends PrimitiveType permits BaseShortType {
 }

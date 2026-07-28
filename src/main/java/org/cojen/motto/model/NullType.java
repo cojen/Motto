@@ -16,12 +16,12 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.TheNullType;
+import org.cojen.motto.internal.model.BaseNullType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface NullType extends ObjectType permits TheNullType {
+public sealed interface NullType extends ObjectType permits BaseNullType {
 }

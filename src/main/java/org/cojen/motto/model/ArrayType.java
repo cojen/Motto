@@ -16,12 +16,12 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.TheArrayType;
+import org.cojen.motto.internal.model.BaseArrayType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface ArrayType extends ObjectType permits TheArrayType {
+public sealed interface ArrayType extends ObjectType permits BaseArrayType {
 }

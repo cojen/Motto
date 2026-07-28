@@ -27,7 +27,6 @@ import java.util.Optional;
 
 import java.util.stream.Stream;
 
-import org.cojen.motto.model.ArrayType;
 import org.cojen.motto.model.CallableItem;
 import org.cojen.motto.model.CallSignature;
 import org.cojen.motto.model.FieldItem;
@@ -45,7 +44,7 @@ import org.cojen.motto.internal.util.InternSet;
  * @author Brian S. O'Neill
  */
 public sealed interface BaseType extends Type, EncodableType
-    permits BaseObjectType, BasePrimitiveType, TheUnspecifiedType, GeneratedType
+    permits BaseObjectType, BasePrimitiveType, BaseUnspecifiedType, GeneratedType
 {
     public static BaseType from(Class<?> clazz) {
         if (clazz.isPrimitive()) {
@@ -139,8 +138,8 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
-    public default TheArrayType asArray() {
-        return TheArrayType.from(this);
+    public default BaseArrayType asArray() {
+        return BaseArrayType.from(this);
     }
 
     @Override

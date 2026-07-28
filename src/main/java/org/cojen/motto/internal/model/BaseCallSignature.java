@@ -34,7 +34,7 @@ import org.cojen.motto.internal.util.InternSet;
  *
  * @author Brian S. O'Neill
  */
-public final class TheCallSignature implements CallSignature {
+public final class BaseCallSignature implements CallSignature {
     // Masks for flags.
     private static final int REPETITION = 0b0011, EVALUATED = 0b0100;
 
@@ -44,8 +44,8 @@ public final class TheCallSignature implements CallSignature {
      * @param inputType required
      * @param evaluated true indicates a normal input type, false indicates a code block
      */
-    public static TheCallSignature from(BaseType outputType, String name, BaseTupleType inputType,
-                                        boolean evaluated)
+    public static BaseCallSignature from(BaseType outputType, String name, BaseTupleType inputType,
+                                         boolean evaluated)
     {
         return from(outputType, name, inputType, evaluated, (TheClause[]) null);
     }
@@ -56,9 +56,9 @@ public final class TheCallSignature implements CallSignature {
      * @param inputType required
      * @param evaluated true indicates a normal input type, false indicates a code block
      */
-    public static TheCallSignature from(BaseType outputType, String name, BaseTupleType inputType,
-                                        boolean evaluated,
-                                        TheClause... clauses)
+    public static BaseCallSignature from(BaseType outputType, String name, BaseTupleType inputType,
+                                         boolean evaluated,
+                                         TheClause... clauses)
     {
         int flags = 0;
 
@@ -71,7 +71,7 @@ public final class TheCallSignature implements CallSignature {
         }
 
         return InternSet.apply
-            (new TheCallSignature(Objects.requireNonNull(outputType), Objects.requireNonNull(name),
+            (new BaseCallSignature(Objects.requireNonNull(outputType), Objects.requireNonNull(name),
                                   Objects.requireNonNull(inputType), flags, clauses));
     }
 
@@ -81,10 +81,10 @@ public final class TheCallSignature implements CallSignature {
     private final int mFlags;
     private final TheClause[] mClauses;
 
-    private volatile TheCallSignature mNoFieldNames, mFlattened, mTrimmed;
+    private volatile BaseCallSignature mNoFieldNames, mFlattened, mTrimmed;
 
-    private TheCallSignature(BaseType outputType, String name, BaseTupleType inputType,
-                             int flags, TheClause... clauses)
+    private BaseCallSignature(BaseType outputType, String name, BaseTupleType inputType,
+                              int flags, TheClause... clauses)
     {
         mOutputType = outputType;
         mName = name;
@@ -132,8 +132,8 @@ public final class TheCallSignature implements CallSignature {
     }
 
     @Override
-    public TheCallSignature noFieldNames() {
-        TheCallSignature noFieldNames = mNoFieldNames;
+    public BaseCallSignature noFieldNames() {
+        BaseCallSignature noFieldNames = mNoFieldNames;
 
         if (noFieldNames == null) {
             TheClause[] clauses = mClauses;
@@ -151,7 +151,7 @@ public final class TheCallSignature implements CallSignature {
                 }
             }
 
-            noFieldNames = new TheCallSignature(mOutputType.noFieldNames(), mName,
+            noFieldNames = new BaseCallSignature(mOutputType.noFieldNames(), mName,
                                                 mInputType.noFieldNames(), mFlags,
                                                 clauses);
 
@@ -162,7 +162,7 @@ public final class TheCallSignature implements CallSignature {
     }
 
     @Override
-    public TheCallSignature forMacro() {
+    public BaseCallSignature forMacro() {
         BaseType bindingType = BaseType.from(Binding.class);
         BaseType blockType = BaseType.from(Block.class);
 
@@ -184,15 +184,15 @@ public final class TheCallSignature implements CallSignature {
             }
         }
 
-        var signature = new TheCallSignature
+        var signature = new BaseCallSignature
             (blockType, mName, inputType, mFlags | EVALUATED, clauses);
 
         return InternSet.apply(signature);
     }
 
     @Override
-    public TheCallSignature flatten() {
-        TheCallSignature flattened = mFlattened;
+    public BaseCallSignature flatten() {
+        BaseCallSignature flattened = mFlattened;
 
         if (flattened == null) {
             flattened = doFlatten();
@@ -206,7 +206,7 @@ public final class TheCallSignature implements CallSignature {
     }
 
     @SuppressWarnings("unchecked")
-    private TheCallSignature doFlatten() {
+    private BaseCallSignature doFlatten() {
         boolean evaluated = isInputEvaluated();
 
         if (evaluated && mClauses == null) {
@@ -228,7 +228,7 @@ public final class TheCallSignature implements CallSignature {
                 BaseType type = inputType.fieldType(i);
 
                 if (!isInputEvaluated()) {
-                    type = TheFunctionType.from(type, BaseTupleType.EMPTY);
+                    type = BaseFunctionType.from(type, BaseTupleType.EMPTY);
                 }
 
                 String name = inputType.fieldName(i);
@@ -296,11 +296,11 @@ public final class TheCallSignature implements CallSignature {
     /**
      * Returns a signature with the first input element removed.
      */
-    TheCallSignature trimFirst() {
-        TheCallSignature trimmed = mTrimmed;
+    BaseCallSignature trimFirst() {
+        BaseCallSignature trimmed = mTrimmed;
 
         if (trimmed == null) {
-            trimmed = new TheCallSignature
+            trimmed = new BaseCallSignature
                 (mOutputType, mName, mInputType.trimFirst(), mFlags, mClauses);
             mTrimmed = trimmed = InternSet.apply(trimmed);
         }
@@ -320,7 +320,7 @@ public final class TheCallSignature implements CallSignature {
 
     @Override
     public boolean equals(Object obj) {
-        return this == obj || obj instanceof TheCallSignature other
+        return this == obj || obj instanceof BaseCallSignature other
             && mFlags == other.mFlags
             && mName.equals(other.mName)
             && mOutputType.equals(other.mOutputType)
@@ -446,7 +446,7 @@ public final class TheCallSignature implements CallSignature {
                 var types = new BaseType[num];
                 for (int i=0; i<num; i++) {
                     BaseType type = inputTupleType.fieldType(i);
-                    types[i] = TheFunctionType.from(type, BaseTupleType.EMPTY);
+                    types[i] = BaseFunctionType.from(type, BaseTupleType.EMPTY);
                 }
                 inputTupleType = inputTupleType.withTypes(types);
             }
@@ -454,7 +454,7 @@ public final class TheCallSignature implements CallSignature {
             BaseType inputType = inputTupleType;
 
             if (hasRepetition()) {
-                inputType = TheArrayType.from(inputType);
+                inputType = BaseArrayType.from(inputType);
             }
 
             putElement(map, mName, inputType);

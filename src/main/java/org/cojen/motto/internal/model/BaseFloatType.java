@@ -19,22 +19,24 @@ package org.cojen.motto.internal.model;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 
-import org.cojen.motto.model.VoidType;
+import org.cojen.motto.model.DoubleType;
+import org.cojen.motto.model.FloatType;
+import org.cojen.motto.model.PrimitiveType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public final class TheVoidType extends BasePrimitiveType implements VoidType {
-    public static final TheVoidType THE = new TheVoidType();
+public final class BaseFloatType extends BasePrimitiveType implements FloatType {
+    public static final BaseFloatType THE = new BaseFloatType();
 
-    private TheVoidType() {
+    private BaseFloatType() {
     }
 
     @Override
     public StringBuilder appendDisplayNameTo(StringBuilder b) {
-        return b.append("void");
+        return b.append("float");
     }
 
     @Override
@@ -44,17 +46,30 @@ public final class TheVoidType extends BasePrimitiveType implements VoidType {
     }
 
     @Override
+    boolean isGenericBox(String className) {
+        return "Number".equals(className);
+    }
+
+    @Override
+    int convertCode(PrimitiveType to) {
+        return switch (to) {
+            case DoubleType _ -> 6;
+            default -> Integer.MAX_VALUE;
+        };
+    }
+
+    @Override
     public org.cojen.maker.Type asMakerType() {
-        return org.cojen.maker.Type.from(void.class);
+        return org.cojen.maker.Type.from(float.class);
     }
 
     @Override
     public ClassDesc asClassDesc() {
-        return ConstantDescs.CD_void;
+        return ConstantDescs.CD_float;
     }
 
     @Override
     public void encode(TypeEncoder encoder) {
-        encoder.encodeByte(EncodableType.T_VOID);
+        encoder.encodeByte(EncodableType.T_FLOAT);
     }
 }

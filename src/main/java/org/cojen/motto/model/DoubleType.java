@@ -16,12 +16,12 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.TheDoubleType;
+import org.cojen.motto.internal.model.BaseDoubleType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface DoubleType extends PrimitiveType permits TheDoubleType {
+public sealed interface DoubleType extends PrimitiveType permits BaseDoubleType {
 }

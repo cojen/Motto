@@ -16,12 +16,12 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.TheCharType;
+import org.cojen.motto.internal.model.BaseCharType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface CharType extends PrimitiveType permits TheCharType {
+public sealed interface CharType extends PrimitiveType permits BaseCharType {
 }

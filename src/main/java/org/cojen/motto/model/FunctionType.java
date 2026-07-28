@@ -16,14 +16,14 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.TheFunctionType;
+import org.cojen.motto.internal.model.BaseFunctionType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface FunctionType extends Type permits TheFunctionType {
+public sealed interface FunctionType extends Type permits BaseFunctionType {
     public Type outputType();
 
     public TupleType inputType();

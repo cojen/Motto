@@ -29,10 +29,10 @@ import org.cojen.motto.model.PrimitiveType;
  *
  * @author Brian S. O'Neill
  */
-public final class TheIntType extends BasePrimitiveType implements IntType {
-    public static final TheIntType THE = new TheIntType();
+public final class BaseIntType extends BasePrimitiveType implements IntType {
+    public static final BaseIntType THE = new BaseIntType();
 
-    private TheIntType() {
+    private BaseIntType() {
     }
 
     @Override

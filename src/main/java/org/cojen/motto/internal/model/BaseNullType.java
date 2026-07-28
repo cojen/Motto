@@ -26,10 +26,10 @@ import org.cojen.motto.model.Type;
  *
  * @author Brian S. O'Neill
  */
-public final class TheNullType implements BaseObjectType, NullType {
-    public static final TheNullType THE = new TheNullType();
+public final class BaseNullType implements BaseObjectType, NullType {
+    public static final BaseNullType THE = new BaseNullType();
 
-    private TheNullType() {
+    private BaseNullType() {
     }
 
     @Override

@@ -80,7 +80,7 @@ public final class NewClass extends BaseClassTypeItem {
     }
 
     @Override
-    public Stream<? extends TheFieldItem> fields() {
+    public Stream<? extends BaseFieldItem> fields() {
         try {
             waitUntilAvailable();
         } catch (InterruptedException e) {
@@ -91,7 +91,7 @@ public final class NewClass extends BaseClassTypeItem {
     }
 
     @Override
-    public TheFieldItem field(String name) {
+    public BaseFieldItem field(String name) {
         try {
             waitUntilAvailable();
         } catch (InterruptedException e) {

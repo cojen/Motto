@@ -16,12 +16,12 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.TheByteType;
+import org.cojen.motto.internal.model.BaseByteType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface ByteType extends PrimitiveType permits TheByteType {
+public sealed interface ByteType extends PrimitiveType permits BaseByteType {
 }

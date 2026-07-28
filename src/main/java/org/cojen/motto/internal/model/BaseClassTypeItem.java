@@ -52,9 +52,9 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     private BaseClassTypeItem mSuperType;
     private Set<BaseClassTypeItem> mSuperInterfaces;
 
-    private Map<String, TheFieldItem> mFieldMap;
-    private Map<String, Map<TheCallSignature, BaseCallableItem>> mMethodMap;
-    private Map<TheCallSignature, BaseCallableItem> mConstructorMap;
+    private Map<String, BaseFieldItem> mFieldMap;
+    private Map<String, Map<BaseCallSignature, BaseCallableItem>> mMethodMap;
+    private Map<BaseCallSignature, BaseCallableItem> mConstructorMap;
     //private Map<String, BaseClassTypeItem> mInnerClassesMap;
 
     BaseClassTypeItem(int modifierBits, BasePath packagePath, BasePath namePath) {
@@ -177,13 +177,13 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public Stream<? extends TheFieldItem> fields() {
+    public Stream<? extends BaseFieldItem> fields() {
         return mFieldMap.values().stream();
     }
 
     @Override
-    public TheFieldItem field(String name) {
-        TheFieldItem field = mFieldMap.get(name);
+    public BaseFieldItem field(String name) {
+        BaseFieldItem field = mFieldMap.get(name);
         if (field == null) {
             throw new NoSuchElementException();
         }
@@ -191,7 +191,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public final TheFieldItem field(int index) {
+    public final BaseFieldItem field(int index) {
         throw new UnsupportedOperationException();
     }
 
@@ -205,10 +205,10 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      *
      * @return null if a conflicting field definition already exists
      */
-    public TheFieldItem tryAddField(int modifierBits, BaseType type, String name) {
-        var field = new TheFieldItem(modifierBits, this, type, name);
+    public BaseFieldItem tryAddField(int modifierBits, BaseType type, String name) {
+        var field = new BaseFieldItem(modifierBits, this, type, name);
 
-        Map<String, TheFieldItem> map = mFieldMap;
+        Map<String, BaseFieldItem> map = mFieldMap;
 
         if (map.isEmpty()) {
             mFieldMap = map = new LinkedHashMap<>();
@@ -231,13 +231,13 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public Stream<? extends BaseCallableItem> methods(String name) {
-        Map<TheCallSignature, BaseCallableItem> byName = mMethodMap.get(name);
+        Map<BaseCallSignature, BaseCallableItem> byName = mMethodMap.get(name);
        return byName == null ? Stream.empty() : byName.values().stream();
     }
 
     @Override
     public BaseCallableItem method(CallSignature sig) {
-        Map<TheCallSignature, BaseCallableItem> byName = mMethodMap.get(sig.name());
+        Map<BaseCallSignature, BaseCallableItem> byName = mMethodMap.get(sig.name());
 
         if (byName == null) {
             throw new NoSuchElementException();
@@ -257,7 +257,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         TupleType inputType = sig.inputType();
 
         if (inputType.numFields() == 0 || !inputType.fieldType(0).equals(this) ||
-            !(sig instanceof TheCallSignature baseSig))
+            !(sig instanceof BaseCallSignature baseSig))
         {
             throw new NoSuchElementException();
         }
@@ -281,7 +281,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     public final BaseCallableItem tryAddMethod(int modifierBits, BaseType outputType,
                                                String name, BaseTupleType inputType)
     {
-        var sig = TheCallSignature.from(outputType, name, inputType, true);
+        var sig = BaseCallSignature.from(outputType, name, inputType, true);
 
         return tryAddMethod(modifierBits, sig);
     }
@@ -293,8 +293,8 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      * @throws IllegalArgumentException if adding an instance method and the first
      * parameter isn't named "this"
      */
-    public final BaseCallableItem tryAddMethod(int modifierBits, TheCallSignature sig) {
-        TheCallSignature key = sig.noFieldNames();
+    public final BaseCallableItem tryAddMethod(int modifierBits, BaseCallSignature sig) {
+        BaseCallSignature key = sig.noFieldNames();
 
         if ((modifierBits & Modifiers.STATIC) == 0) {
             validateThis(sig.inputType());
@@ -303,14 +303,14 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
         BaseCallableItem method = BaseCallableItem.from(modifierBits, this, sig);
 
-        Map<String, Map<TheCallSignature, BaseCallableItem>> map = mMethodMap;
+        Map<String, Map<BaseCallSignature, BaseCallableItem>> map = mMethodMap;
 
         if (map.isEmpty()) {
             mMethodMap = map = new LinkedHashMap<>();
         }
 
         String name = sig.name();
-        Map<TheCallSignature, BaseCallableItem> byName = map.get(name);
+        Map<BaseCallSignature, BaseCallableItem> byName = map.get(name);
 
         if (byName == null) {
             byName = new LinkedHashMap<>();
@@ -347,12 +347,12 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      * @throws IllegalArgumentException the first parameter isn't named "this"
      */
     public final BaseCallableItem tryAddConstructor(int modifierBits, BaseTupleType inputType) {
-        var sig = TheCallSignature.from(TheVoidType.THE, "", validateThis(inputType), true);
+        var sig = BaseCallSignature.from(BaseVoidType.THE, "", validateThis(inputType), true);
 
         var ctor = BaseCallableItem.from(modifierBits, this, sig);
 
-        Map<TheCallSignature, BaseCallableItem> map = mConstructorMap;
-        TheCallSignature key = sig.noFieldNames();
+        Map<BaseCallSignature, BaseCallableItem> map = mConstructorMap;
+        BaseCallSignature key = sig.noFieldNames();
 
         if (map.isEmpty()) {
             mConstructorMap = map = new LinkedHashMap<>();
@@ -382,15 +382,15 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
             BasePath namePath = namePath();
             if (namePath.size() == 1) {
                 return switch (namePath.getFirst()) {
-                    case "Void"      -> TheVoidType.THE;
-                    case "Boolean"   -> TheBooleanType.THE;
-                    case "Character" -> TheCharType.THE;
-                    case "Byte"      -> TheByteType.THE;
-                    case "Short"     -> TheShortType.THE;
-                    case "Integer"   -> TheIntType.THE;
-                    case "Long"      -> TheLongType.THE;
-                    case "Float"     -> TheFloatType.THE;
-                    case "Double"    -> TheDoubleType.THE;
+                    case "Void"      -> BaseVoidType.THE;
+                    case "Boolean"   -> BaseBooleanType.THE;
+                    case "Character" -> BaseCharType.THE;
+                    case "Byte"      -> BaseByteType.THE;
+                    case "Short"     -> BaseShortType.THE;
+                    case "Integer"   -> BaseIntType.THE;
+                    case "Long"      -> BaseLongType.THE;
+                    case "Float"     -> BaseFloatType.THE;
+                    case "Double"    -> BaseDoubleType.THE;
                     default -> null;
                 };
             }

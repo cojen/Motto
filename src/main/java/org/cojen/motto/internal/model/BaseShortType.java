@@ -19,22 +19,27 @@ package org.cojen.motto.internal.model;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 
-import org.cojen.motto.model.BooleanType;
+import org.cojen.motto.model.DoubleType;
+import org.cojen.motto.model.FloatType;
+import org.cojen.motto.model.IntType;
+import org.cojen.motto.model.LongType;
+import org.cojen.motto.model.PrimitiveType;
+import org.cojen.motto.model.ShortType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public final class TheBooleanType extends BasePrimitiveType implements BooleanType {
-    public static final TheBooleanType THE = new TheBooleanType();
+public final class BaseShortType extends BasePrimitiveType implements ShortType {
+    public static final BaseShortType THE = new BaseShortType();
 
-    private TheBooleanType() {
+    private BaseShortType() {
     }
 
     @Override
     public StringBuilder appendDisplayNameTo(StringBuilder b) {
-        return b.append("boolean");
+        return b.append("short");
     }
 
     @Override
@@ -44,17 +49,33 @@ public final class TheBooleanType extends BasePrimitiveType implements BooleanTy
     }
 
     @Override
+    boolean isGenericBox(String className) {
+        return "Number".equals(className);
+    }
+
+    @Override
+    int convertCode(PrimitiveType to) {
+        return switch (to) {
+            case    IntType _ -> 2;
+            case   LongType _ -> 3;
+            case  FloatType _ -> 4;
+            case DoubleType _ -> 5;
+            default -> Integer.MAX_VALUE;
+        };
+    }
+
+    @Override
     public org.cojen.maker.Type asMakerType() {
-        return org.cojen.maker.Type.from(boolean.class);
+        return org.cojen.maker.Type.from(short.class);
     }
 
     @Override
     public ClassDesc asClassDesc() {
-        return ConstantDescs.CD_boolean;
+        return ConstantDescs.CD_short;
     }
 
     @Override
     public void encode(TypeEncoder encoder) {
-        encoder.encodeByte(EncodableType.T_BOOLEAN);
+        encoder.encodeByte(EncodableType.T_SHORT);
     }
 }

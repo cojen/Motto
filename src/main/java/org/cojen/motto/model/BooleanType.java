@@ -16,12 +16,12 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.TheBooleanType;
+import org.cojen.motto.internal.model.BaseBooleanType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface BooleanType extends PrimitiveType permits TheBooleanType {
+public sealed interface BooleanType extends PrimitiveType permits BaseBooleanType {
 }

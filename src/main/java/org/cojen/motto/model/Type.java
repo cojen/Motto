@@ -24,18 +24,18 @@ import java.util.stream.Stream;
 
 import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
-import org.cojen.motto.internal.model.TheBooleanType;
-import org.cojen.motto.internal.model.TheByteType;
-import org.cojen.motto.internal.model.TheCharType;
-import org.cojen.motto.internal.model.TheDoubleType;
-import org.cojen.motto.internal.model.TheFloatType;
-import org.cojen.motto.internal.model.TheFunctionType;
-import org.cojen.motto.internal.model.TheIntType;
-import org.cojen.motto.internal.model.TheLongType;
-import org.cojen.motto.internal.model.TheNullType;
-import org.cojen.motto.internal.model.TheShortType;
-import org.cojen.motto.internal.model.TheUnspecifiedType;
-import org.cojen.motto.internal.model.TheVoidType;
+import org.cojen.motto.internal.model.BaseBooleanType;
+import org.cojen.motto.internal.model.BaseByteType;
+import org.cojen.motto.internal.model.BaseCharType;
+import org.cojen.motto.internal.model.BaseDoubleType;
+import org.cojen.motto.internal.model.BaseFloatType;
+import org.cojen.motto.internal.model.BaseFunctionType;
+import org.cojen.motto.internal.model.BaseIntType;
+import org.cojen.motto.internal.model.BaseLongType;
+import org.cojen.motto.internal.model.BaseNullType;
+import org.cojen.motto.internal.model.BaseShortType;
+import org.cojen.motto.internal.model.BaseUnspecifiedType;
+import org.cojen.motto.internal.model.BaseVoidType;
 
 /**
  * 
@@ -46,47 +46,47 @@ public sealed interface Type extends Constable
     permits BaseType, UnspecifiedType, PrimitiveType, ObjectType, FunctionType
 {
     public static UnspecifiedType unspecified() {
-        return TheUnspecifiedType.THE;
+        return BaseUnspecifiedType.THE;
     }
 
     public static VoidType void_() {
-        return TheVoidType.THE;
+        return BaseVoidType.THE;
     }
 
     public static BooleanType boolean_() {
-        return TheBooleanType.THE;
+        return BaseBooleanType.THE;
     }
 
     public static CharType char_() {
-        return TheCharType.THE;
+        return BaseCharType.THE;
     }
 
     public static ByteType byte_() {
-        return TheByteType.THE;
+        return BaseByteType.THE;
     }
 
     public static ShortType short_() {
-        return TheShortType.THE;
+        return BaseShortType.THE;
     }
 
     public static IntType int_() {
-        return TheIntType.THE;
+        return BaseIntType.THE;
     }
 
     public static LongType long_() {
-        return TheLongType.THE;
+        return BaseLongType.THE;
     }
 
     public static FloatType float_() {
-        return TheFloatType.THE;
+        return BaseFloatType.THE;
     }
 
     public static DoubleType double_() {
-        return TheDoubleType.THE;
+        return BaseDoubleType.THE;
     }
 
     public static NullType null_() {
-        return TheNullType.THE;
+        return BaseNullType.THE;
     }
 
     /**
@@ -124,7 +124,7 @@ public sealed interface Type extends Constable
      * @throws NullPointerException if any given types are null
      */
     public static FunctionType function(Type outputType, TupleType inputType) {
-        return TheFunctionType.from((BaseType) outputType, (BaseTupleType) inputType);
+        return BaseFunctionType.from((BaseType) outputType, (BaseTupleType) inputType);
     }
 
     /**

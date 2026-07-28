@@ -24,7 +24,7 @@ import org.cojen.motto.model.ObjectType;
  * @author Brian S. O'Neill
  */
 public sealed interface BaseObjectType extends BaseType, ObjectType
-    permits BaseClassTypeItem, TheNullType, TheArrayType, BaseTupleType
+    permits BaseClassTypeItem, BaseNullType, BaseArrayType, BaseTupleType
 {
     @Override
     public default boolean isPrimitive() {

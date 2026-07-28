@@ -19,27 +19,22 @@ package org.cojen.motto.internal.model;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 
-import org.cojen.motto.model.CharType;
-import org.cojen.motto.model.DoubleType;
-import org.cojen.motto.model.FloatType;
-import org.cojen.motto.model.IntType;
-import org.cojen.motto.model.LongType;
-import org.cojen.motto.model.PrimitiveType;
+import org.cojen.motto.model.VoidType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public final class TheCharType extends BasePrimitiveType implements CharType {
-    public static final TheCharType THE = new TheCharType();
+public final class BaseVoidType extends BasePrimitiveType implements VoidType {
+    public static final BaseVoidType THE = new BaseVoidType();
 
-    private TheCharType() {
+    private BaseVoidType() {
     }
 
     @Override
     public StringBuilder appendDisplayNameTo(StringBuilder b) {
-        return b.append("char");
+        return b.append("void");
     }
 
     @Override
@@ -49,28 +44,17 @@ public final class TheCharType extends BasePrimitiveType implements CharType {
     }
 
     @Override
-    int convertCode(PrimitiveType to) {
-        return switch (to) {
-            case    IntType _ -> 2;
-            case   LongType _ -> 3;
-            case  FloatType _ -> 4;
-            case DoubleType _ -> 5;
-            default -> Integer.MAX_VALUE;
-        };
-    }
-
-    @Override
     public org.cojen.maker.Type asMakerType() {
-        return org.cojen.maker.Type.from(char.class);
+        return org.cojen.maker.Type.from(void.class);
     }
 
     @Override
     public ClassDesc asClassDesc() {
-        return ConstantDescs.CD_char;
+        return ConstantDescs.CD_void;
     }
 
     @Override
     public void encode(TypeEncoder encoder) {
-        encoder.encodeByte(EncodableType.T_CHAR);
+        encoder.encodeByte(EncodableType.T_VOID);
     }
 }

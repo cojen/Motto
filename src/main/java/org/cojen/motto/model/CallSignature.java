@@ -16,14 +16,14 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.TheCallSignature;
+import org.cojen.motto.internal.model.BaseCallSignature;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface CallSignature permits TheCallSignature {
+public sealed interface CallSignature permits BaseCallSignature {
     public Type outputType();
 
     public String name();
@@ -73,7 +73,7 @@ public sealed interface CallSignature permits TheCallSignature {
      */
     public CallSignature flatten();
 
-    public static sealed interface Clause permits TheCallSignature.TheClause {
+    public static sealed interface Clause permits BaseCallSignature.TheClause {
         public boolean isRequired();
 
         public boolean hasRepetition();

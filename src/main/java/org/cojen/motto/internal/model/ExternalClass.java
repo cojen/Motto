@@ -16,7 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.classfile.Attributes;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.FieldModel;
@@ -100,13 +99,13 @@ public final class ExternalClass extends BaseClassTypeItem
     }
 
     @Override
-    public Stream<? extends TheFieldItem> fields() {
+    public Stream<? extends BaseFieldItem> fields() {
         load();
         return super.fields();
     }
 
     @Override
-    public TheFieldItem field(String name) {
+    public BaseFieldItem field(String name) {
         load();
         return super.field(name);
     }
@@ -187,7 +186,7 @@ public final class ExternalClass extends BaseClassTypeItem
             MethodMaker mm;
 
             if (!method.isMacro()) {
-                TheCallSignature flattened = method.signature().flatten();
+                BaseCallSignature flattened = method.signature().flatten();
                 Object[] paramTypes = makerParamsFor(method, flattened, cm);
 
                 // FIXME: might have conflicts
@@ -210,7 +209,7 @@ public final class ExternalClass extends BaseClassTypeItem
         });
     }
 
-    private static Object[] makerParamsFor(BaseCallableItem item, TheCallSignature sig,
+    private static Object[] makerParamsFor(BaseCallableItem item, BaseCallSignature sig,
                                            ClassMaker cm)
     {
         BaseTupleType inputType = sig.inputType();

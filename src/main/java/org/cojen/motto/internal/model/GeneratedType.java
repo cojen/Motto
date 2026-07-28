@@ -22,7 +22,7 @@ package org.cojen.motto.internal.model;
  * @author Brian S. O'Neill
  */
 abstract sealed class GeneratedType implements BaseType, EncodableType
-    permits BaseTupleType, TheFunctionType
+    permits BaseTupleType, BaseFunctionType
 {
     private volatile String mGeneratedName;
     private volatile org.cojen.maker.Type mMakerType;

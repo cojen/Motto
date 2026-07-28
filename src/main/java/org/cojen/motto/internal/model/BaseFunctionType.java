@@ -29,19 +29,19 @@ import org.cojen.motto.internal.util.InternSet;
  *
  * @author Brian S. O'Neill
  */
-public final class TheFunctionType extends GeneratedType
+public final class BaseFunctionType extends GeneratedType
     implements FunctionType, EncodableType.FunctionT
 {
-    public static TheFunctionType from(BaseType outputType, BaseTupleType inputType) {
-        return InternSet.apply(new TheFunctionType(outputType, inputType));
+    public static BaseFunctionType from(BaseType outputType, BaseTupleType inputType) {
+        return InternSet.apply(new BaseFunctionType(outputType, inputType));
     }
 
     private final BaseType mOutputType;
     private final BaseTupleType mInputType;
 
-    private volatile TheFunctionType mNoFieldNames;
+    private volatile BaseFunctionType mNoFieldNames;
 
-    private TheFunctionType(BaseType outputType, BaseTupleType inputType) {
+    private BaseFunctionType(BaseType outputType, BaseTupleType inputType) {
         mOutputType = Objects.requireNonNull(outputType);
         mInputType = Objects.requireNonNull(inputType);
     }
@@ -74,8 +74,8 @@ public final class TheFunctionType extends GeneratedType
     }
 
     @Override
-    public TheFunctionType noFieldNames() {
-        TheFunctionType noFieldNames = mNoFieldNames;
+    public BaseFunctionType noFieldNames() {
+        BaseFunctionType noFieldNames = mNoFieldNames;
 
         if (noFieldNames == null) {
             noFieldNames = from(mOutputType.noFieldNames(), mInputType.noFieldNames());
@@ -88,7 +88,7 @@ public final class TheFunctionType extends GeneratedType
     @Override
     public boolean isAssignableFrom(Type other) {
         return super.isAssignableFrom(other)
-            || (other instanceof TheFunctionType oft
+            || (other instanceof BaseFunctionType oft
                 && mInputType.isAssignableFrom(oft.mInputType)
                 && mOutputType.isAssignableFrom(oft.mOutputType));
     }

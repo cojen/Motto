@@ -25,10 +25,10 @@ import org.cojen.motto.model.UnspecifiedType;
  *
  * @author Brian S. O'Neill
  */
-public final class TheUnspecifiedType implements BaseType, UnspecifiedType {
-    public static final TheUnspecifiedType THE = new TheUnspecifiedType();
+public final class BaseUnspecifiedType implements BaseType, UnspecifiedType {
+    public static final BaseUnspecifiedType THE = new BaseUnspecifiedType();
 
-    private TheUnspecifiedType() {
+    private BaseUnspecifiedType() {
     }
 
     @Override

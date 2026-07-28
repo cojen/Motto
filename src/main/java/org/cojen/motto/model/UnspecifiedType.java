@@ -16,12 +16,12 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.TheUnspecifiedType;
+import org.cojen.motto.internal.model.BaseUnspecifiedType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface UnspecifiedType extends Type permits TheUnspecifiedType {
+public sealed interface UnspecifiedType extends Type permits BaseUnspecifiedType {
 }

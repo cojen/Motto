@@ -16,8 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.constant.ClassDesc;
-
 import java.util.Objects;
 
 import org.cojen.motto.model.ArrayType;
@@ -31,16 +29,16 @@ import org.cojen.motto.internal.util.InternSet;
  *
  * @author Brian S. O'Neill
  */
-public final class TheArrayType implements BaseObjectType, ArrayType, EncodableType.ArrayT {
-    public static TheArrayType from(BaseType elementType) {
-        return InternSet.apply(new TheArrayType(Objects.requireNonNull(elementType)));
+public final class BaseArrayType implements BaseObjectType, ArrayType, EncodableType.ArrayT {
+    public static BaseArrayType from(BaseType elementType) {
+        return InternSet.apply(new BaseArrayType(Objects.requireNonNull(elementType)));
     }
 
     private final BaseType mElementType;
 
-    private volatile TheArrayType mNoFieldNames;
+    private volatile BaseArrayType mNoFieldNames;
 
-    TheArrayType(BaseType elementType) {
+    BaseArrayType(BaseType elementType) {
         mElementType = elementType;
     }
 
@@ -65,8 +63,8 @@ public final class TheArrayType implements BaseObjectType, ArrayType, EncodableT
     }
 
     @Override
-    public TheArrayType noFieldNames() {
-        TheArrayType noFieldNames = mNoFieldNames;
+    public BaseArrayType noFieldNames() {
+        BaseArrayType noFieldNames = mNoFieldNames;
 
         if (noFieldNames == null) {
             BaseType noFieldNamesElement = mElementType.noFieldNames();
@@ -74,7 +72,7 @@ public final class TheArrayType implements BaseObjectType, ArrayType, EncodableT
             if (noFieldNamesElement.equals(mElementType)) {
                 noFieldNames = this;
             } else {
-                noFieldNames = InternSet.apply(new TheArrayType(noFieldNamesElement));
+                noFieldNames = InternSet.apply(new BaseArrayType(noFieldNamesElement));
             }
 
             mNoFieldNames = noFieldNames;
@@ -122,7 +120,7 @@ public final class TheArrayType implements BaseObjectType, ArrayType, EncodableT
 
     @Override
     public boolean equals(Object obj) {
-        return this == obj || obj instanceof TheArrayType other
+        return this == obj || obj instanceof BaseArrayType other
             && mElementType.equals(other.mElementType);
     }
 }

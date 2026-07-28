@@ -16,12 +16,12 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.TheIntType;
+import org.cojen.motto.internal.model.BaseIntType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface IntType extends PrimitiveType permits TheIntType {
+public sealed interface IntType extends PrimitiveType permits BaseIntType {
 }

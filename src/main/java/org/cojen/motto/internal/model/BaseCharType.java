@@ -19,8 +19,11 @@ package org.cojen.motto.internal.model;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 
+import org.cojen.motto.model.CharType;
 import org.cojen.motto.model.DoubleType;
 import org.cojen.motto.model.FloatType;
+import org.cojen.motto.model.IntType;
+import org.cojen.motto.model.LongType;
 import org.cojen.motto.model.PrimitiveType;
 
 /**
@@ -28,15 +31,15 @@ import org.cojen.motto.model.PrimitiveType;
  *
  * @author Brian S. O'Neill
  */
-public final class TheFloatType extends BasePrimitiveType implements FloatType {
-    public static final TheFloatType THE = new TheFloatType();
+public final class BaseCharType extends BasePrimitiveType implements CharType {
+    public static final BaseCharType THE = new BaseCharType();
 
-    private TheFloatType() {
+    private BaseCharType() {
     }
 
     @Override
     public StringBuilder appendDisplayNameTo(StringBuilder b) {
-        return b.append("float");
+        return b.append("char");
     }
 
     @Override
@@ -46,30 +49,28 @@ public final class TheFloatType extends BasePrimitiveType implements FloatType {
     }
 
     @Override
-    boolean isGenericBox(String className) {
-        return "Number".equals(className);
-    }
-
-    @Override
     int convertCode(PrimitiveType to) {
         return switch (to) {
-            case DoubleType _ -> 6;
+            case    IntType _ -> 2;
+            case   LongType _ -> 3;
+            case  FloatType _ -> 4;
+            case DoubleType _ -> 5;
             default -> Integer.MAX_VALUE;
         };
     }
 
     @Override
     public org.cojen.maker.Type asMakerType() {
-        return org.cojen.maker.Type.from(float.class);
+        return org.cojen.maker.Type.from(char.class);
     }
 
     @Override
     public ClassDesc asClassDesc() {
-        return ConstantDescs.CD_float;
+        return ConstantDescs.CD_char;
     }
 
     @Override
     public void encode(TypeEncoder encoder) {
-        encoder.encodeByte(EncodableType.T_FLOAT);
+        encoder.encodeByte(EncodableType.T_CHAR);
     }
 }

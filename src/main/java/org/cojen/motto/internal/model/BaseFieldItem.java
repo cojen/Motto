@@ -27,7 +27,7 @@ import org.cojen.motto.model.FieldItem;
  *
  * @author Brian S. O'Neill
  */
-public final class TheFieldItem extends BaseItem implements FieldItem {
+public final class BaseFieldItem extends BaseItem implements FieldItem {
     private final BaseClassTypeItem mEnclosingClass;
     private final BaseType mType;
     private final String mName;
@@ -35,7 +35,7 @@ public final class TheFieldItem extends BaseItem implements FieldItem {
     /**
      * @see Modifiers
      */
-    TheFieldItem(int modifierBits, BaseClassTypeItem enclosingClass, BaseType type, String name) {
+    BaseFieldItem(int modifierBits, BaseClassTypeItem enclosingClass, BaseType type, String name) {
         super(modifierBits);
         mEnclosingClass = Objects.requireNonNull(enclosingClass);
         mType = Objects.requireNonNull(type);

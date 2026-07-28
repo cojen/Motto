@@ -30,7 +30,7 @@ import org.cojen.motto.model.Item;
  */
 public sealed class BaseCallableItem extends BaseItem implements CallableItem {
     public static BaseCallableItem from(int modifierBits, BaseClassTypeItem enclosingClass,
-                                        TheCallSignature signature)
+                                        BaseCallSignature signature)
     {
         return (modifierBits & Modifiers.MACRO) == 0
             ? new BaseCallableItem(modifierBits, enclosingClass, signature)
@@ -38,13 +38,13 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
     }
 
     private final BaseClassTypeItem mEnclosingClass;
-    private final TheCallSignature mSignature;
+    private final BaseCallSignature mSignature;
 
     /**
      * @see Modifiers
      */
     private BaseCallableItem(int modifierBits, BaseClassTypeItem enclosingClass,
-                             TheCallSignature signature)
+                             BaseCallSignature signature)
     {
         super(modifierBits);
         mEnclosingClass = Objects.requireNonNull(enclosingClass);
@@ -68,14 +68,14 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
             && mSignature.inputType().isAccessibleVia(via);
     }
 
-    public TheCallSignature signature() {
+    public BaseCallSignature signature() {
         return mSignature;
     }
 
     /**
      * @see CallSignature#forMacro
      */
-    public TheCallSignature macroSignature() {
+    public BaseCallSignature macroSignature() {
         throw new UnsupportedOperationException();
     }
 
@@ -102,10 +102,10 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
     }
 
     public static final class Macro extends BaseCallableItem {
-        private final TheCallSignature mMacroSignature;
+        private final BaseCallSignature mMacroSignature;
 
         private Macro(int modifierBits, BaseClassTypeItem enclosingClass,
-                      TheCallSignature signature)
+                      BaseCallSignature signature)
         {
             super(modifierBits, enclosingClass, signature);
             mMacroSignature = signature.forMacro();
@@ -115,7 +115,7 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
          * @see CallSignature#forMacro
          */
         @Override
-        public TheCallSignature macroSignature() {
+        public BaseCallSignature macroSignature() {
             return mMacroSignature;
         }
     }

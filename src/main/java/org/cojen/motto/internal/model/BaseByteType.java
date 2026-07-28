@@ -32,10 +32,10 @@ import org.cojen.motto.model.ShortType;
  *
  * @author Brian S. O'Neill
  */
-public final class TheByteType extends BasePrimitiveType implements ByteType {
-    public static final TheByteType THE = new TheByteType();
+public final class BaseByteType extends BasePrimitiveType implements ByteType {
+    public static final BaseByteType THE = new BaseByteType();
 
-    private TheByteType() {
+    private BaseByteType() {
     }
 
     @Override

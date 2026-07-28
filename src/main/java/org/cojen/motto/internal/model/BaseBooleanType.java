@@ -19,27 +19,22 @@ package org.cojen.motto.internal.model;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 
-import org.cojen.motto.model.DoubleType;
-import org.cojen.motto.model.FloatType;
-import org.cojen.motto.model.IntType;
-import org.cojen.motto.model.LongType;
-import org.cojen.motto.model.PrimitiveType;
-import org.cojen.motto.model.ShortType;
+import org.cojen.motto.model.BooleanType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public final class TheShortType extends BasePrimitiveType implements ShortType {
-    public static final TheShortType THE = new TheShortType();
+public final class BaseBooleanType extends BasePrimitiveType implements BooleanType {
+    public static final BaseBooleanType THE = new BaseBooleanType();
 
-    private TheShortType() {
+    private BaseBooleanType() {
     }
 
     @Override
     public StringBuilder appendDisplayNameTo(StringBuilder b) {
-        return b.append("short");
+        return b.append("boolean");
     }
 
     @Override
@@ -49,33 +44,17 @@ public final class TheShortType extends BasePrimitiveType implements ShortType {
     }
 
     @Override
-    boolean isGenericBox(String className) {
-        return "Number".equals(className);
-    }
-
-    @Override
-    int convertCode(PrimitiveType to) {
-        return switch (to) {
-            case    IntType _ -> 2;
-            case   LongType _ -> 3;
-            case  FloatType _ -> 4;
-            case DoubleType _ -> 5;
-            default -> Integer.MAX_VALUE;
-        };
-    }
-
-    @Override
     public org.cojen.maker.Type asMakerType() {
-        return org.cojen.maker.Type.from(short.class);
+        return org.cojen.maker.Type.from(boolean.class);
     }
 
     @Override
     public ClassDesc asClassDesc() {
-        return ConstantDescs.CD_short;
+        return ConstantDescs.CD_boolean;
     }
 
     @Override
     public void encode(TypeEncoder encoder) {
-        encoder.encodeByte(EncodableType.T_SHORT);
+        encoder.encodeByte(EncodableType.T_BOOLEAN);
     }
 }

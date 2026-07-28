@@ -19,22 +19,22 @@ package org.cojen.motto.internal.model;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 
-import org.cojen.motto.model.LongType;
+import org.cojen.motto.model.DoubleType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public final class TheLongType extends BasePrimitiveType implements LongType {
-    public static final TheLongType THE = new TheLongType();
+public final class BaseDoubleType extends BasePrimitiveType implements DoubleType {
+    public static final BaseDoubleType THE = new BaseDoubleType();
 
-    private TheLongType() {
+    private BaseDoubleType() {
     }
 
     @Override
     public StringBuilder appendDisplayNameTo(StringBuilder b) {
-        return b.append("long");
+        return b.append("double");
     }
 
     @Override
@@ -50,16 +50,16 @@ public final class TheLongType extends BasePrimitiveType implements LongType {
 
     @Override
     public org.cojen.maker.Type asMakerType() {
-        return org.cojen.maker.Type.from(long.class);
+        return org.cojen.maker.Type.from(double.class);
     }
 
     @Override
     public ClassDesc asClassDesc() {
-        return ConstantDescs.CD_long;
+        return ConstantDescs.CD_double;
     }
 
     @Override
     public void encode(TypeEncoder encoder) {
-        encoder.encodeByte(EncodableType.T_LONG);
+        encoder.encodeByte(EncodableType.T_DOUBLE);
     }
 }
