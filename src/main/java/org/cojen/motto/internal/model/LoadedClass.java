@@ -20,18 +20,27 @@ import java.util.Set;
 
 import java.util.stream.Stream;
 
+import org.cojen.motto.internal.util.InternSet;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
 public final class LoadedClass extends BaseClassTypeItem {
+    public static BaseType from(Class<?> clazz) {
+        if (clazz.isPrimitive()) {
+            return BasePrimitiveType.trySelectByDescriptor(clazz.descriptorString());
+        } else if (clazz.isArray()) {
+            return from(clazz.getComponentType()).asArray();
+        } else {
+            return InternSet.apply(new LoadedClass(clazz));
+        }
+    }
+
     private final Class<?> mClass;
 
-    /**
-     * Note: Don't construct directly. Use BaseType.from instead.
-     */
-    LoadedClass(Class<?> clazz) {
+    private LoadedClass(Class<?> clazz) {
         int modifierBits = Modifiers.from(clazz);
         BasePath packagePath = BasePath.parse(clazz.getPackageName(), '.');
         BasePath namePath = namePath(clazz);

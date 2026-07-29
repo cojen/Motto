@@ -36,8 +36,6 @@ import org.cojen.motto.model.Type;
 
 import org.cojen.motto.runtime.ConstantBootstraps;
 
-import org.cojen.motto.internal.util.InternSet;
-
 /**
  * 
  *
@@ -47,13 +45,7 @@ public sealed interface BaseType extends Type, EncodableType
     permits BaseObjectType, BasePrimitiveType, BaseUnspecifiedType, GeneratedType
 {
     public static BaseType from(Class<?> clazz) {
-        if (clazz.isPrimitive()) {
-            return BasePrimitiveType.trySelectByDescriptor(clazz.descriptorString());
-        } else if (clazz.isArray()) {
-            return from(clazz.getComponentType()).asArray();
-        } else {
-            return InternSet.apply(new LoadedClass(clazz));
-        }
+        return LoadedClass.from(clazz);
     }
 
     @Override
