@@ -322,31 +322,13 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     public static abstract sealed class Local extends BaseBinding {
-        /**
-         * @param name optional
-         */
-        public static Local from(BaseType type, int index, String name) {
-            Local local;
-
-            if (name == null) {
-                local = new Unnamed(type, index);
-            } else {
-                local = new Named(type, index, name);
-            }
-
-            return InternSet.apply(local);
-        }
-
         final BaseType mType;
-        int mIndex;
 
-        Local(BaseType type, int index) {
-            if (index < 0) {
-                throw new IllegalArgumentException();
-            }
-
+        /**
+         * @param type required
+         */
+        Local(BaseType type) {
             mType = Objects.requireNonNull(type);
-            mIndex = index;
         }
 
         @Override
@@ -354,8 +336,11 @@ public abstract sealed class BaseBinding implements Binding {
             return mType;
         }
 
-        public final int index() {
-            return mIndex;
+        /**
+         * @return -1 if not applicable
+         */
+        public int index() {
+            return -1;
         }
 
         /**
@@ -366,78 +351,99 @@ public abstract sealed class BaseBinding implements Binding {
         }
     }
 
-    public static final class Named extends Local {
-        public static Named from(BaseType type, int index, String name) {
-            return InternSet.apply(new Named(type, index, Objects.requireNonNull(name)));
+    public static sealed class Named extends Local {
+        /**
+         * Returns a shared instance (by type and name).
+         *
+         * @param type required
+         * @param name required
+         */
+        public static Named from(BaseType type, String name) {
+            return InternSet.apply(new Named(type, Objects.requireNonNull(name)));
         }
 
-        private final String mName;
+        final String mName;
 
-        private Named(BaseType type, int index, String name) {
-            super(type, index);
+        private Named(BaseType type, String name) {
+            super(type);
             mName = name;
         }
 
         @Override
-        public String name() {
+        public final String name() {
             return mName;
         }
 
         @Override
         public int hashCode() {
-            int hash = mType.hashCode();
-            hash = hash * 31 + mName.hashCode();
-            hash = hash * 31 + mIndex;
-            return hash;
+            return mType.hashCode() * 31 + Objects.hashCode(mName);
         }
 
         @Override
         public boolean equals(Object obj) {
             return this == obj || obj instanceof Named other
-                && mType.equals(other.mType)
-                && mName.equals(other.mName)
-                && mIndex == other.mIndex;
+                && other.getClass() == Named.class
+                && mType.equals(other.mType) && Objects.equals(mName, other.mName);
         }
     }
 
-    public static sealed class Unnamed extends Local {
-        public static Unnamed from(BaseType type, int index) {
-            return InternSet.apply(new Unnamed(type, index));
+    public static final class Parameter extends Named {
+        /**
+         * Returns a shared instance (by type, name, and index).
+         *
+         * @param type required
+         * @param name optional
+         * @throws IllegalArgumentException if index is negative
+         */
+        public static Parameter from(BaseType type, String name, int index) {
+            return InternSet.apply(new Parameter(type, name, index));
         }
 
-        private Unnamed(BaseType type, int index) {
-            super(type, index);
+        private final int mIndex;
+
+        private Parameter(BaseType type, String name, int index) {
+            super(type, name);
+            if (index < 0) {
+                throw new IllegalArgumentException();
+            }
+            mIndex = index;
         }
 
         @Override
-        public final int hashCode() {
-            int hash = mType.hashCode();
-            hash = hash * 31 + mIndex;
-            return hash;
+        public int index() {
+            return mIndex;
         }
 
         @Override
-        public final boolean equals(Object obj) {
-            return this == obj || obj instanceof Unnamed other
-                && mType.equals(other.mType)
+        public int hashCode() {
+            return super.hashCode() * 31 + mIndex;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return this == obj || obj instanceof Parameter other
+                && mType.equals(other.mType) && Objects.equals(mName, other.mName)
                 && mIndex == other.mIndex;
         }
     }
 
     /**
-     * An anonymous variable can be eliminated during code generation as an optimization. Most
-     * unnamed variables can be anonymous, but unnamed inputs and outputs can't be anonymous,
-     * because they can't be eliminated.
+     * An anonymous variable can be eliminated during code generation as an optimization.
      */
-    public static final class Anonymous extends Unnamed {
-        public static Anonymous from(BaseType type, int index) {
-            return new Anonymous(type, index);
+    public static final class Anonymous extends Local {
+        /**
+         * Returns a new instance.
+         *
+         * @param type required
+         */
+        public static Anonymous from(BaseType type) {
+            return new Anonymous(type);
         }
 
         private boolean mHasBlockInterdependency;
 
-        private Anonymous(BaseType type, int index) {
-            super(type, index);
+        private Anonymous(BaseType type) {
+            super(type);
         }
 
         @Override

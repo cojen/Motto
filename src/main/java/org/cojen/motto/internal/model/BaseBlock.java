@@ -41,8 +41,6 @@ import org.cojen.motto.runtime.Math;
  * @author Brian S. O'Neill
  */
 public final class BaseBlock implements Block {
-    private final BlockContext mContext;
-
     private int mPosition;
 
     private BaseAction mFirstAction;
@@ -53,8 +51,7 @@ public final class BaseBlock implements Block {
     // Should only ever be 0, 1, or 2 (many).
     private byte mReached;
 
-    public BaseBlock(BlockContext context) {
-        mContext = context;
+    public BaseBlock() {
     }
 
     // FIXME: Need stricter checks that objects passed into these methods belong to the same
@@ -184,7 +181,7 @@ public final class BaseBlock implements Block {
     }
 
     public BaseBinding.Anonymous var(BaseType type) {
-        return mContext.newVariable(type);
+        return BaseBinding.Anonymous.from(type);
     }
 
     @Override
@@ -193,7 +190,7 @@ public final class BaseBlock implements Block {
     }
 
     public BaseBinding.Local var(BaseType type, String name) {
-        return mContext.newVariable(type, name);
+        return name == null ? var(type) : BaseBinding.Named.from(type, name);
     }
 
     public void declare(Binding binding) {
