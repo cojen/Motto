@@ -352,19 +352,17 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     public static sealed class Named extends Local {
-        /**
-         * Returns a shared instance (by type and name).
-         *
-         * @param type required
-         * @param name required
-         */
-        public static Named from(BaseType type, String name) {
-            return InternSet.apply(new Named(type, Objects.requireNonNull(name)));
-        }
-
         final String mName;
 
-        private Named(BaseType type, String name) {
+        /**
+         * @param name required
+         */
+        public Named(BaseType type, String name) {
+            super(type);
+            mName = Objects.requireNonNull(name);
+        }
+
+        protected Named(String name, BaseType type) {
             super(type);
             mName = name;
         }
@@ -373,36 +371,17 @@ public abstract sealed class BaseBinding implements Binding {
         public final String name() {
             return mName;
         }
-
-        @Override
-        public int hashCode() {
-            return mType.hashCode() * 31 + Objects.hashCode(mName);
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return this == obj || obj instanceof Named other
-                && other.getClass() == Named.class
-                && mType.equals(other.mType) && Objects.equals(mName, other.mName);
-        }
     }
 
     public static final class Parameter extends Named {
+        private final int mIndex;
+
         /**
-         * Returns a shared instance (by type, name, and index).
-         *
-         * @param type required
          * @param name optional
          * @throws IllegalArgumentException if index is negative
          */
-        public static Parameter from(BaseType type, String name, int index) {
-            return InternSet.apply(new Parameter(type, name, index));
-        }
-
-        private final int mIndex;
-
         private Parameter(BaseType type, String name, int index) {
-            super(type, name);
+            super(name, type);
             if (index < 0) {
                 throw new IllegalArgumentException();
             }
@@ -413,36 +392,15 @@ public abstract sealed class BaseBinding implements Binding {
         public int index() {
             return mIndex;
         }
-
-        @Override
-        public int hashCode() {
-            return super.hashCode() * 31 + mIndex;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return this == obj || obj instanceof Parameter other
-                && mType.equals(other.mType) && Objects.equals(mName, other.mName)
-                && mIndex == other.mIndex;
-        }
     }
 
     /**
      * An anonymous variable can be eliminated during code generation as an optimization.
      */
     public static final class Anonymous extends Local {
-        /**
-         * Returns a new instance.
-         *
-         * @param type required
-         */
-        public static Anonymous from(BaseType type) {
-            return new Anonymous(type);
-        }
-
         private boolean mHasBlockInterdependency;
 
-        private Anonymous(BaseType type) {
+        public Anonymous(BaseType type) {
             super(type);
         }
 
