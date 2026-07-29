@@ -236,14 +236,9 @@ public final class ExternalClass extends BaseClassTypeItem
 
     private void doLoad() throws NoClassDefFoundError {
         // Set LOADED early in case the load fails, so as not to try loading again.
-        {
-            int modifierBits = super.modifierBits() | Modifiers.LOADED;
-            setModifierBits(modifierBits);
-        }
+        setModifierBits(super.modifierBits() | Modifiers.LOADED);
 
-        String className = fullMangledName();
-
-        byte[] classBytes = mLoader.apply(className);
+        byte[] classBytes = mLoader.apply(fullMangledName());
 
         if (classBytes == null) {
             throw new NoClassDefFoundError(displayName());

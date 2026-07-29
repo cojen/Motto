@@ -1,0 +1,724 @@
+/*
+ *  Copyright 2026 Cojen.org
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package org.cojen.motto.internal.model;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+
+import org.cojen.maker.Label;
+import org.cojen.maker.Maker;
+import org.cojen.maker.MethodMaker;
+import org.cojen.maker.Variable;
+
+import org.cojen.motto.runtime.ConstantBootstraps;
+
+/**
+ * 
+ *
+ * @author Brian S. O'Neill
+ */
+final class CodeGenerator implements ActionVisitor<BaseAction> {
+    private final MethodMaker mMethodMaker;
+    private final BaseCallableItem mItem;
+
+    private final HashMap<BaseBinding.Local, Variable> mLocalVars;
+
+    private static final class BlockState {
+        final Label mLabel;
+        List<BaseBinding.Anonymous> mNonDependents;
+        boolean mVisited;
+
+        BlockState(Label label) {
+            mLabel = label;
+        }
+
+        BlockState(Label label, List<BaseBinding.Anonymous> nonDependents) {
+            mLabel = label;
+            mNonDependents = nonDependents;
+        }
+    }
+
+    private final HashMap<BaseBlock, BlockState> mBlockStateMap;
+
+    private BaseBlock[] mVisitLater;
+    private int mNumVisitLater;
+
+    private int mLineNum;
+
+    CodeGenerator(MethodMaker mm, BaseCallableItem item) {
+        mMethodMaker = mm;
+        mItem = item;
+        mLocalVars = new HashMap<>();
+        mBlockStateMap = new HashMap<>();
+    }
+
+    void finish() {
+        BaseBlock code = mItem.code();
+
+        if (code == null) {
+            return;
+        }
+
+        buildBlockStateMap(code);
+
+        mNumVisitLater = 0;
+
+        visitCode(code);
+
+        int num = mNumVisitLater;
+        if (num <= 0) {
+            return;
+        }
+
+        BaseBlock[] later = mVisitLater;
+        int i = 0;
+
+        while (true) {
+            visitCode(later[i++]);
+
+            if (i >= num) {
+                num = mNumVisitLater;
+                if (i >= num) {
+                    break;
+                }
+                later = mVisitLater;
+            }
+        }
+    }
+
+    private void buildBlockStateMap(BaseBlock code) {
+        HashMap<BaseBlock, BlockState> map = mBlockStateMap;
+
+        if (map.containsKey(code)) {
+            return;
+        }
+
+        final var state = new BlockState(mMethodMaker.label());
+        map.put(code, state);
+
+        var anonBindings = new HashMap<BaseBinding.Anonymous, Boolean>(2);
+
+        code.baseForEach(action -> {
+            action.trackBlockLocalBindings(anonBindings);
+
+            if (action instanceof BaseJumpAction jump) {
+                buildBlockStateMap(jump.destination());
+            } else if (action instanceof BaseBranchAction branch) {
+                buildBlockStateMap(branch.whenTrue());
+                buildBlockStateMap(branch.whenFalse());
+            }
+        });
+
+        List<BaseBinding.Anonymous> nonDependents = List.of();
+
+        for (BaseBinding.Anonymous anon : anonBindings.keySet()) {
+            if (!anon.hasBlockInterdependency()) {
+                if (nonDependents.isEmpty()) {
+                    nonDependents = List.of(anon);
+                } else {
+                    if (nonDependents.size() == 1) {
+                        nonDependents = new ArrayList<>(nonDependents);
+                    }
+                    nonDependents.add(anon);
+                }
+            }
+        }
+
+        state.mNonDependents = nonDependents;
+    }
+
+    private void visitCode(BaseBlock block) {
+        BlockState state = mBlockStateMap.get(block);
+        if (!state.mVisited) {
+            state.mVisited = true;
+            state.mLabel.here();
+            doVisitCode(block, state);
+        }
+    }
+
+    // Call this method directly if the block is inlined, so as not to position an unnecessary
+    // label, which can defeat the simple Maker peephole optimizer.
+    private void doVisitCode(BaseBlock block) {
+        doVisitCode(block, mBlockStateMap.get(block));
+    }
+
+    private void doVisitCode(BaseBlock block, BlockState state) {
+        if (state != null) {
+            // Removing local variable associations for bindings that aren't dependent on
+            // incoming blocks helps the Maker peephole optimizer reduce the amount of
+            // generated bytecode ops, by relying more on the operand stack instead of local
+            // variables. This optimization isn't necessary for correct behavior.
+            for (BaseBinding.Anonymous anon : state.mNonDependents) {
+                mLocalVars.remove(anon);
+            }
+        }
+
+        BaseAction action = block.firstAction();
+
+        while (action != null) {
+            int lineNum = action.line();
+            if (lineNum != 0 && lineNum != mLineNum) {
+                mMethodMaker.lineNum(lineNum);
+                mLineNum = lineNum;
+            }
+
+            action = action.accept(this);
+        }
+
+        if (!block.isTerminated()) {
+            BaseBinding result = block.result();
+            if (result == BaseBinding.Void.THE) {
+                mMethodMaker.return_();
+            } else {
+                mMethodMaker.return_(variableFor(result));
+            }
+        }
+    }
+
+    @Override
+    public BaseAction visit(BaseBranchAction action) {
+        // FIXME: Convert to switch statements if possible. Pattern matching should probably
+        // start with the eq/ne math intrinsic action. For now, only support int and Integer
+        // cases. A special switch macro can be used to generate code for cases that don't map
+        // to a special bytecode instruction.
+
+        var condVar = variableFor(action.condition());
+
+        BaseBlock whenTrue = action.whenTrue();
+        BaseBlock whenFalse = action.whenFalse();
+
+        if (shouldInline(whenTrue)) {
+            condVar.ifFalse(label(whenFalse));
+            doVisitCode(whenTrue);
+            maybeVisitLater(whenFalse);
+        } else {
+            condVar.ifTrue(label(whenTrue));
+            if (shouldInline(whenFalse)) {
+                doVisitCode(whenFalse);
+            } else {
+                label(whenFalse).goto_();
+                maybeVisitLater(whenFalse);
+            }
+            maybeVisitLater(whenTrue);
+        }
+
+        return null;
+    }
+
+    @Override
+    public BaseAction visit(BaseCallAction.Direct action) {
+        BaseCallableItem callable = action.callable();
+
+        if (callable.isMacro()) {
+            /* FIXME: macro
+            if (!makeMacroCall(action)) {
+                // Will need to recompile this file and try again later.
+                mEnv.recompile();
+                mMethodMaker.new_(UnresolvedMacroException.class).throw_();
+            }
+            return action.next;
+            */
+            throw null;
+        }
+
+        if (action.numClauses() != 0) {
+            // FIXME: clauses
+            throw null;
+        }
+
+        BaseClassTypeItem objType = callable.enclosingClass();
+
+        if (objType.packagePath().equals(BasePath.MOTTO_RUNTIME)) {
+            BasePath namePath = objType.namePath();
+            if (namePath.size() == 1 && namePath.getFirst().equals("Math")) {
+                if (tryMathIntrinsic(action)) {
+                    return action.next;
+                }
+            }
+        }
+
+        var params = new Object[action.numInputs()];
+        for (int i=0; i<params.length; i++) {
+            params[i] = forLoad(action.input(i));
+        }
+
+        var classVar = mMethodMaker.var(objType.asMakerType());
+
+        var result = classVar.invoke(Maker.mangle(callable.signature().name()), params);
+
+        if (result != null) {
+            forStore(action.output()).set(result);
+        }
+
+        return action.next;
+    }
+
+    private boolean tryMathIntrinsic(BaseCallAction.Direct action) {
+        int numInputs = action.numInputs();
+
+        if (numInputs == 0) {
+            return false;
+        }
+
+        Variable firstVar = variableFor(action.input(0));
+        Object secondObj = numInputs == 1 ? null : forLoad(action.input(1));
+
+        Variable resultVar;
+
+        switch (action.callable().signature().name()) {
+            default -> {
+                return false;
+            }
+
+            case "add"  -> resultVar = firstVar.add(secondObj);
+            case "sub"  -> resultVar = firstVar.sub(secondObj);
+            case "mul"  -> resultVar = firstVar.mul(secondObj);
+            case "div"  -> resultVar = firstVar.div(secondObj);
+            case "rem"  -> resultVar = firstVar.rem(secondObj);
+            case "shl"  -> resultVar = firstVar.shl(secondObj);
+            case "shr"  -> resultVar = firstVar.shr(secondObj);
+            case "ushr" -> resultVar = firstVar.ushr(secondObj);
+            case "and"  -> resultVar = firstVar.and(secondObj);
+            case "or"   -> resultVar = firstVar.or(secondObj);
+            case "xor"  -> resultVar = firstVar.xor(secondObj);
+            case "eq"   -> resultVar = firstVar.eq(secondObj);
+            case "ne"   -> resultVar = firstVar.ne(secondObj);
+            case "lt"   -> resultVar = firstVar.lt(secondObj);
+            case "ge"   -> resultVar = firstVar.ge(secondObj);
+            case "gt"   -> resultVar = firstVar.gt(secondObj);
+            case "le"   -> resultVar = firstVar.le(secondObj);
+
+            case "neg"  -> resultVar = firstVar.neg();
+            case "com"  -> resultVar = firstVar.com();
+            case "not"  -> resultVar = firstVar.not();
+        }
+
+        forStore(action.output()).set(resultVar);
+
+        return true;
+    }
+
+    @Override
+    public BaseAction visit(BaseCallAction.New action) {
+        var params = new Object[action.numInputs()];
+        for (int i=0; i<params.length; i++) {
+            params[i] = forLoad(action.input(i));
+        }
+
+        var classVar = mMethodMaker.var(action.callable().enclosingClass().asMakerType());
+
+        forStore(action.output()).set(mMethodMaker.new_(classVar, params));
+
+        return action.next;
+    }
+
+    @Override
+    public BaseAction visit(BaseCallAction.Virtual action) {
+        Variable instanceVar = variableFor(action.input(0));
+
+        Object[] params;
+        {
+            // Drop the explicit "this" parameter.
+            int numInputs = action.numInputs();
+            params = new Object[numInputs - 1];
+            for (int i=1; i<numInputs; i++) {
+                params[i - 1] = forLoad(action.input(i));
+            }
+        }
+
+        BaseCallableItem callable = action.callable();
+
+        var result = instanceVar.invoke(Maker.mangle(callable.signature().name()), params);
+
+        if (result != null) {
+            forStore(action.output()).set(result);
+        }
+
+        return action.next;
+    }
+
+    @Override
+    public BaseAction visit(BaseCastAction action) {
+        //forStore(action.target()).set(variableFor(action.source()).cast(action.targetType().asMakerType()));
+        // FIXME: BaseCastAction
+        throw null;
+    }
+
+    @Override
+    public BaseAction visit(BaseConvertAction action) {
+        // FIXME: BaseConvertAction
+        throw null;
+    }
+
+    @Override
+    public BaseAction visit(BaseCopyAction action) {
+        BaseBinding target = action.target();
+
+        /* FIXME: yield
+        if (action.next instanceof BaseReturnAction && target instanceof BaseBinding.Local) {
+            // Return directly, avoiding the creation of an unnecessary temporary variable
+            // which cannot always be optimized away by the Maker library. This happens when
+            // the method has multiple return locations, and so the output variable is
+            // determined to be shared because accurate liveness analysis isn't performed.
+            if (!mItem.isMacro() && mItem.signature().outputType() == BaseVoidType.THE) {
+                mMethodMaker.return_();
+            } else {
+                mMethodMaker.return_(forLoad(action.source()));
+            }
+            return null;
+        }
+        */
+
+        forStore(target).set(forLoad(action.source()));
+
+        return action.next;
+    }
+
+    @Override
+    public BaseAction visit(BaseDeclarationAction action) {
+        return action.next;
+    }
+
+    @Override
+    public BaseAction visit(BaseJumpAction action) {
+        BaseBlock block = action.destination();
+
+        if (shouldInline(block)) {
+            doVisitCode(block);
+        } else {
+            label(block).goto_();
+            maybeVisitLater(block);
+        }
+
+        return null;
+    }
+
+    @Override
+    public BaseAction visit(BaseThrowAction action) {
+        BaseBinding ex = action.exception();
+
+        if (ex instanceof BaseBinding.Null ||
+            ex instanceof BaseBinding.Constant c && c.value() == null)
+        {
+            mMethodMaker.var(Throwable.class).clear().throw_();
+        } else {
+            variableFor(ex).throw_();
+        }
+
+        return null;
+    }
+
+    @Override
+    public BaseAction visit(BaseTupleAction.New action) {
+        var params = new Object[action.numInputs()];
+        for (int i=0; i<params.length; i++) {
+            params[i] = forLoad(action.input(i));
+        }
+
+        Variable result;
+
+        if (params.length == 0) {
+            // Obtain the empty singleton. See TypeGenerator.
+            result = mMethodMaker.var(action.type().asMakerType()).field("\\=_");
+        } else {
+            // FIXME: generateType
+            //result = mMethodMaker.new_(mClassGen.generateType(action.type()), params);
+            throw null;
+        }
+
+        forStore(action.output()).set(result);
+
+        return action.next;
+    }
+
+    @Override
+    public BaseAction visit(BaseTupleAction.Get action) {
+        // FIXME
+        throw null;
+    }
+
+    @Override
+    public BaseAction visit(BaseTupleAction.Set action) {
+        // FIXME
+        throw null;
+    }
+
+    @Override
+    public BaseAction visit(BaseYieldAction action) {
+        // The doVisitCode method will add the return op.
+        return null;
+    }
+
+    /**
+     * Returns true if the block is reached once, or is empty, or it consists of one small
+     * terminal action.
+     */
+    private boolean shouldInline(BaseBlock block) {
+        if (block.isReachedOnce()) {
+            return true;
+        }
+        BaseAction first = block.firstAction();
+        return first == null || first instanceof BaseYieldAction;
+    }
+
+    private void maybeVisitLater(BaseBlock block) {
+        if (!mBlockStateMap.get(block).mVisited) {
+            visitLater(block);
+        }
+    }
+
+    private void visitLater(BaseBlock block) {
+        BaseBlock[] later = mVisitLater;
+        int num = mNumVisitLater;
+        if (later == null) {
+            mVisitLater = later = new BaseBlock[4];
+        } else if (num >= later.length) {
+            mVisitLater = later = Arrays.copyOf(later, later.length << 1);
+        }
+        later[num] = block;
+        mNumVisitLater = num + 1;
+    }
+
+    /**
+     * Maps the binding to a Variable or an Object (constant) for loading it.
+     *
+     * @throws IllegalArgumentException if the binding type isn't supported
+     */
+    private Object forLoad(BaseBinding binding) {
+        switch (binding) {
+            case BaseBinding.Void _ -> {
+                return Void.TYPE;
+            }
+
+            case BaseBinding.Null _ -> {
+                return null;
+            }
+
+            case BaseBinding.Constant b -> {
+                return forLoad(b);
+            }
+
+            case BaseBinding.Static b -> {
+                return variableFor(b);
+            }
+
+            case BaseBinding.Instance b -> {
+                return variableFor(b);
+            }
+
+            case BaseBinding.Tuple b -> {
+                return variableFor(b);
+            }
+
+            case BaseBinding.Local b -> {
+                return variableFor(b);
+            }
+
+            case BaseBinding.Code b -> {
+                throw new IllegalArgumentException();
+            }
+        }
+    }
+
+    private Object forLoad(BaseBinding.Constant binding) {
+        Object value = binding.value();
+
+        switch (value) {
+            case BigDecimal bd -> {
+                return complexConstant(mMethodMaker, bd);
+            }
+            case BigInteger bi -> {
+                return complexConstant(mMethodMaker, bi);
+            }
+            default -> {
+                return value;
+            }
+        }
+    }
+
+    static Object complexConstant(MethodMaker mm, BigDecimal bd) {
+        Object constant;
+
+        select: {
+            if (bd.scale() <= 0) {
+                try {
+                    constant = bd.longValueExact();
+                    break select;
+                } catch (ArithmeticException e) {
+                }
+
+                try {
+                    constant = complexConstant(mm, bd.toBigIntegerExact());
+                    break select;
+                } catch (ArithmeticException e) {
+                }
+            }
+                
+            {
+                double d = bd.doubleValue();
+                if (!Double.isInfinite(d) && BigDecimal.valueOf(d).equals(bd)) {
+                    constant = d;
+                    break select;
+                }
+            }
+
+            constant = bd.toString();
+        }
+
+        return mm.var(ConstantBootstraps.class)
+            .condy("bigDecimal", constant)
+            .invoke(BigDecimal.class, "_");
+    }
+
+    static Object complexConstant(MethodMaker mm, BigInteger bi) {
+        Object constant;
+
+        select: {
+            try {
+                constant = bi.longValueExact();
+                break select;
+            } catch (ArithmeticException e) {
+            }
+
+            constant = bi.toString();
+        }
+
+        return mm.var(ConstantBootstraps.class)
+            .condy("bigInteger", constant)
+            .invoke(BigInteger.class, "_");
+    }
+
+    /**
+     * Maps the binding to a Variable for storing into it.
+     *
+     * @throws IllegalArgumentException if the binding type isn't supported or cannot be modified
+     */
+    private Variable forStore(BaseBinding binding) {
+        switch (binding) {
+            case BaseBinding.Static b -> {
+                return variableFor(b);
+            }
+
+            case BaseBinding.Instance b -> {
+                return variableFor(b);
+            }
+
+            case BaseBinding.Local b -> {
+                return variableFor(b);
+            }
+
+            default -> {
+                throw new IllegalArgumentException();
+            }
+        }
+    }
+
+    private Variable variableFor(BaseBinding binding) {
+        Object obj = forLoad(binding);
+        if (obj instanceof Variable v) {
+            return v;
+        } else {
+            // Object is a constant, so use a temporary variable.
+            return mMethodMaker.var(binding.type().asMakerType()).set(obj);
+        }
+    }
+
+    private Variable variableFor(BaseBinding.Static binding) {
+        return variableFor(binding.field(), null);
+    }
+
+    private Variable variableFor(BaseBinding.Instance binding) {
+        return variableFor(binding.field(), binding.instance());
+    }
+
+    /**
+     * @param instanceBinding is null for static field
+     */
+    private Variable variableFor(BaseFieldItem fieldItem, BaseBinding instanceBinding) {
+        String fieldName = fieldItem.name();
+
+        if (fieldItem.isPseudo() && "class".equals(fieldName)) {
+            // Class literal.
+            BaseObjectType enclosingType = fieldItem.enclosingClass();
+            return mMethodMaker.var(Class.class).set(enclosingType.asMakerType());
+        }
+
+        fieldName = Maker.mangle(fieldName);
+
+        if (instanceBinding == null) {
+            // Static field.
+            BaseObjectType enclosingType = fieldItem.enclosingClass();
+            return mMethodMaker.var(enclosingType.asMakerType()).field(fieldName);
+        }
+
+        Object instance = forLoad(instanceBinding);
+        Variable instanceVar;
+
+        if (instance instanceof Variable) {
+            instanceVar = (Variable) instance;
+        } else {
+            // Instance is a constant, so use a temporary variable.
+            BaseType type = fieldItem.type();
+            instanceVar = mMethodMaker.var(type.asMakerType());
+            if (type != BaseVoidType.THE) {
+                instanceVar.set(instance);
+            }
+        }
+
+        return instanceVar.field(fieldName);
+    }
+
+    private Variable variableFor(BaseBinding.Tuple binding) {
+        String name = binding.tupleType().fieldName(binding.index());
+        return variableFor(binding.tuple()).invoke(name);
+    }
+
+    private Variable variableFor(BaseBinding.Local binding) {
+        return mLocalVars.computeIfAbsent
+            (binding, _ -> {
+                int index = binding.index();
+
+                if (index >= 0) {
+                    if (!mItem.isStatic()) {
+                        if (index == 0) {
+                            return mMethodMaker.this_();
+                        }
+                        index--;
+                    }
+                    return mMethodMaker.param(index);
+                }
+
+                var v = mMethodMaker.var(binding.type().asMakerType());
+
+                String name = binding.name();
+                if (name != null) {
+                    v.name(Maker.mangle(name));
+                }
+
+                return v;
+            });
+    }
+
+    private Label label(BaseBlock block) {
+        return mBlockStateMap.get(block).mLabel;
+    }
+}

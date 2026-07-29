@@ -37,6 +37,7 @@ import org.cojen.motto.internal.util.InternSet;
 public abstract sealed class BasePath extends AbstractList<String> implements Path {
     public static final BasePath JAVA_LANG = from("java", "lang");
     public static final BasePath JAVA_MATH = from("java", "math");
+    public static final BasePath MOTTO_RUNTIME = from("org", "cojen", "motto", "runtime");
 
     /**
      * Returns an empty path.

@@ -40,6 +40,8 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
     private final BaseClassTypeItem mEnclosingClass;
     private final BaseCallSignature mSignature;
 
+    private BaseBlock mCode;
+
     /**
      * @see Modifiers
      */
@@ -77,6 +79,15 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
      */
     public BaseCallSignature macroSignature() {
         throw new UnsupportedOperationException();
+    }
+
+    public final void assignCode(BaseBlock code) {
+        code.finish();
+        mCode = code;
+    }
+
+    public final BaseBlock code() {
+        return mCode;
     }
 
     void applyModifiers(MethodMaker mm) {

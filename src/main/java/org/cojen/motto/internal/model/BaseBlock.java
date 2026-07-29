@@ -699,6 +699,10 @@ public final class BaseBlock implements Block {
         mLastAction = action;
     }
 
+    BaseAction firstAction() {
+        return mFirstAction;
+    }
+
     boolean isReachedOnce() {
         return mReached == 1;
     }

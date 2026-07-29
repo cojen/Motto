@@ -337,7 +337,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         /**
-         * @return -1 if not applicable
+         * @return -1 if not a parameter
          */
         public int index() {
             return -1;
