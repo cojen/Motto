@@ -674,8 +674,7 @@ public final class BaseBlock implements Block {
      * Define a source code position to be associated with newly appended actions.
      */
     public void sourcePosition(int line, int column) {
-        // FIXME: sourcePosition
-        throw null;
+        sourcePosition(BaseAction.encodePosition(line, column));
     }
 
     void addAction(BaseAction action) {

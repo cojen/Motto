@@ -42,14 +42,12 @@ public abstract sealed class BaseAction implements Action
 
     @Override
     public int line() {
-        // FIXME
-        throw null;
+        return decodeLine(mPosition);
     }
 
     @Override
     public int column() {
-        // FIXME
-        throw null;
+        return decodeColumn(mPosition);
     }
 
     int position() {
@@ -69,4 +67,57 @@ public abstract sealed class BaseAction implements Action
      * @see BaseBinding
      */
     abstract void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map);
+
+    /**
+     * @param line source code start line, one-based; is 0 if not applicable
+     * @param column source code start column, zero-based; is -1 if not applicable
+     */
+    public static int encodePosition(int line, int column) {
+        // Favor the line number, dropping the column number if necessary.
+
+        // -1 means not applicable, but encode as 0.
+        column++;
+
+        if (line >= (1 << 6)) {
+            if (line < (1 << 12)) {
+                // (12-bit line, 18-bit column)
+                return (1 << 30) | (line << 18 | columnLimit(column, (1 << 18) - 1));
+            }
+            if (line < (1 << 18)) {
+                // (18-bit line, 12-bit column)
+                return (2 << 30) | (line << 12 | columnLimit(column, (1 << 12) - 1));
+            }
+            if (line < (1 << 24)) {
+                // (24-bit line, 6-bit column)
+                return (3 << 30) | (line <<  6 | columnLimit(column, (1 <<  6) - 1));
+            }
+            // Line number is too big, so make it not applicable.
+            line = 0;
+        }
+
+        // (6-bit line, 24-bit column)
+        return (0 << 30) | (line << 24 | Math.min(column, (1 << 24) - 1));
+    }
+
+    private static int columnLimit(int value, int limit) {
+        return value <= limit ? value : 0; // 0 will be decoded as -1, or not applicable
+    }
+
+    public static int decodeLine(int position) {
+        return switch (position >>> 30) {
+            default -> (position >> 24) & ((1 <<  6) - 1);
+            case 1  -> (position >> 18) & ((1 << 12) - 1);
+            case 2  -> (position >> 12) & ((1 << 18) - 1);
+            case 3  -> (position >>  6) & ((1 << 24) - 1);
+        };
+    }
+
+    public static int decodeColumn(int position) {
+        return switch (position >>> 30) {
+            default -> position & ((1 << 24) - 1);
+            case 1  -> position & ((1 << 18) - 1);
+            case 2  -> position & ((1 << 12) - 1);
+            case 3  -> position & ((1 <<  6) - 1);
+        } - 1;
+    }
 }

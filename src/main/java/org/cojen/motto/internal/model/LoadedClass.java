@@ -34,8 +34,15 @@ public final class LoadedClass extends BaseClassTypeItem {
         } else if (clazz.isArray()) {
             return from(clazz.getComponentType()).asArray();
         } else {
-            return InternSet.apply(new LoadedClass(clazz));
+            return classFrom(clazz);
         }
+    }
+
+    /**
+     * @param clazz must not be primitive or an array type
+     */
+    public static LoadedClass classFrom(Class<?> clazz) {
+        return InternSet.apply(new LoadedClass(clazz));
     }
 
     private final Class<?> mClass;
@@ -45,7 +52,7 @@ public final class LoadedClass extends BaseClassTypeItem {
         BasePath packagePath = BasePath.parse(clazz.getPackageName(), '.');
         BasePath namePath = namePath(clazz);
 
-        super(modifierBits, packagePath, null);
+        super(modifierBits, packagePath, namePath);
 
         mClass = clazz;
 

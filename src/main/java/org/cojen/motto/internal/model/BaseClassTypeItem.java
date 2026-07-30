@@ -64,6 +64,8 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         mPackagePath = Objects.requireNonNull(packagePath);
         mNamePath = Objects.requireNonNull(namePath);
 
+        mSuperInterfaces = Set.of();
+
         mFieldMap = Map.of();
         mMethodMap = Map.of();
         mConstructorMap = Map.of();

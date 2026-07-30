@@ -37,12 +37,6 @@ public sealed interface ClassTypeItem extends ObjectType, Item permits BaseClass
     }
 
     /**
-     * Returns the superclass of this class, which should only be null if this class is
-     * java.lang.Object.
-     */
-    public ClassTypeItem superType();
-
-    /**
      * Returns the non-null set of interfaces that this class implements.
      */
     public Set<? extends ClassTypeItem> interfaces();

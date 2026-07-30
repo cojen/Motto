@@ -67,6 +67,11 @@ public final class BaseNullType implements BaseObjectType, NullType {
     }
 
     @Override
+    public BaseClassTypeItem superType() {
+        return null;
+    }
+
+    @Override
     public int canConvertTo(Type to) {
         return to instanceof ObjectType ? 0 : BaseObjectType.super.canConvertTo(to);
     }

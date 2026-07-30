@@ -165,6 +165,11 @@ public sealed abstract class BaseTupleType extends GeneratedType
     }
 
     @Override
+    public BaseClassTypeItem superType() {
+        return LoadedClass.classFrom(Object.class);
+    }
+
+    @Override
     public final BaseTupleType noFieldNames() {
         BaseTupleType noFieldNames = mNoFieldNames;
 

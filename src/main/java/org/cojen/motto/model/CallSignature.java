@@ -73,7 +73,7 @@ public sealed interface CallSignature permits BaseCallSignature {
      */
     public CallSignature flatten();
 
-    public static sealed interface Clause permits BaseCallSignature.TheClause {
+    public static sealed interface Clause permits BaseCallSignature.BaseClause {
         public boolean isRequired();
 
         public boolean hasRepetition();

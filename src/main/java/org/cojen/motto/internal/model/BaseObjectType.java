@@ -40,4 +40,7 @@ public sealed interface BaseObjectType extends BaseType, ObjectType
     public default BaseObjectType box() {
         return this;
     }
+
+    @Override
+    public BaseClassTypeItem superType();
 }

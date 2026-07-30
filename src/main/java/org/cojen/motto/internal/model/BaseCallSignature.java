@@ -47,7 +47,7 @@ public final class BaseCallSignature implements CallSignature {
     public static BaseCallSignature from(BaseType outputType, String name, BaseTupleType inputType,
                                          boolean evaluated)
     {
-        return from(outputType, name, inputType, evaluated, (TheClause[]) null);
+        return from(outputType, name, inputType, evaluated, (BaseClause[]) null);
     }
 
     /**
@@ -58,7 +58,7 @@ public final class BaseCallSignature implements CallSignature {
      */
     public static BaseCallSignature from(BaseType outputType, String name, BaseTupleType inputType,
                                          boolean evaluated,
-                                         TheClause... clauses)
+                                         BaseClause... clauses)
     {
         int flags = 0;
 
@@ -79,12 +79,12 @@ public final class BaseCallSignature implements CallSignature {
     private final String mName;
     private final BaseTupleType mInputType;
     private final int mFlags;
-    private final TheClause[] mClauses;
+    private final BaseClause[] mClauses;
 
     private volatile BaseCallSignature mNoFieldNames, mFlattened, mTrimmed;
 
     private BaseCallSignature(BaseType outputType, String name, BaseTupleType inputType,
-                              int flags, TheClause... clauses)
+                              int flags, BaseClause... clauses)
     {
         mOutputType = outputType;
         mName = name;
@@ -118,13 +118,13 @@ public final class BaseCallSignature implements CallSignature {
 
     @Override
     public int numClauses() {
-        TheClause[] clauses = mClauses;
+        BaseClause[] clauses = mClauses;
         return clauses == null ? 0 : clauses.length;
     }
 
     @Override
-    public TheClause clause(int index) {
-        TheClause[] clauses = mClauses;
+    public BaseClause clause(int index) {
+        BaseClause[] clauses = mClauses;
         if (clauses == null) {
             throw new IndexOutOfBoundsException();
         }
@@ -136,12 +136,12 @@ public final class BaseCallSignature implements CallSignature {
         BaseCallSignature noFieldNames = mNoFieldNames;
 
         if (noFieldNames == null) {
-            TheClause[] clauses = mClauses;
+            BaseClause[] clauses = mClauses;
 
             if (clauses != null) {
                 for (int i=0; i<clauses.length; i++) {
-                    TheClause clause = clauses[i];
-                    TheClause newClause = clause.noFieldNames();
+                    BaseClause clause = clauses[i];
+                    BaseClause newClause = clause.noFieldNames();
                     if (newClause != clause) {
                         if (clauses == mClauses) {
                             clauses = clauses.clone();
@@ -175,10 +175,10 @@ public final class BaseCallSignature implements CallSignature {
             inputType = inputType.withTypes(types);
         }
 
-        TheClause[] clauses = null;
+        BaseClause[] clauses = null;
 
         if (mClauses != null) {
-            clauses = new TheClause[mClauses.length];
+            clauses = new BaseClause[mClauses.length];
             for (int i=0; i<clauses.length; i++) {
                 clauses[i] = mClauses[i].forMacro(bindingType, blockType);
             }
@@ -238,7 +238,7 @@ public final class BaseCallSignature implements CallSignature {
 
         // Now fill with clauses, which are converted to parameters.
         if (mClauses != null) {
-            for (TheClause clause : mClauses) {
+            for (BaseClause clause : mClauses) {
                 clause.doFlatten(map);
             }
         }
@@ -328,18 +328,18 @@ public final class BaseCallSignature implements CallSignature {
             && Arrays.equals(mClauses, other.mClauses);
     }
 
-    public static final class TheClause implements Clause {
+    public static final class BaseClause implements Clause {
         /**
          * Returns a clause which accepts any code statement.
          *
          * @param repetition -1: once, 0: zero or more, 1: one or more
          * @param name required (can be empty, except when repetition is >= 0)
          */
-        public static TheClause from(int repetition, String name) {
+        public static BaseClause from(int repetition, String name) {
             if (name.isEmpty() && repetition >= 0) {
                 throw new IllegalArgumentException();
             }
-            return InternSet.apply(new TheClause(repetition, name, null, false));
+            return InternSet.apply(new BaseClause(repetition, name, null, false));
         }
 
         /**
@@ -350,25 +350,26 @@ public final class BaseCallSignature implements CallSignature {
          * @param inputType required
          * @param evaluated true indicates a normal input type, false indicates a code block
          */
-        public static TheClause from(int repetition, String name,
-                                     BaseTupleType inputType, boolean evaluated)
+        public static BaseClause from(int repetition, String name,
+                                      BaseTupleType inputType, boolean evaluated)
         {
             Objects.requireNonNull(name);
             Objects.requireNonNull(inputType);
-            return InternSet.apply(new TheClause(repetition, name, inputType, evaluated));
+            return InternSet.apply(new BaseClause(repetition, name, inputType, evaluated));
         }
 
         private final String mName;
         private final BaseTupleType mInputType;
         private final int mFlags;
 
-        private volatile TheClause mNoFieldNames;
+        private volatile BaseClause mNoFieldNames;
 
-        private TheClause(int repetition, String name, BaseTupleType inputType, boolean evaluated) {
+        private BaseClause(int repetition, String name, BaseTupleType inputType, boolean evaluated)
+        {
             this(name, inputType, (repetition & 0b11) | (evaluated ? EVALUATED : 0));
         }
 
-        private TheClause(String name, BaseTupleType inputType, int flags) {
+        private BaseClause(String name, BaseTupleType inputType, int flags) {
             mName = name;
             mInputType = inputType;
             mFlags = flags;
@@ -407,8 +408,8 @@ public final class BaseCallSignature implements CallSignature {
         }
 
         @Override
-        public TheClause noFieldNames() {
-            TheClause noFieldNames = mNoFieldNames;
+        public BaseClause noFieldNames() {
+            BaseClause noFieldNames = mNoFieldNames;
 
             if (noFieldNames == null) {
                 BaseTupleType in = mInputType;
@@ -416,7 +417,7 @@ public final class BaseCallSignature implements CallSignature {
                 if (in == null || (newIn = in.noFieldNames()) == in) {
                     noFieldNames = this;
                 } else {
-                    noFieldNames = InternSet.apply(new TheClause(mName, newIn, mFlags));
+                    noFieldNames = InternSet.apply(new BaseClause(mName, newIn, mFlags));
                 }
                 mNoFieldNames = noFieldNames;
             }
@@ -424,7 +425,7 @@ public final class BaseCallSignature implements CallSignature {
             return noFieldNames;
         }
 
-        private TheClause forMacro(BaseType bindingType, BaseType blockType) {
+        private BaseClause forMacro(BaseType bindingType, BaseType blockType) {
             BaseTupleType inputType = mInputType;
 
             int num = inputType.numFields();
@@ -434,7 +435,7 @@ public final class BaseCallSignature implements CallSignature {
                 inputType = inputType.withTypes(types);
             }
 
-            return InternSet.apply(new TheClause(mName, inputType, mFlags | EVALUATED));
+            return InternSet.apply(new BaseClause(mName, inputType, mFlags | EVALUATED));
         }
 
         private void doFlatten(LinkedHashMap<Object, Object> map) {
@@ -470,7 +471,7 @@ public final class BaseCallSignature implements CallSignature {
 
         @Override
         public boolean equals(Object obj) {
-            return this == obj || obj instanceof TheClause other
+            return this == obj || obj instanceof BaseClause other
                 && mFlags == other.mFlags
                 && Objects.equals(mName, other.mName)
                 && Objects.equals(mInputType, other.mInputType);

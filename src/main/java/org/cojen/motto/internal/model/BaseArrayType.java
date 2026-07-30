@@ -94,6 +94,11 @@ public final class BaseArrayType implements BaseObjectType, ArrayType, Encodable
     }
 
     @Override
+    public BaseClassTypeItem superType() {
+        return LoadedClass.classFrom(Object.class);
+    }
+
+    @Override
     public org.cojen.maker.Type asMakerType() {
         return mElementType.asMakerType().asArray();
     }
