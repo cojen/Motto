@@ -294,6 +294,34 @@ public sealed abstract class BaseTupleType extends GeneratedType
     }
 
     @Override
+    public int bindCompare(Type aParam, Type bParam) {
+        if (aParam instanceof BaseTupleType att && bParam instanceof BaseTupleType btt) {
+            int numFields = numFields();
+
+            if (numFields == 0) {
+                return 0;
+            }
+
+            int aNumFields = att.numFields();
+            int bNumFields;
+
+            if (numFields == aNumFields && (numFields == (bNumFields = btt.numFields()))) {
+                for (int i=0; i<numFields; i++) {
+                    if (!(fieldType(i) instanceof BaseType ti)) {
+                        break;
+                    }
+                    int cmp = ti.bindCompare(att.fieldType(i), btt.fieldType(i));
+                    if (cmp != 0) {
+                        return cmp;
+                    }
+                }
+            }
+        }
+
+        return super.bindCompare(aParam, bParam);
+    }
+
+    @Override
     public BaseTupleType withNames(String... fieldNames) {
         return withNames(fieldNames, null);
     }

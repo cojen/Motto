@@ -183,8 +183,46 @@ public sealed interface BaseType extends Type, EncodableType
         return Integer.MAX_VALUE;
     }
 
-    @Override
-    public boolean isAccessibleVia(Item via);
+    /**
+     * Compares this argument type against the given parameter types, to select which one is a
+     * better candidate to bind to for a method call.
+     *
+     * @return -1 if aParam is better, 1 if bParam is better, or 0 if neither is strictly better
+     */
+    public default int bindCompare(Type aParam, Type bParam) {
+        int aCost = this.canConvertTo(aParam);
+        int bCost = this.canConvertTo(bParam);
+
+        if (aCost != bCost) {
+            return aCost < bCost ? -1 : 1;
+        }
+
+        if (aCost != 0) {
+            return 0;
+        }
+
+        if (this.equals(aParam)) {
+            return this.equals(bParam) ? 0 : -1;
+        } else if (this.equals(bParam)) {
+            return 1;
+        }
+
+        // Favor the parameter which is more specialized. Note the compare order: A greater
+        // depth is more specialized, which makes it better.
+        return Integer.compare(depth(bParam), depth(aParam));
+    }
+
+    /**
+     * Returns the superclass hierarchy depth of the given type.
+     */
+    private static int depth(Type type) {
+        if (!(type instanceof BaseObjectType objType)) {
+            return 0;
+        }
+        int depth = 0;
+        while ((objType = objType.superType()) != null) depth++;
+        return depth;
+    }
 
     public org.cojen.maker.Type asMakerType();
 }

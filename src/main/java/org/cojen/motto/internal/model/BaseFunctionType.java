@@ -99,6 +99,15 @@ public final class BaseFunctionType extends GeneratedType
     }
 
     @Override
+    public int bindCompare(Type aParam, Type bParam) {
+        if (aParam instanceof BaseFunctionType aft && bParam instanceof BaseFunctionType bft) {
+            return inputType().bindCompare(aft.inputType(), bft.inputType());
+        }
+
+        return super.bindCompare(aParam, bParam);
+    }
+
+    @Override
     public BaseType outputType() {
         return mOutputType;
     }

@@ -308,6 +308,106 @@ public final class BaseCallSignature implements CallSignature {
         return trimmed;
     }
 
+    /**
+     * Returns true if this signature, representing a call, can bind to the signature of a
+     * defined method. The output and inputs might need to be converted, however.
+     *
+     * <p>If this call has any clauses, the repetition value should be -1, although the value
+     * is ignored. Actual repetition should be specified using duplicate clauses.
+     */
+    boolean canBindTo(BaseCallSignature other) {
+        if (!mName.equals(other.mName) || isInputEvaluated() != other.isInputEvaluated() ||
+            other.mOutputType.canConvertTo(mOutputType) == Integer.MAX_VALUE ||
+            mInputType.canConvertTo(other.mInputType) == Integer.MAX_VALUE)
+        {
+            return false;
+        }
+
+        if (mClauses == null) {
+            if (other.mClauses != null) {
+                for (BaseClause clause : other.mClauses) {
+                    if (clause.repetition() != 0) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        if (other.mClauses == null) {
+            return false;
+        }
+
+        int thisIndex = 0;
+        int otherIndex = 0;
+
+        while (true) {
+            if (thisIndex >= mClauses.length) {
+                for (; otherIndex < other.mClauses.length; otherIndex++) {
+                    if (other.mClauses[otherIndex].repetition() != 0) {
+                        return false;
+                    }
+                }
+                return true;
+            } else if (otherIndex >= other.mClauses.length) {
+                return false;
+            }
+
+            BaseClause thisClause = mClauses[thisIndex];
+            BaseClause otherClause = other.mClauses[otherIndex];
+            int repetition = otherClause.repetition();
+
+            if (thisClause.canBindTo(otherClause)) {
+                thisIndex++;
+                if (repetition == -1) { // once
+                    otherIndex++;
+                }
+            } else {
+                if (repetition != 0) {
+                    // Must bind at least once, and so it cannot be skipped.
+                    return false;
+                }
+                otherIndex++;
+            }
+        }
+    }
+
+    /**
+     * Compares this argument set against the given parameter sets, to select which one is a
+     * better candidate to bind to for a method call. The given signatures are expected to be
+     * valid matching candidates. For a selected signature to be strictly "better" than
+     * another, all parameter types must be equal or better based on conversion cost.
+     *
+     * @return -1 if aSig is better, 1 if bSig is better, or 0 if neither is strictly better
+     */
+    int bindCompare(BaseCallSignature aSig, BaseCallSignature bSig) {
+        int cmp = this.inputType().bindCompare(aSig.inputType(), bSig.inputType());
+
+        if (cmp != 0) {
+            return cmp;
+        }
+
+        // FIXME: Clause comparison is wrong. It needs to follow the same rules as canBindTo.
+
+        int numClauses = this.numClauses();
+
+        if (numClauses != bSig.numClauses()) {
+            return 0;
+        }
+
+        for (int i=0; i<numClauses; i++) {
+            BaseCallSignature.BaseClause clause = this.clause(i);
+            BaseCallSignature.BaseClause aClause = aSig.clause(i);
+            BaseCallSignature.BaseClause bClause = bSig.clause(i);
+            cmp = clause.inputType().bindCompare(aClause.inputType(), bClause.inputType());
+            if (cmp != 0) {
+                return cmp;
+            }
+        }
+
+        return 0;
+    }
+
     @Override
     public int hashCode() {
         int hash = mFlags ^ -546471431;
@@ -459,6 +559,11 @@ public final class BaseCallSignature implements CallSignature {
             }
 
             putElement(map, mName, inputType);
+        }
+
+        private boolean canBindTo(BaseClause other) {
+            return mName.equals(other.mName) && isInputEvaluated() == other.isInputEvaluated()
+                && mInputType.canConvertTo(other.mInputType) != Integer.MAX_VALUE;
         }
 
         @Override
