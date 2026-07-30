@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 
 import org.cojen.maker.ClassMaker;
 import org.cojen.maker.Maker;
+import org.cojen.maker.MethodMaker;
 
 import org.cojen.motto.model.CallSignature;
 import org.cojen.motto.model.ClassTypeItem;
@@ -476,5 +477,50 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
             throw new IllegalArgumentException();
         }
         return inputType;
+    }
+
+    static Object[] makerParamsFor(BaseCallableItem item) {
+        return makerParamsFor(item, item.signature());
+    }
+
+    static Object[] makerParamsFor(BaseCallableItem item, BaseCallSignature sig) {
+        BaseTupleType inputType = sig.inputType();
+        int numFields = inputType.numFields();
+
+        Object[] params;
+        int offset;
+
+        if (item.isStatic()) {
+            params = new Object[numFields];
+            offset = 0;
+        } else {
+            // Drop the implicit "this" parameter.
+            params = new Object[numFields - 1];
+            offset = 1;
+        }
+
+        for (int ix = offset; ix < numFields; ix++) {
+            params[ix - offset] = inputType.fieldType(ix).asMakerType();
+        }
+
+        return params;
+    }
+
+    static void applyParamNames(MethodMaker mm, BaseCallableItem item) {
+        applyParamNames(mm, item, item.signature());
+    }
+
+    static void applyParamNames(MethodMaker mm, BaseCallableItem item, BaseCallSignature sig) {
+        BaseTupleType inputType = sig.inputType();
+        int numFields = inputType.numFields();
+
+        int offset = item.isStatic() ? 0 : 1; // Drop the implicit "this" parameter.
+
+        for (int ix = offset; ix < numFields; ix++) {
+            String name = inputType.fieldName(ix);
+            if (name != null) {
+                mm.param(ix - offset).name(Maker.mangle(name));
+            }
+        }
     }
 }

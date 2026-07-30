@@ -187,7 +187,7 @@ public final class ExternalClass extends BaseClassTypeItem
 
             if (!method.isMacro()) {
                 BaseCallSignature flattened = method.signature().flatten();
-                Object[] paramTypes = makerParamsFor(method, flattened, cm);
+                Object[] paramTypes = makerParamsFor(method, flattened);
 
                 // FIXME: might have conflicts
                 mm = cm.addMethod(flattened.outputType().asMakerType(),
@@ -204,34 +204,9 @@ public final class ExternalClass extends BaseClassTypeItem
     @Override // Type.Provider
     public void addConstructors(ClassMaker cm) {
         constructors().filter(c -> !c.isPseudo()).forEach(ctor -> {
-            MethodMaker mm = cm.addConstructor(makerParamsFor(ctor, ctor.signature(), cm));
+            MethodMaker mm = cm.addConstructor(makerParamsFor(ctor, ctor.signature()));
             ctor.applyModifiers(mm);
         });
-    }
-
-    private static Object[] makerParamsFor(BaseCallableItem item, BaseCallSignature sig,
-                                           ClassMaker cm)
-    {
-        BaseTupleType inputType = sig.inputType();
-        int numFields = inputType.numFields();
-
-        Object[] params;
-        int offset;
-
-        if (item.isStatic()) {
-            params = new Object[numFields];
-            offset = 0;
-        } else {
-            // Drop the implicit "this" parameter.
-            params = new Object[numFields - 1];
-            offset = 1;
-        }
-
-        for (int ix = offset; ix < numFields; ix++) {
-            params[ix - offset] = inputType.fieldType(ix).asMakerType();
-        }
-
-        return params;
     }
 
     private void doLoad() throws NoClassDefFoundError {

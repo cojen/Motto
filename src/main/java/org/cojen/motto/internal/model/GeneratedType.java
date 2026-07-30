@@ -24,26 +24,38 @@ package org.cojen.motto.internal.model;
 abstract sealed class GeneratedType implements BaseType, EncodableType
     permits BaseTupleType, BaseFunctionType
 {
+    // Is used by NewClass such that calling asMakerType calls back into NewClass.generateType,
+    // no matter where asMakerType is being called from.
+    static final ScopedValue<NewClass> FOR_NEW_CLASS = ScopedValue.newInstance();
+
     private volatile String mGeneratedName;
     private volatile org.cojen.maker.Type mMakerType;
 
     @Override
     public org.cojen.maker.Type asMakerType() {
         var type = mMakerType;
+
         if (type == null) {
             Class<?> clazz = TypeGenerator.generateFromName(generatedName());
             mMakerType = type = org.cojen.maker.Type.from(clazz);
         }
+
+        if (FOR_NEW_CLASS.isBound()) {
+            FOR_NEW_CLASS.get().generateType(generatedName());
+        }
+
         return type;
     }
 
     String generatedName() {
         String name = mGeneratedName;
+
         if (name == null) {
             mGeneratedName = name = EncodableType.GENERATED_PREFIX +
                 // Use a slash separator because that's what Java class files use.
                 '/' + TypeEncoder.encodeBase64(this);
         }
+
         return name;
     }
 }
