@@ -188,40 +188,31 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public final int numFields() {
-        try {
-            initFields();
-        } catch (InterruptedException e) {
-            return 0;
-        }
-
-        return mFieldMap.size();
+        return fieldMap().size();
     }
 
     @Override
     public final Stream<? extends BaseFieldItem> fields() {
-        try {
-            initFields();
-        } catch (InterruptedException e) {
-            return Stream.empty();
-        }
-
-        return mFieldMap.values().stream();
+        return fieldMap().values().stream();
     }
 
     @Override
     public final BaseFieldItem field(String name) {
-        try {
-            initFields();
-        } catch (InterruptedException e) {
-            throw new NoSuchElementException();
-        }
-
-        BaseFieldItem field = mFieldMap.get(name);
+        BaseFieldItem field = fieldMap().get(name);
         if (field == null) {
             throw new NoSuchElementException();
         }
-
         return field;
+    }
+
+    private Map<String, BaseFieldItem> fieldMap() {
+        try {
+            initFields();
+        } catch (InterruptedException e) {
+            return Map.of();
+        }
+
+        return mFieldMap;
     }
 
     @Override
@@ -255,47 +246,23 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public final int numMethods() {
-        try {
-            initMethods();
-        } catch (InterruptedException e) {
-            return 0;
-        }
-
         return (int) methods().count();
     }
 
     @Override
     public final Stream<? extends BaseCallableItem> methods() {
-        try {
-            initMethods();
-        } catch (InterruptedException e) {
-            return Stream.empty();
-        }
-
-        return mMethodMap.values().stream().flatMap(byName -> byName.values().stream());
+        return methodMap().values().stream().flatMap(byName -> byName.values().stream());
     }
 
     @Override
     public final Stream<? extends BaseCallableItem> methods(String name) {
-        try {
-            initMethods();
-        } catch (InterruptedException e) {
-            return Stream.empty();
-        }
-
-        Map<BaseCallSignature, BaseCallableItem> byName = mMethodMap.get(name);
+        Map<BaseCallSignature, BaseCallableItem> byName = methodMap().get(name);
         return byName == null ? Stream.empty() : byName.values().stream();
     }
 
     @Override
     public final BaseCallableItem method(CallSignature sig) {
-        try {
-            initMethods();
-        } catch (InterruptedException e) {
-            throw new NoSuchElementException();
-        }
-
-        Map<BaseCallSignature, BaseCallableItem> byName = mMethodMap.get(sig.name());
+        Map<BaseCallSignature, BaseCallableItem> byName = methodMap().get(sig.name());
 
         if (byName == null) {
             throw new NoSuchElementException();
@@ -327,6 +294,16 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         }
 
         throw new NoSuchElementException();
+    }
+
+    private Map<String, Map<BaseCallSignature, BaseCallableItem>> methodMap() {
+        try {
+            initMethods();
+        } catch (InterruptedException e) {
+            return Map.of();
+        }
+
+        return mMethodMap;
     }
 
     /**
@@ -380,40 +357,31 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public final int numConstructors() {
-        try {
-            initConstructors();
-        } catch (InterruptedException e) {
-            return 0;
-        }
-
-        return mConstructorMap.size();
+        return constructorMap().size();
     }
 
     @Override
     public final Stream<? extends BaseCallableItem> constructors() {
-        try {
-            initConstructors();
-        } catch (InterruptedException e) {
-            return Stream.empty();
-        }
-
-        return mConstructorMap.values().stream();
+        return constructorMap().values().stream();
     }
 
     @Override
     public final BaseCallableItem constructor(CallSignature sig) {
-        try {
-            initConstructors();
-        } catch (InterruptedException e) {
-            throw new NoSuchElementException();
-        }
-
-        BaseCallableItem ctor = mConstructorMap.get(sig);
+        BaseCallableItem ctor = constructorMap().get(sig);
         if (ctor == null) {
             throw new NoSuchElementException();
         }
-
         return ctor;
+    }
+
+    private Map<BaseCallSignature, BaseCallableItem> constructorMap() {
+        try {
+            initConstructors();
+        } catch (InterruptedException e) {
+            return Map.of();
+        }
+
+        return mConstructorMap;
     }
 
     /**
