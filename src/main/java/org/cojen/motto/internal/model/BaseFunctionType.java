@@ -85,6 +85,7 @@ public final class BaseFunctionType extends GeneratedType
         return noFieldNames;
     }
 
+    /* FIXME: Function type compatibility is more nuanced.
     @Override
     public boolean isAssignableFrom(Type other) {
         return super.isAssignableFrom(other)
@@ -92,6 +93,7 @@ public final class BaseFunctionType extends GeneratedType
                 && mInputType.isAssignableFrom(oft.mInputType)
                 && mOutputType.isAssignableFrom(oft.mOutputType));
     }
+    */
 
     @Override
     public boolean isAccessibleVia(Item via) {

@@ -83,12 +83,24 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public BaseClassTypeItem superType() {
+    public final BaseClassTypeItem superType() {
+        try {
+            init();
+        } catch (InterruptedException e) {
+            return null;
+        }
+
         return mSuperType;
     }
 
     @Override
-    public Set<? extends BaseClassTypeItem> interfaces() {
+    public final Set<? extends BaseClassTypeItem> interfaces() {
+        try {
+            init();
+        } catch (InterruptedException e) {
+            return Set.of();
+        }
+
         return mSuperInterfaces;
     }
 
@@ -143,7 +155,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public BaseClassTypeItem outerType() {
+    public final BaseClassTypeItem outerType() {
         // FIXME
         throw null;
     }
@@ -175,21 +187,40 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public int numFields() {
+    public final int numFields() {
+        try {
+            initFields();
+        } catch (InterruptedException e) {
+            return 0;
+        }
+
         return mFieldMap.size();
     }
 
     @Override
-    public Stream<? extends BaseFieldItem> fields() {
+    public final Stream<? extends BaseFieldItem> fields() {
+        try {
+            initFields();
+        } catch (InterruptedException e) {
+            return Stream.empty();
+        }
+
         return mFieldMap.values().stream();
     }
 
     @Override
-    public BaseFieldItem field(String name) {
+    public final BaseFieldItem field(String name) {
+        try {
+            initFields();
+        } catch (InterruptedException e) {
+            throw new NoSuchElementException();
+        }
+
         BaseFieldItem field = mFieldMap.get(name);
         if (field == null) {
             throw new NoSuchElementException();
         }
+
         return field;
     }
 
@@ -208,7 +239,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      *
      * @return null if a conflicting field definition already exists
      */
-    public BaseFieldItem tryAddField(int modifierBits, BaseType type, String name) {
+    public final BaseFieldItem tryAddField(int modifierBits, BaseType type, String name) {
         var field = new BaseFieldItem(modifierBits, this, type, name);
 
         Map<String, BaseFieldItem> map = mFieldMap;
@@ -223,23 +254,47 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public int numMethods() {
+    public final int numMethods() {
+        try {
+            initMethods();
+        } catch (InterruptedException e) {
+            return 0;
+        }
+
         return (int) methods().count();
     }
 
     @Override
-    public Stream<? extends BaseCallableItem> methods() {
+    public final Stream<? extends BaseCallableItem> methods() {
+        try {
+            initMethods();
+        } catch (InterruptedException e) {
+            return Stream.empty();
+        }
+
         return mMethodMap.values().stream().flatMap(byName -> byName.values().stream());
     }
 
     @Override
-    public Stream<? extends BaseCallableItem> methods(String name) {
+    public final Stream<? extends BaseCallableItem> methods(String name) {
+        try {
+            initMethods();
+        } catch (InterruptedException e) {
+            return Stream.empty();
+        }
+
         Map<BaseCallSignature, BaseCallableItem> byName = mMethodMap.get(name);
-       return byName == null ? Stream.empty() : byName.values().stream();
+        return byName == null ? Stream.empty() : byName.values().stream();
     }
 
     @Override
-    public BaseCallableItem method(CallSignature sig) {
+    public final BaseCallableItem method(CallSignature sig) {
+        try {
+            initMethods();
+        } catch (InterruptedException e) {
+            throw new NoSuchElementException();
+        }
+
         Map<BaseCallSignature, BaseCallableItem> byName = mMethodMap.get(sig.name());
 
         if (byName == null) {
@@ -324,21 +379,40 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public int numConstructors() {
+    public final int numConstructors() {
+        try {
+            initConstructors();
+        } catch (InterruptedException e) {
+            return 0;
+        }
+
         return mConstructorMap.size();
     }
 
     @Override
-    public Stream<? extends BaseCallableItem> constructors() {
+    public final Stream<? extends BaseCallableItem> constructors() {
+        try {
+            initConstructors();
+        } catch (InterruptedException e) {
+            return Stream.empty();
+        }
+
         return mConstructorMap.values().stream();
     }
 
     @Override
-    public BaseCallableItem constructor(CallSignature sig) {
+    public final BaseCallableItem constructor(CallSignature sig) {
+        try {
+            initConstructors();
+        } catch (InterruptedException e) {
+            throw new NoSuchElementException();
+        }
+
         BaseCallableItem ctor = mConstructorMap.get(sig);
         if (ctor == null) {
             throw new NoSuchElementException();
         }
+
         return ctor;
     }
 
@@ -441,7 +515,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         return code;
     }
 
-    void applyModifiers(ClassMaker cm) {
+    final void applyModifiers(ClassMaker cm) {
         super.applyModifiers(cm);
 
         int modifiers = modifierBits();
@@ -524,5 +598,33 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
                 mm.param(ix - offset).name(Maker.mangle(name));
             }
         }
+    }
+
+    /**
+     * Override to initialize the super types or wait until they're ready. Implementation is
+     * required to check if init has already been called.
+     */
+    protected void init() throws InterruptedException {
+    }
+
+    /**
+     * Override to initialize the fields or wait until they're ready. Implementation is
+     * required to check if initFields has already been called.
+     */
+    protected void initFields() throws InterruptedException {
+    }
+
+    /**
+     * Override to initialize the methods or wait until they're ready. Implementation is
+     * required to check if initMethods has already been called.
+     */
+    protected void initMethods() throws InterruptedException {
+    }
+
+    /**
+     * Override to initialize the constructors or wait until they're ready. Implementation is
+     * required to check if initConstructors has already been called.
+     */
+    protected void initConstructors() throws InterruptedException {
     }
 }

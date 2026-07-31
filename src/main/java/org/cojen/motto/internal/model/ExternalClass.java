@@ -80,78 +80,6 @@ public final class ExternalClass extends BaseClassTypeItem
         return super.modifierBits();
     }
 
-    @Override
-    public BaseClassTypeItem superType() {
-        load();
-        return super.superType();
-    }
-
-    @Override
-    public Set<? extends BaseClassTypeItem> interfaces() {
-        load();
-        return super.interfaces();
-    }
-
-    @Override
-    public int numFields() {
-        load();
-        return super.numFields();
-    }
-
-    @Override
-    public Stream<? extends BaseFieldItem> fields() {
-        load();
-        return super.fields();
-    }
-
-    @Override
-    public BaseFieldItem field(String name) {
-        load();
-        return super.field(name);
-    }
-
-    @Override
-    public int numMethods() {
-        load();
-        return super.numMethods();
-    }
-
-    @Override
-    public Stream<? extends BaseCallableItem> methods() {
-        load();
-        return super.methods();
-    }
-
-    @Override
-    public Stream<? extends BaseCallableItem> methods(String name) {
-        load();
-        return super.methods(name);
-    }
-
-    @Override
-    public BaseCallableItem method(CallSignature sig) {
-        load();
-        return super.method(sig);
-    }
-
-    @Override
-    public int numConstructors() {
-        load();
-        return super.numConstructors();
-    }
-
-    @Override
-    public Stream<? extends BaseCallableItem> constructors() {
-        load();
-        return super.constructors();
-    }
-
-    @Override
-    public BaseCallableItem constructor(CallSignature sig) {
-        load();
-        return super.constructor(sig);
-    }
-
     @Override // Type.Provider
     public void init(ClassMaker cm) {
         applyModifiers(cm);
@@ -363,5 +291,25 @@ public final class ExternalClass extends BaseClassTypeItem
             type = type.withNames(firstName);
         }
         return type;
+    }
+
+    @Override // BaseClassTypeItem
+    protected void init() {
+        load();
+    }
+
+    @Override // BaseClassTypeItem
+    protected void initFields() {
+        load();
+    }
+
+    @Override // BaseClassTypeItem
+    protected void initMethods() {
+        load();
+    }
+
+    @Override // BaseClassTypeItem
+    protected void initConstructors() {
+        load();
     }
 }

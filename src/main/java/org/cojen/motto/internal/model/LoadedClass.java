@@ -42,6 +42,8 @@ public final class LoadedClass extends BaseClassTypeItem {
      * @param clazz must not be primitive or an array type
      */
     public static LoadedClass classFrom(Class<?> clazz) {
+        // FIXME: Add a feature to InternSet to find without constructing? Or perhaps define a
+        // custom key? A different kind of cache perhaps? Or just a simple local cache?
         return InternSet.apply(new LoadedClass(clazz));
     }
 
@@ -56,7 +58,8 @@ public final class LoadedClass extends BaseClassTypeItem {
 
         mClass = clazz;
 
-        // FIXME: setSuperTypes, fields, methods, constructors, inner classes
+        // FIXME: setSuperTypes, fields, methods, constructors, inner classes. Do on demand
+        // using the inherited init methods.
     }
 
     private static BasePath namePath(Class<?> clazz) {
