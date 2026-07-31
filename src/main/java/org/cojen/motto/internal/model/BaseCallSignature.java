@@ -309,6 +309,20 @@ public final class BaseCallSignature implements CallSignature {
     }
 
     /**
+     * Returns a version of this CallSignature in which the first input type is the one given.
+     *
+     * @throws IllegalStateException if the input type has no elements
+     */
+    BaseCallSignature withFirstInputType(BaseType type) {
+        BaseTupleType newInputType = mInputType.withFirstType(type);
+        if (newInputType.equals(mInputType)) {
+            return this;
+        }
+        return InternSet.apply
+            (new BaseCallSignature(mOutputType, mName, newInputType, mFlags, mClauses));
+    }
+
+    /**
      * Returns true if this signature, representing a call, can bind to the signature of a
      * defined method. The output and inputs might need to be converted, however.
      *

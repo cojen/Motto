@@ -581,14 +581,10 @@ public final class BaseBlock implements Block {
         BaseBinding in2 = toBinding(input2);
 
         var mathType = BaseType.from(Math.class);
-        var sigType = BaseTupleType.from(in1.type(), in1.type());
-        var sig = BaseCallSignature.from(BaseUnspecifiedType.THE, op, sigType, true);
+        var inputType = BaseTupleType.from(in1.type(), in1.type());
 
-        /* FIXME: findMethodForCall
         Map<BaseCallSignature, BaseCallableItem> methods =
-            mathType.findMethodForCall(sig, true, null);
-        */
-        Map<BaseCallSignature, BaseCallableItem> methods = null;
+            mathType.findStaticMethod(op, inputType, null);
 
         if (methods.size() != 1) {
             // FIXME: use a better exception
@@ -608,14 +604,10 @@ public final class BaseBlock implements Block {
         BaseBinding in = toBinding(input);
 
         var mathType = BaseType.from(Math.class);
-        var sigType = BaseTupleType.from(in.type());
-        var sig = BaseCallSignature.from(BaseUnspecifiedType.THE, op, sigType, true);
+        var inputType = BaseTupleType.from(in.type());
 
-        /* FIXME: findMethodForCall
         Map<BaseCallSignature, BaseCallableItem> methods =
-            mathType.findMethodForCall(sig, true, null);
-        */
-        Map<BaseCallSignature, BaseCallableItem> methods = null;
+            mathType.findStaticMethod(op, inputType, null);
 
         if (methods.size() != 1) {
             // FIXME: use a better exception

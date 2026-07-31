@@ -22,6 +22,7 @@ import java.lang.constant.ConstantDescs;
 import java.lang.constant.DirectMethodHandleDesc;
 import java.lang.constant.DynamicConstantDesc;
 
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -107,6 +108,32 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
+    public default Map<BaseCallSignature, BaseCallableItem> findMethod
+        (String name, TupleType inputType, Item via)
+    {
+        return findMethod(name, (BaseTupleType) inputType, via);
+    }
+
+    public default Map<BaseCallSignature, BaseCallableItem> findMethod
+        (String name, BaseTupleType inputType, Item via)
+    {
+        return Map.of();
+    }
+
+    @Override
+    public default Map<BaseCallSignature, BaseCallableItem> findStaticMethod
+        (String name, TupleType inputType, Item via)
+    {
+        return findStaticMethod(name, (BaseTupleType) inputType, via);
+    }
+
+    public default Map<BaseCallSignature, BaseCallableItem> findStaticMethod
+        (String name, BaseTupleType inputType, Item via)
+    {
+        return Map.of();
+    }
+
+    @Override
     public default int numConstructors() {
         return 0;
     }
@@ -117,8 +144,21 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
-    public default CallableItem constructor(CallSignature sig) {
+    public default BaseCallableItem constructor(CallSignature sig) {
         throw new NoSuchElementException();
+    }
+
+    @Override
+    public default Map<BaseCallSignature, BaseCallableItem> findConstructor
+        (TupleType inputType, Item via)
+    {
+        return findConstructor((BaseTupleType) inputType, via);
+    }
+
+    public default Map<BaseCallSignature, BaseCallableItem> findConstructor
+        (BaseTupleType inputType, Item via)
+    {
+        return Map.of();
     }
 
     @Override

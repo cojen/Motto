@@ -18,6 +18,7 @@ package org.cojen.motto.model;
 
 import java.lang.constant.Constable;
 
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import java.util.stream.Stream;
@@ -213,6 +214,8 @@ public sealed interface Type extends Constable
      */
     public int fieldIndex(String name);
 
+    // FIXME: Need a findField which checks inherited fields.
+
     /**
      * Returns the number of methods defined explicitly in this type.
      */
@@ -236,6 +239,31 @@ public sealed interface Type extends Constable
     public CallableItem method(CallSignature sig);
 
     /**
+     * Tries to find an accessible instance method to bind to, which might be inherited. If
+     * more than one is returned, then the binding is ambiguous. The output and inputs of a
+     * found method might need to be converted.
+     *
+     * <p>The first parameter is assumed to be this type, named "this". If not, then it's
+     * automatically prepended.
+     *
+     * @param via can pass null to only return publicly available methods
+     * @return an empty map if no applicable methods could be found
+     */
+    public Map<? extends CallSignature, ? extends CallableItem> findMethod
+        (String name, TupleType inputType, Item via);
+
+    /**
+     * Tries to find an accessible static method to bind to, which might be inherited. If more
+     * than one is returned, then the binding is ambiguous. The output and inputs of a found
+     * method might need to be converted.
+     *
+     * @param via can pass null to only return publicly available methods
+     * @return an empty map if no applicable methods could be found
+     */
+    public Map<? extends CallSignature, ? extends CallableItem> findStaticMethod
+        (String name, TupleType inputType, Item via);
+
+    /**
      * Returns the number of constructors defined explicitly in this type.
      */
     public int numConstructors();
@@ -251,6 +279,19 @@ public sealed interface Type extends Constable
      * @throws NoSuchElementException if the constructor doesn't exist
      */
     public CallableItem constructor(CallSignature sig);
+
+    /**
+     * Tries to find an accessible constructor to bind to. If more than one is returned, then
+     * the binding is ambiguous. The inputs of a found constructor might need to be converted.
+     *
+     * <p>The first parameter is assumed to be this type, named "this". If not, then it's
+     * automatically prepended.
+     *
+     * @param via can pass null to only return publicly available constructors
+     * @return an empty map if no applicable constructors could be found
+     */
+    public Map<? extends CallSignature, ? extends CallableItem> findConstructor
+        (TupleType inputType, Item via);
 
     /**
      * Returns true if this type is an array.

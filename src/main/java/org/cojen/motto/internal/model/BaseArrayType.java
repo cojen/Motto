@@ -42,6 +42,8 @@ public final class BaseArrayType implements BaseObjectType, ArrayType, Encodable
         mElementType = elementType;
     }
 
+    // FIXME: Provide a pseudo "length" field.
+
     @Override
     public StringBuilder appendDisplayNameTo(StringBuilder b) {
         return mElementType.appendDisplayNameTo(b).append("[]");

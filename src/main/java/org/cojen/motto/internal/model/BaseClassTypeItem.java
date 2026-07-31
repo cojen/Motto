@@ -18,6 +18,7 @@ package org.cojen.motto.internal.model;
 
 import java.lang.constant.ClassDesc;
 
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -32,6 +33,7 @@ import org.cojen.maker.MethodMaker;
 
 import org.cojen.motto.model.CallSignature;
 import org.cojen.motto.model.ClassTypeItem;
+import org.cojen.motto.model.Item;
 import org.cojen.motto.model.ObjectType;
 import org.cojen.motto.model.PrimitiveType;
 import org.cojen.motto.model.TupleType;
@@ -306,6 +308,58 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         return mMethodMap;
     }
 
+    @Override
+    public final Map<BaseCallSignature, BaseCallableItem> findMethod
+        (String name, BaseTupleType inputType, Item via)
+    {
+        return findMethod(name, inputType, false, via);
+    }
+
+    @Override
+    public final Map<BaseCallSignature, BaseCallableItem> findStaticMethod
+        (String name, BaseTupleType inputType, Item via)
+    {
+        return findMethod(name, inputType, true, via);
+    }
+
+    private Map<BaseCallSignature, BaseCallableItem> findMethod
+        (String name, BaseTupleType inputType, boolean staticCall, Item via)
+    {
+        // The output type and evaluated option are ignored.
+        BaseCallSignature sig = BaseCallSignature.from(BaseVoidType.THE, name, inputType, true);
+
+        Map<BaseCallSignature, BaseCallableItem> map =
+            doFindMethod(Map.of(), sig, staticCall, via, null);
+
+        return reduceCallables(map, sig);
+    }
+
+    /**
+     * @param base should be null for the first call (it becomes "this" for recursive calls)
+     */
+    private Map<BaseCallSignature, BaseCallableItem> doFindMethod
+        (Map<BaseCallSignature, BaseCallableItem> map,
+         BaseCallSignature sig, boolean staticCall, Item via, BaseClassTypeItem base)
+    {
+        map = findCallable(map, sig, staticCall, via, base, methodMap().get(sig.name()));
+
+        if (base == null) {
+            base = this;
+        }
+
+        BaseClassTypeItem superType = superType();
+
+        if (superType != null) {
+            map = superType.doFindMethod(map, sig, staticCall, via, base);
+        }
+
+        for (BaseClassTypeItem iface : interfaces()) {
+            map = iface.doFindMethod(map, sig, staticCall, via, base);
+        }
+
+        return map;
+    }
+
     /**
      * Attempt to add a method, which initially doesn't have any code.
      *
@@ -382,6 +436,14 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         }
 
         return mConstructorMap;
+    }
+
+    @Override
+    public Map<BaseCallSignature, BaseCallableItem> findConstructor
+        (BaseTupleType inputType, Item via)
+    {
+        BaseCallSignature sig = BaseCallSignature.from(BaseVoidType.THE, "", inputType, true);
+        return findCallable(Map.of(), sig, false, via, null, constructorMap());
     }
 
     /**
@@ -594,5 +656,124 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      * required to check if initConstructors has already been called.
      */
     protected void initConstructors() throws InterruptedException {
+    }
+
+    /**
+     * @param map original map, possibly empty
+     * @param via can pass null to only return publicly available methods
+     * @param base when non-null, it represents the specific type being called (the base type
+     * will remain the same while the super type(s) are examined)
+     * @return the actual map
+     */
+    private Map<BaseCallSignature, BaseCallableItem> findCallable
+        (Map<BaseCallSignature, BaseCallableItem> map,
+         BaseCallSignature sig, boolean staticCall, Item via,
+         BaseClassTypeItem base, Map<BaseCallSignature, BaseCallableItem> available)
+    {
+        if (available == null) {
+            return map;
+        }
+
+        for (Map.Entry<BaseCallSignature, BaseCallableItem> e : available.entrySet()) {
+            BaseCallableItem item = e.getValue();
+
+            if (item.isStatic() != staticCall) {
+                continue;
+            }
+
+            if (!item.isAccessibleVia(via)) {
+                continue;
+            }
+
+            BaseCallSignature availableSig = e.getValue().signature();
+
+            if (!sig.canBindTo(availableSig)) {
+                continue;
+            }
+
+            if (base != null) {
+                if (item.isPrivate()) {
+                    // Cannot be inherited.
+                    continue;
+                }
+
+                if ((item.modifierBits() & Modifiers.INTERNAL) != 0) {
+                    // Check if an internal method can be inherited. It must be in the same
+                    // package as the base.
+
+                    if (!(item.enclosingType() instanceof ClassTypeItem enclosing)) {
+                        // The item cannot be defined in a package, and so it can't really have
+                        // inheritable internal methods anyhow.
+                        continue;
+                    }
+
+                    if (!enclosing.packagePath().equals(base.packagePath())) {
+                        // The package doesn't match, and so the method cannot be inherited.
+                        continue;
+                    }
+                }
+
+                if (!staticCall) {
+                    // All instance methods must have an initial "this" parameter. Force it to
+                    // look like the instance type, to match the others.
+                    availableSig = availableSig.withFirstInputType(base);
+                }
+            }
+
+            if (map.isEmpty()) {
+                map = Map.of(e.getKey(), item);
+            } else {
+                if (map.size() == 1) {
+                    map = new LinkedHashMap<>(map);
+                }
+                map.putIfAbsent(availableSig, item);
+            }
+        }
+
+        return map;
+    }
+
+    private static Map<BaseCallSignature, BaseCallableItem> reduceCallables
+        (Map<BaseCallSignature, BaseCallableItem> map, BaseCallSignature sig)
+    {
+        if (map.size() > 1) {
+            Iterator<Map.Entry<BaseCallSignature, BaseCallableItem>> it = map.entrySet().iterator();
+            Map.Entry<BaseCallSignature, BaseCallableItem> best = it.next();
+            var bestMap = new LinkedHashMap<BaseCallSignature, BaseCallableItem>(1);
+            bestMap.put(best.getKey(), best.getValue());
+
+            while (it.hasNext()) {
+                Map.Entry<BaseCallSignature, BaseCallableItem> candidate = it.next();
+                int cmp = sig.bindCompare(best.getKey(), candidate.getKey());
+                if (cmp >= 0) {
+                    if (cmp > 0) {
+                        best = candidate;
+                        bestMap.clear();
+                        bestMap.put(best.getKey(), best.getValue());
+                    } else {
+                        bestMap.put(candidate.getKey(), candidate.getValue());
+                    }
+                }
+            }
+
+            map = bestMap;
+        }
+
+        if (map.size() > 1) {
+            // If any non-bridge methods, remove the bridge methods.
+            int nonBridges = 0, bridges = 0;
+            for (BaseCallableItem callable : map.values()) {
+                if (callable.isBridge()) {
+                    bridges++;
+                } else {
+                    nonBridges++;
+                }
+            }
+            if (nonBridges > 0 && bridges > 0) {
+                map.values().removeIf(BaseItem::isBridge);
+            }
+        }
+
+        return map;
     }
 }
