@@ -21,12 +21,9 @@ package org.cojen.motto.internal.parser;
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed class Element permits Token {
-    Element() {
-    }
+public abstract sealed interface Element permits Token {
+    public Token start();
 
-    public abstract Token start();
-
-    public abstract Token end();
+    public Token end();
 }
 

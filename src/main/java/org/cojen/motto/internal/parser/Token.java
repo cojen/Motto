@@ -32,7 +32,7 @@ import org.cojen.motto.internal.model.LoadedClass;
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed class Token extends Element {
+public abstract sealed class Token implements Element {
     public static final int T_EOF = 0, T_UNCLOSED = 1;
 
     // Grouping tokens.
