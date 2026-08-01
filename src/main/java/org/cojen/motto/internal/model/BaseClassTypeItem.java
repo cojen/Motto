@@ -566,7 +566,6 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     {
         mSuperType = superType;
         mSuperInterfaces = interfaces == null ? Set.of() : interfaces;
-
     }
 
     /**
