@@ -16,16 +16,16 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.BaseClauseArgument;
+import org.cojen.motto.internal.model.BaseSegmentArgument;
 
 /**
  * @author Brian S. O'Neill
  * @see Block#callDirect
  */
-// Note: This can best be modeled using a method clause. Yes, use a clause to define a clause.
-// The Block.callDirect method supports 0 or more `clause` clauses.
-public sealed interface ClauseArgument permits BaseClauseArgument {
-    public static ClauseArgument from(String name, Binding... inputs) {
+// Note: This can best be modeled using a method segment. Yes, use a segment to define a
+// segment. The Block.callDirect method supports 0 or more `segment` segments.
+public sealed interface SegmentArgument permits BaseSegmentArgument {
+    public static SegmentArgument from(String name, Binding... inputs) {
         // FIXME
         throw null;
     }

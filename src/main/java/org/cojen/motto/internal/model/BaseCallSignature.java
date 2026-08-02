@@ -47,7 +47,7 @@ public final class BaseCallSignature implements CallSignature {
     public static BaseCallSignature from(BaseType outputType, String name, BaseTupleType inputType,
                                          boolean evaluated)
     {
-        return from(outputType, name, inputType, evaluated, (BaseClause[]) null);
+        return from(outputType, name, inputType, evaluated, (BaseSegment[]) null);
     }
 
     /**
@@ -58,7 +58,7 @@ public final class BaseCallSignature implements CallSignature {
      */
     public static BaseCallSignature from(BaseType outputType, String name, BaseTupleType inputType,
                                          boolean evaluated,
-                                         BaseClause... clauses)
+                                         BaseSegment... segments)
     {
         int flags = 0;
 
@@ -66,34 +66,34 @@ public final class BaseCallSignature implements CallSignature {
             flags |= EVALUATED;
         }
 
-        if (clauses != null) {
-            clauses = clauses.length == 0 ? null : clauses.clone();
+        if (segments != null) {
+            segments = segments.length == 0 ? null : segments.clone();
         }
 
         return InternSet.apply
             (new BaseCallSignature(Objects.requireNonNull(outputType), Objects.requireNonNull(name),
-                                  Objects.requireNonNull(inputType), flags, clauses));
+                                  Objects.requireNonNull(inputType), flags, segments));
     }
 
     private final BaseType mOutputType;
     private final String mName;
     private final BaseTupleType mInputType;
     private final int mFlags;
-    private final BaseClause[] mClauses;
+    private final BaseSegment[] mSegments;
 
     private volatile BaseCallSignature mNoFieldNames, mFlattened, mTrimmed;
 
     private BaseCallSignature(BaseType outputType, String name, BaseTupleType inputType,
-                              int flags, BaseClause... clauses)
+                              int flags, BaseSegment... segments)
     {
         mOutputType = outputType;
         mName = name;
         mInputType = inputType;
         mFlags = flags;
-        if (clauses != null && clauses.length == 0) {
-            clauses = null;
+        if (segments != null && segments.length == 0) {
+            segments = null;
         }
-        mClauses = clauses;
+        mSegments = segments;
     }
 
     @Override
@@ -117,18 +117,18 @@ public final class BaseCallSignature implements CallSignature {
     }
 
     @Override
-    public int numClauses() {
-        BaseClause[] clauses = mClauses;
-        return clauses == null ? 0 : clauses.length;
+    public int numSegments() {
+        BaseSegment[] segments = mSegments;
+        return segments == null ? 0 : segments.length;
     }
 
     @Override
-    public BaseClause clause(int index) {
-        BaseClause[] clauses = mClauses;
-        if (clauses == null) {
+    public BaseSegment segment(int index) {
+        BaseSegment[] segments = mSegments;
+        if (segments == null) {
             throw new IndexOutOfBoundsException();
         }
-        return clauses[index];
+        return segments[index];
     }
 
     @Override
@@ -136,24 +136,24 @@ public final class BaseCallSignature implements CallSignature {
         BaseCallSignature noFieldNames = mNoFieldNames;
 
         if (noFieldNames == null) {
-            BaseClause[] clauses = mClauses;
+            BaseSegment[] segments = mSegments;
 
-            if (clauses != null) {
-                for (int i=0; i<clauses.length; i++) {
-                    BaseClause clause = clauses[i];
-                    BaseClause newClause = clause.noFieldNames();
-                    if (newClause != clause) {
-                        if (clauses == mClauses) {
-                            clauses = clauses.clone();
+            if (segments != null) {
+                for (int i=0; i<segments.length; i++) {
+                    BaseSegment segment = segments[i];
+                    BaseSegment newSegment = segment.noFieldNames();
+                    if (newSegment != segment) {
+                        if (segments == mSegments) {
+                            segments = segments.clone();
                         }
-                        clauses[i] = newClause;
+                        segments[i] = newSegment;
                     }
                 }
             }
 
             noFieldNames = new BaseCallSignature(mOutputType.noFieldNames(), mName,
                                                 mInputType.noFieldNames(), mFlags,
-                                                clauses);
+                                                segments);
 
             mNoFieldNames = noFieldNames = InternSet.apply(noFieldNames);
         }
@@ -175,17 +175,17 @@ public final class BaseCallSignature implements CallSignature {
             inputType = inputType.withTypes(types);
         }
 
-        BaseClause[] clauses = null;
+        BaseSegment[] segments = null;
 
-        if (mClauses != null) {
-            clauses = new BaseClause[mClauses.length];
-            for (int i=0; i<clauses.length; i++) {
-                clauses[i] = mClauses[i].forMacro(bindingType, blockType);
+        if (mSegments != null) {
+            segments = new BaseSegment[mSegments.length];
+            for (int i=0; i<segments.length; i++) {
+                segments[i] = mSegments[i].forMacro(bindingType, blockType);
             }
         }
 
         var signature = new BaseCallSignature
-            (blockType, mName, inputType, mFlags | EVALUATED, clauses);
+            (blockType, mName, inputType, mFlags | EVALUATED, segments);
 
         return InternSet.apply(signature);
     }
@@ -209,13 +209,13 @@ public final class BaseCallSignature implements CallSignature {
     private BaseCallSignature doFlatten() {
         boolean evaluated = isInputEvaluated();
 
-        if (evaluated && mClauses == null) {
+        if (evaluated && mSegments == null) {
             // Already flattened.
             return this;
         }
 
-        // Maps parameter or clause names to types. Unnamed parameters are keyed by plain
-        // objects. For clauses defined more than once, the map values are lists. These lists
+        // Maps parameter or segment names to types. Unnamed parameters are keyed by plain
+        // objects. For segments defined more than once, the map values are lists. These lists
         // will later become tuple types in the flattened signature.
         var map = new LinkedHashMap<Object, Object>();
 
@@ -236,10 +236,10 @@ public final class BaseCallSignature implements CallSignature {
             }
         }
 
-        // Now fill with clauses, which are converted to parameters.
-        if (mClauses != null) {
-            for (BaseClause clause : mClauses) {
-                clause.doFlatten(map);
+        // Now fill with segments, which are converted to parameters.
+        if (mSegments != null) {
+            for (BaseSegment segment : mSegments) {
+                segment.doFlatten(map);
             }
         }
 
@@ -301,7 +301,7 @@ public final class BaseCallSignature implements CallSignature {
 
         if (trimmed == null) {
             trimmed = new BaseCallSignature
-                (mOutputType, mName, mInputType.trimFirst(), mFlags, mClauses);
+                (mOutputType, mName, mInputType.trimFirst(), mFlags, mSegments);
             mTrimmed = trimmed = InternSet.apply(trimmed);
         }
 
@@ -319,15 +319,15 @@ public final class BaseCallSignature implements CallSignature {
             return this;
         }
         return InternSet.apply
-            (new BaseCallSignature(mOutputType, mName, newInputType, mFlags, mClauses));
+            (new BaseCallSignature(mOutputType, mName, newInputType, mFlags, mSegments));
     }
 
     /**
      * Returns true if this signature, representing a call, can bind to the signature of a
      * defined method. The output and inputs might need to be converted, however.
      *
-     * <p>If this call has any clauses, the repetition value should be -1, although the value
-     * is ignored. Actual repetition should be specified using duplicate clauses.
+     * <p>If this call has any segments, the repetition value should be -1, although the value
+     * is ignored. Actual repetition should be specified using duplicate segments.
      */
     boolean canBindTo(BaseCallSignature other) {
         if (!mName.equals(other.mName) || isInputEvaluated() != other.isInputEvaluated() ||
@@ -337,10 +337,10 @@ public final class BaseCallSignature implements CallSignature {
             return false;
         }
 
-        if (mClauses == null) {
-            if (other.mClauses != null) {
-                for (BaseClause clause : other.mClauses) {
-                    if (clause.repetition() != 0) {
+        if (mSegments == null) {
+            if (other.mSegments != null) {
+                for (BaseSegment segment : other.mSegments) {
+                    if (segment.repetition() != 0) {
                         return false;
                     }
                 }
@@ -348,7 +348,7 @@ public final class BaseCallSignature implements CallSignature {
             return true;
         }
 
-        if (other.mClauses == null) {
+        if (other.mSegments == null) {
             return false;
         }
 
@@ -356,22 +356,22 @@ public final class BaseCallSignature implements CallSignature {
         int otherIndex = 0;
 
         while (true) {
-            if (thisIndex >= mClauses.length) {
-                for (; otherIndex < other.mClauses.length; otherIndex++) {
-                    if (other.mClauses[otherIndex].repetition() != 0) {
+            if (thisIndex >= mSegments.length) {
+                for (; otherIndex < other.mSegments.length; otherIndex++) {
+                    if (other.mSegments[otherIndex].repetition() != 0) {
                         return false;
                     }
                 }
                 return true;
-            } else if (otherIndex >= other.mClauses.length) {
+            } else if (otherIndex >= other.mSegments.length) {
                 return false;
             }
 
-            BaseClause thisClause = mClauses[thisIndex];
-            BaseClause otherClause = other.mClauses[otherIndex];
-            int repetition = otherClause.repetition();
+            BaseSegment thisSegment = mSegments[thisIndex];
+            BaseSegment otherSegment = other.mSegments[otherIndex];
+            int repetition = otherSegment.repetition();
 
-            if (thisClause.canBindTo(otherClause)) {
+            if (thisSegment.canBindTo(otherSegment)) {
                 thisIndex++;
                 if (repetition == -1) { // once
                     otherIndex++;
@@ -401,19 +401,19 @@ public final class BaseCallSignature implements CallSignature {
             return cmp;
         }
 
-        // FIXME: Clause comparison is wrong. It needs to follow the same rules as canBindTo.
+        // FIXME: Segment comparison is wrong. It needs to follow the same rules as canBindTo.
 
-        int numClauses = this.numClauses();
+        int numSegments = this.numSegments();
 
-        if (numClauses != bSig.numClauses()) {
+        if (numSegments != bSig.numSegments()) {
             return 0;
         }
 
-        for (int i=0; i<numClauses; i++) {
-            BaseCallSignature.BaseClause clause = this.clause(i);
-            BaseCallSignature.BaseClause aClause = aSig.clause(i);
-            BaseCallSignature.BaseClause bClause = bSig.clause(i);
-            cmp = clause.inputType().bindCompare(aClause.inputType(), bClause.inputType());
+        for (int i=0; i<numSegments; i++) {
+            BaseCallSignature.BaseSegment segment = this.segment(i);
+            BaseCallSignature.BaseSegment aSegment = aSig.segment(i);
+            BaseCallSignature.BaseSegment bSegment = bSig.segment(i);
+            cmp = segment.inputType().bindCompare(aSegment.inputType(), bSegment.inputType());
             if (cmp != 0) {
                 return cmp;
             }
@@ -428,7 +428,7 @@ public final class BaseCallSignature implements CallSignature {
         hash = hash * mOutputType.hashCode();
         hash = hash * 31 + Objects.hashCode(mName);
         hash = hash * 31 + mInputType.hashCode();
-        hash = hash * 31 + Arrays.hashCode(mClauses);
+        hash = hash * 31 + Arrays.hashCode(mSegments);
         return hash;
     }
 
@@ -439,51 +439,51 @@ public final class BaseCallSignature implements CallSignature {
             && mName.equals(other.mName)
             && mOutputType.equals(other.mOutputType)
             && mInputType.equals(other.mInputType)
-            && Arrays.equals(mClauses, other.mClauses);
+            && Arrays.equals(mSegments, other.mSegments);
     }
 
-    public static final class BaseClause implements Clause {
+    public static final class BaseSegment implements Segment {
         /**
-         * Returns a clause which accepts any code statement.
+         * Returns a segment which accepts any code statement.
          *
          * @param repetition -1: once, 0: zero or more, 1: one or more
          * @param name required (can be empty, except when repetition is >= 0)
          */
-        public static BaseClause from(int repetition, String name) {
+        public static BaseSegment from(int repetition, String name) {
             if (name.isEmpty() && repetition >= 0) {
                 throw new IllegalArgumentException();
             }
-            return InternSet.apply(new BaseClause(repetition, name, null, false));
+            return InternSet.apply(new BaseSegment(repetition, name, null, false));
         }
 
         /**
-         * Returns a clause which accepts a tuple or code block.
+         * Returns a segment which accepts a tuple or code block.
          *
          * @param repetition -1: once, 0: zero or more, 1: one or more
          * @param name required (can be empty)
          * @param inputType required
          * @param evaluated true indicates a normal input type, false indicates a code block
          */
-        public static BaseClause from(int repetition, String name,
+        public static BaseSegment from(int repetition, String name,
                                       BaseTupleType inputType, boolean evaluated)
         {
             Objects.requireNonNull(name);
             Objects.requireNonNull(inputType);
-            return InternSet.apply(new BaseClause(repetition, name, inputType, evaluated));
+            return InternSet.apply(new BaseSegment(repetition, name, inputType, evaluated));
         }
 
         private final String mName;
         private final BaseTupleType mInputType;
         private final int mFlags;
 
-        private volatile BaseClause mNoFieldNames;
+        private volatile BaseSegment mNoFieldNames;
 
-        private BaseClause(int repetition, String name, BaseTupleType inputType, boolean evaluated)
+        private BaseSegment(int repetition, String name, BaseTupleType inputType, boolean evaluated)
         {
             this(name, inputType, (repetition & 0b11) | (evaluated ? EVALUATED : 0));
         }
 
-        private BaseClause(String name, BaseTupleType inputType, int flags) {
+        private BaseSegment(String name, BaseTupleType inputType, int flags) {
             mName = name;
             mInputType = inputType;
             mFlags = flags;
@@ -522,8 +522,8 @@ public final class BaseCallSignature implements CallSignature {
         }
 
         @Override
-        public BaseClause noFieldNames() {
-            BaseClause noFieldNames = mNoFieldNames;
+        public BaseSegment noFieldNames() {
+            BaseSegment noFieldNames = mNoFieldNames;
 
             if (noFieldNames == null) {
                 BaseTupleType in = mInputType;
@@ -531,7 +531,7 @@ public final class BaseCallSignature implements CallSignature {
                 if (in == null || (newIn = in.noFieldNames()) == in) {
                     noFieldNames = this;
                 } else {
-                    noFieldNames = InternSet.apply(new BaseClause(mName, newIn, mFlags));
+                    noFieldNames = InternSet.apply(new BaseSegment(mName, newIn, mFlags));
                 }
                 mNoFieldNames = noFieldNames;
             }
@@ -539,7 +539,7 @@ public final class BaseCallSignature implements CallSignature {
             return noFieldNames;
         }
 
-        private BaseClause forMacro(BaseType bindingType, BaseType blockType) {
+        private BaseSegment forMacro(BaseType bindingType, BaseType blockType) {
             BaseTupleType inputType = mInputType;
 
             int num = inputType.numFields();
@@ -549,7 +549,7 @@ public final class BaseCallSignature implements CallSignature {
                 inputType = inputType.withTypes(types);
             }
 
-            return InternSet.apply(new BaseClause(mName, inputType, mFlags | EVALUATED));
+            return InternSet.apply(new BaseSegment(mName, inputType, mFlags | EVALUATED));
         }
 
         private void doFlatten(LinkedHashMap<Object, Object> map) {
@@ -575,7 +575,7 @@ public final class BaseCallSignature implements CallSignature {
             putElement(map, mName, inputType);
         }
 
-        private boolean canBindTo(BaseClause other) {
+        private boolean canBindTo(BaseSegment other) {
             return mName.equals(other.mName) && isInputEvaluated() == other.isInputEvaluated()
                 && mInputType.canConvertTo(other.mInputType) != Integer.MAX_VALUE;
         }
@@ -590,7 +590,7 @@ public final class BaseCallSignature implements CallSignature {
 
         @Override
         public boolean equals(Object obj) {
-            return this == obj || obj instanceof BaseClause other
+            return this == obj || obj instanceof BaseSegment other
                 && mFlags == other.mFlags
                 && Objects.equals(mName, other.mName)
                 && Objects.equals(mInputType, other.mInputType);

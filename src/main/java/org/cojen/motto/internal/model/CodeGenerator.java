@@ -240,8 +240,8 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             throw null;
         }
 
-        if (action.numClauses() != 0) {
-            // FIXME: clauses
+        if (action.numSegments() != 0) {
+            // FIXME: segments
             throw null;
         }
 

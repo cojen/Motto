@@ -28,7 +28,7 @@ import org.cojen.motto.model.ArrayType;
 import org.cojen.motto.model.Binding;
 import org.cojen.motto.model.Block;
 import org.cojen.motto.model.CallableItem;
-import org.cojen.motto.model.ClauseArgument;
+import org.cojen.motto.model.SegmentArgument;
 import org.cojen.motto.model.TerminatedBlockException;
 import org.cojen.motto.model.Type;
 import org.cojen.motto.model.TupleType;
@@ -278,18 +278,18 @@ public final class BaseBlock implements Block {
 
     @Override
     public BaseBinding callDirect(Binding target, CallableItem callable, Object... inputs) {
-        return callDirect(target, callable, inputs, (ClauseArgument[]) null);
+        return callDirect(target, callable, inputs, (SegmentArgument[]) null);
     }
 
     @Override
     public BaseBinding callDirect(Binding target, CallableItem callable, Object[] inputs,
-                                  ClauseArgument... clauses)
+                                  SegmentArgument... segments)
     {
-        return callDirect((BaseBinding) target, (BaseCallableItem) callable, inputs, clauses);
+        return callDirect((BaseBinding) target, (BaseCallableItem) callable, inputs, segments);
     }
 
     public BaseBinding callDirect(BaseBinding target, BaseCallableItem callable,
-                                  Object[] inputs, ClauseArgument... clauses)
+                                  Object[] inputs, SegmentArgument... segments)
     {
         // FIXME: verify target and input types
 
@@ -297,15 +297,15 @@ public final class BaseBlock implements Block {
             target = targetVar(callable);
         }
 
-        BaseClauseArgument[] extArray = null;
+        BaseSegmentArgument[] extArray = null;
 
-        if (clauses != null && clauses.length != 0) {
-            if (clauses instanceof BaseClauseArgument[] a) {
+        if (segments != null && segments.length != 0) {
+            if (segments instanceof BaseSegmentArgument[] a) {
                 extArray = a;
             } else {
-                extArray = new BaseClauseArgument[clauses.length];
-                for (int i=0; i<clauses.length; i++) {
-                    extArray[i] = (BaseClauseArgument) clauses[i];
+                extArray = new BaseSegmentArgument[segments.length];
+                for (int i=0; i<segments.length; i++) {
+                    extArray[i] = (BaseSegmentArgument) segments[i];
                 }
             }
         }

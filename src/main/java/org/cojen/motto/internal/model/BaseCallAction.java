@@ -30,22 +30,22 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
     private final BaseCallableItem mCallable;
     private final BaseBinding mOutput;
     private final BaseBinding[] mInputs;
-    private final BaseClauseArgument[] mClauses;
+    private final BaseSegmentArgument[] mSegments;
 
     BaseCallAction(int position, BaseCallableItem callable,
                    BaseBinding output, BaseBinding... inputs)
     {
-        this(position, callable, output, inputs, (BaseClauseArgument[]) null);
+        this(position, callable, output, inputs, (BaseSegmentArgument[]) null);
     }
 
     BaseCallAction(int position, BaseCallableItem callable,
-                   BaseBinding output, BaseBinding[] inputs, BaseClauseArgument... clauses)
+                   BaseBinding output, BaseBinding[] inputs, BaseSegmentArgument... segments)
     {
         super(position);
         mCallable = Objects.requireNonNull(callable);
         mOutput = Objects.requireNonNull(output);
         mInputs = Objects.requireNonNull(inputs);
-        mClauses = clauses;
+        mSegments = segments;
     }
 
     @Override
@@ -68,15 +68,15 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
         return mInputs[index];
     }
 
-    public final int numClauses() {
-        return mClauses == null ? 0 : mClauses.length;
+    public final int numSegments() {
+        return mSegments == null ? 0 : mSegments.length;
     }
 
-    public final BaseClauseArgument clause(int index) {
-        if (mClauses == null) {
+    public final BaseSegmentArgument segment(int index) {
+        if (mSegments == null) {
             throw new IndexOutOfBoundsException();
         }
-        return mClauses[index];
+        return mSegments[index];
     }
 
     @Override
@@ -96,9 +96,9 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
         }
 
         public Direct(int position, BaseCallableItem callable,
-                      BaseBinding output, BaseBinding[] inputs, BaseClauseArgument... clauses)
+                      BaseBinding output, BaseBinding[] inputs, BaseSegmentArgument... segments)
         {
-            super(position, callable, output, inputs, clauses);
+            super(position, callable, output, inputs, segments);
         }
 
         @Override

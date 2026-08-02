@@ -16,14 +16,14 @@
 
 package org.cojen.motto.internal.model;
 
-import org.cojen.motto.model.ClauseArgument;
+import org.cojen.motto.model.SegmentArgument;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public final class BaseClauseArgument implements ClauseArgument {
+public final class BaseSegmentArgument implements SegmentArgument {
     @Override
     public String name() {
         // FIXME

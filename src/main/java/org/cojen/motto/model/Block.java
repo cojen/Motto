@@ -124,7 +124,7 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding callDirect(Binding target, CallableItem callable, Object[] inputs,
-                              ClauseArgument... clauses);
+                              SegmentArgument... segments);
 
     /**
      * @param target the target binding; pass null to have one automatically created

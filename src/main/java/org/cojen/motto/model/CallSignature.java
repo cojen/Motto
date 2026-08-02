@@ -35,9 +35,9 @@ public sealed interface CallSignature permits BaseCallSignature {
      */
     public boolean isInputEvaluated();
 
-    public int numClauses();
+    public int numSegments();
 
-    public Clause clause(int index);
+    public Segment segment(int index);
 
     /**
      * Returns a version of this signature in which the output and input types don't have any
@@ -53,27 +53,27 @@ public sealed interface CallSignature permits BaseCallSignature {
     public CallSignature forMacro();
 
     /**
-     * Returns a signature which has no clauses and the input type is eagerly evaluated. A
+     * Returns a signature which has no segments and the input type is eagerly evaluated. A
      * flattened signature can be used to define a Java method.
      *
      * <p>It should be noted that the flattened representation is lossy. Repetition details are
-     * lost, and clause interleaving order is also lost.
+     * lost, and segment interleaving order is also lost.
      *
      * <p>The following transformations are made:
      * <ul>
      * <li>Parameter types which represent unevaluated code blocks are converted to function
      *     types.
-     * <li>Clauses are converted to parameters, and they appear after the regular parameters.
-     * <li>Clauses which are defined once are represented by tuples of named parameters.
-     * <li>Clauses which have repetition are represented by tuple arrays.
-     * <li>Clauses which are defined more than once (by name) are represented by tuples of
+     * <li>Segments are converted to parameters, and they appear after the regular parameters.
+     * <li>Segments which are defined once are represented by tuples of named parameters.
+     * <li>Segments which have repetition are represented by tuple arrays.
+     * <li>Segments which are defined more than once (by name) are represented by tuples of
      *     tuples or tuples of tuple arrays. The number of fields in the outer tuple matches
-     *     the number of times the clause is defined, and the outer tuple fields are unnamed.
+     *     the number of times the segment is defined, and the outer tuple fields are unnamed.
      * </ul>
      */
     public CallSignature flatten();
 
-    public static sealed interface Clause permits BaseCallSignature.BaseClause {
+    public static sealed interface Segment permits BaseCallSignature.BaseSegment {
         public boolean isRequired();
 
         public boolean hasRepetition();
@@ -88,8 +88,8 @@ public sealed interface CallSignature permits BaseCallSignature {
         public boolean isInputEvaluated();
 
         /**
-         * Returns a version of this clause in which the input type doesn't have any names.
+         * Returns a version of this segment in which the input type doesn't have any names.
          */
-        public Clause noFieldNames();
+        public Segment noFieldNames();
     }
 }
