@@ -18,14 +18,22 @@ package org.cojen.motto.internal.parser;
 
 /**
  * 
- *
+ * @see MethodDefinitionStatement
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
-{
-    public Token start();
+public final class DefinitionSegment {
+    public final int repetition;
+    public final Token.Identifier name;
+    public final Statement params;
 
-    public Token end();
+    /**
+     * @param repetition -1: once, 0: zero or more, 1: one or more
+     * @param name optional
+     * @param params is a TupleStatement or a `_` LiteralStatement to accept any statement
+     */
+    DefinitionSegment(int repetition, Token.Identifier name, Statement params) {
+        this.repetition = repetition;
+        this.name = name;
+        this.params = params;
+    }
 }
-

@@ -16,16 +16,19 @@
 
 package org.cojen.motto.internal.parser;
 
+import java.util.List;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
+public abstract sealed class StatementList implements Element
+    permits EnclosedStatementList, SequenceStatement
 {
-    public Token start();
+    public final List<Statement> items;
 
-    public Token end();
+    StatementList(List<Statement> items) {
+        this.items = items;
+    }
 }
-

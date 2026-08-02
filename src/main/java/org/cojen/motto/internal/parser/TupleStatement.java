@@ -16,16 +16,24 @@
 
 package org.cojen.motto.internal.parser;
 
+import java.util.List;
+
 /**
- * 
+ * Example: `(a, 0)` or `{a, 0}`
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
-{
-    public Token start();
+public final class TupleStatement extends EnclosedStatementList implements Statement {
+    /**
+     * @param first T_LPAREN or T_LBRACE
+     * @param last T_RPAREN or T_RBRACE
+     */
+    TupleStatement(Token first, List<Statement> items, Token last) {
+        super(first, items, last);
+    }
 
-    public Token end();
+    @Override
+    public <R, P> R accept(ParseVisitor<R, P> v, P param) {
+        return v.visit(this, param);
+    }
 }
-

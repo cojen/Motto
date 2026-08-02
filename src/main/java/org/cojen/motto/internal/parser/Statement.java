@@ -21,11 +21,19 @@ package org.cojen.motto.internal.parser;
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
+public sealed interface Statement extends Element permits
+    CoordinateLoadStatement, CoordinateStoreStatement, DeclarationStatement, DefinitionStatement,
+    EmptyStatement, FieldLoadStatement, InfixStatement, JumpStatement, LabeledStatement,
+    LiteralStatement, NewArrayStatement, NewStatement, PathStatement, PostfixStatement,
+    PrefixStatement, ReturnStatement, SequenceStatement, ThrowStatement, TupleStatement,
+    YieldStatement
 {
-    public Token start();
+    public <R, P> R accept(ParseVisitor<R, P> v, P param);
 
-    public Token end();
+    /**
+     * @see LabeledStatement
+     */
+    public default Statement delabel() {
+        return this;
+    }
 }
-

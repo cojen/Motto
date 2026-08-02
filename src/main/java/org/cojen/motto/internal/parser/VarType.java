@@ -16,16 +16,18 @@
 
 package org.cojen.motto.internal.parser;
 
+import java.util.List;
+
 /**
- * 
- *
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
-{
-    public Token start();
+public abstract sealed class VarType implements Element permits SimpleVarType, TupleVarType {
+    public final List<Coordinate> coordinates;
 
-    public Token end();
+    /**
+     * @param coordinates optional; items must be VarTypes or null
+     */
+    VarType(List<Coordinate> coordinates) {
+        this.coordinates = coordinates;
+    }
 }
-

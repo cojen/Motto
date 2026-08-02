@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import java.util.function.Supplier;
+
 import org.cojen.maker.Maker;
 
 import org.cojen.motto.model.Path;
@@ -63,6 +65,25 @@ public abstract sealed class BasePath extends AbstractList<String> implements Pa
             return from(elements[0]);
         } else {
             return InternSet.apply(new Multi(elements.clone()));
+        }
+    }
+
+    /**
+     * Returns a canonical path with the given elements.
+     */
+    public static BasePath from(List<? extends Supplier<String>> elements) {
+        int size;
+        if (elements == null || (size = elements.size()) == 0) {
+            return Empty.THE;
+        } else if (size == 1) {
+            return from(elements.getFirst().get());
+        } else {
+            var strs = new String[size];
+            int i = 0;
+            for (Supplier<String> s : elements) {
+                strs[i++] = s.get();
+            }
+            return InternSet.apply(new Multi(strs));
         }
     }
 

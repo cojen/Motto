@@ -19,6 +19,8 @@ package org.cojen.motto.internal.parser;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import java.util.function.Supplier;
+
 import org.cojen.motto.internal.model.BaseAction;
 import org.cojen.motto.internal.model.BaseIntType;
 import org.cojen.motto.internal.model.BaseFloatType;
@@ -157,12 +159,17 @@ public abstract sealed class Token implements Element {
         }
     }
 
-    public static abstract sealed class Text extends Token {
+    public static abstract sealed class Text extends Token implements Supplier<String> {
         public final String text;
 
         Text(int line, int column, int length, String text) {
             super(line, column, length);
             this.text = text.intern();
+        }
+
+        @Override // Supplier
+        public String get() {
+            return text;
         }
 
         @Override

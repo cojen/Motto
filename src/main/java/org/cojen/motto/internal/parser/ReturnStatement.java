@@ -17,15 +17,34 @@
 package org.cojen.motto.internal.parser;
 
 /**
- * 
+ * Example: `return 0`
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
-{
-    public Token start();
+public final class ReturnStatement implements Statement {
+    public final Token keyword;
+    public final Statement source;
 
-    public Token end();
+    /**
+     * @param source can be null when returning void
+     */
+    ReturnStatement(Token keyword, Statement source) {
+        this.keyword = keyword;
+        this.source = source;
+    }
+
+    @Override
+    public <R, P> R accept(ParseVisitor<R, P> v, P param) {
+        return v.visit(this, param);
+    }
+
+    @Override
+    public Token start() {
+        return keyword;
+    }
+
+    @Override
+    public Token end() {
+        return source == null ? keyword : source.end();
+    }
 }
-

@@ -19,13 +19,19 @@ package org.cojen.motto.internal.parser;
 /**
  * 
  *
+ * @see MethodCallStatement
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
-{
-    public Token start();
+public final class CallSegment {
+    public final Token.Identifier name;
+    public final Statement statement;
 
-    public Token end();
+    /**
+     * @param name optional
+     * @param statement required
+     */
+    CallSegment(Token.Identifier name, Statement statement) {
+        this.name = name;
+        this.statement = statement;
+    }
 }
-

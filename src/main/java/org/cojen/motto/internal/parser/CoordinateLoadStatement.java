@@ -16,16 +16,34 @@
 
 package org.cojen.motto.internal.parser;
 
+import java.util.List;
+
 /**
- * 
+ * Example: `a[0]`
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
-{
-    public Token start();
+public final class CoordinateLoadStatement implements Statement {
+    public final Statement source;
+    public final List<Coordinate> coordinates;
 
-    public Token end();
+    CoordinateLoadStatement(Statement source, List<Coordinate> coordinates) {
+        this.source = source;
+        this.coordinates = coordinates;
+    }
+
+    @Override
+    public <R, P> R accept(ParseVisitor<R, P> v, P param) {
+        return v.visit(this, param);
+    }
+
+    @Override
+    public Token start() {
+        return source.start();
+    }
+
+    @Override
+    public Token end() {
+        return coordinates.isEmpty() ? source.end() : coordinates.getLast().end();
+    }
 }
-

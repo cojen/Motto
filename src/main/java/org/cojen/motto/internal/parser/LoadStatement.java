@@ -16,16 +16,33 @@
 
 package org.cojen.motto.internal.parser;
 
+import java.util.List;
+
 /**
- * 
+ * Example: `a` or `a.b`
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
-{
-    public Token start();
+public final class LoadStatement extends PathStatement {
+    /**
+     * @param path path to variable or field
+     */
+    LoadStatement(List<Token.Identifier> path) {
+        super(path);
+    }
 
-    public Token end();
+    @Override
+    public <R, P> R accept(ParseVisitor<R, P> v, P param) {
+        return v.visit(this, param);
+    }
+
+    @Override
+    public Token start() {
+        return path.getFirst();
+    }
+
+    @Override
+    public Token end() {
+        return path.getLast();
+    }
 }
-

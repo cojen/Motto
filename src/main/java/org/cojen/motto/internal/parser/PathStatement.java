@@ -16,16 +16,22 @@
 
 package org.cojen.motto.internal.parser;
 
+import java.util.List;
+
 /**
- * 
+ * Base class for statements which have a name path which must be resolved later.
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
+public abstract sealed class PathStatement implements Statement
+    permits LoadStatement, MethodCallStatement, StoreStatement
 {
-    public Token start();
+    public final List<Token.Identifier> path;
 
-    public Token end();
+    /**
+     * @param path path to variable or field
+     */
+    PathStatement(List<Token.Identifier> path) {
+        this.path = path;
+    }
 }
-

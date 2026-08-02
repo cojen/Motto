@@ -21,11 +21,26 @@ package org.cojen.motto.internal.parser;
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
-{
-    public Token start();
+public final class EmptyStatement implements Statement {
+    private final Token mToken;
 
-    public Token end();
+    EmptyStatement(Token token) {
+        mToken = token;
+    }
+
+    @Override
+    public <R, P> R accept(ParseVisitor<R, P> v, P param) {
+        return v.visit(this, param);
+    }
+
+    @Override
+    public Token start() {
+        return mToken;
+    }
+
+    @Override
+    public Token end() {
+        return mToken;
+    }
 }
 

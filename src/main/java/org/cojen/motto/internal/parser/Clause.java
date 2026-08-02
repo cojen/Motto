@@ -16,16 +16,33 @@
 
 package org.cojen.motto.internal.parser;
 
+import java.util.List;
+
 /**
- * 
+ * Example: `extends a.B` or `throws B, C`
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
-{
-    public Token start();
+public final class Clause implements Element {
+    public final Token.Identifier kind;
+    public final List<List<Token.Identifier>> items;
 
-    public Token end();
+    /**
+     * @param kind required
+     * @param items required list of qualified identifiers
+     */
+    Clause(Token.Identifier kind, List<List<Token.Identifier>> items) {
+        this.kind = kind;
+        this.items = items;
+    }
+
+    @Override
+    public Token start() {
+        return kind;
+    }
+
+    @Override
+    public Token end() {
+        return items.isEmpty() ? kind : items.getLast().getLast();
+    }
 }
-

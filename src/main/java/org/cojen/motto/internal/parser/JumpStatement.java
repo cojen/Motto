@@ -17,15 +17,35 @@
 package org.cojen.motto.internal.parser;
 
 /**
- * 
+ * Example: `goto start`
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
-{
-    public Token start();
+public final class JumpStatement implements Statement {
+    public final Token.Identifier keyword;
+    public final Token.Identifier target;
 
-    public Token end();
+    /**
+     * @param keyword goto, break, or continue
+     * @param target required for goto
+     */
+    JumpStatement(Token.Identifier keyword, Token.Identifier target) {
+        this.keyword = keyword;
+        this.target = target;
+    }
+
+    @Override
+    public <R, P> R accept(ParseVisitor<R, P> v, P param) {
+        return v.visit(this, param);
+    }
+
+    @Override
+    public Token start() {
+        return keyword;
+    }
+
+    @Override
+    public Token end() {
+        return target;
+    }
 }
-

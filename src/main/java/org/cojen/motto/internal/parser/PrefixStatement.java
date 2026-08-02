@@ -17,15 +17,31 @@
 package org.cojen.motto.internal.parser;
 
 /**
- * 
+ * Example: `-a`
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
-{
-    public Token start();
+public final class PrefixStatement implements Statement {
+    public final Token operator;
+    public final Statement param;
 
-    public Token end();
+    PrefixStatement(Token operator, Statement param) {
+        this.operator = operator;
+        this.param = param;
+    }
+
+    @Override
+    public <R, P> R accept(ParseVisitor<R, P> v, P param) {
+        return v.visit(this, param);
+    }
+
+    @Override
+    public Token start() {
+        return operator;
+    }
+
+    @Override
+    public Token end() {
+        return param.end();
+    }
 }
-

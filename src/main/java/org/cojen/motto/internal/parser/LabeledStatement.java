@@ -17,15 +17,36 @@
 package org.cojen.motto.internal.parser;
 
 /**
- * 
+ * Example: `start: ...`
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
-{
-    public Token start();
+public final class LabeledStatement implements Statement {
+    public final Token.Identifier label;
+    public final Statement source;
 
-    public Token end();
+    LabeledStatement(Token.Identifier label, Statement source) {
+        this.label = label;
+        this.source = source;
+    }
+
+    @Override
+    public <R, P> R accept(ParseVisitor<R, P> v, P param) {
+        return v.visit(this, param);
+    }
+
+    @Override
+    public Token start() {
+        return label;
+    }
+
+    @Override
+    public Token end() {
+        return source.end();
+    }
+
+    @Override
+    public Statement delabel() {
+        return source.delabel();
+    }
 }
-
