@@ -87,11 +87,6 @@ public abstract sealed class BaseBinding implements Binding {
         return false;
     }
 
-    @Override
-    public boolean isStable() {
-        return true;
-    }
-
     /**
      * If this is an anonymous binding, calls map.putIfAbsent(binding, true). If successful,
      * then the binding is tagged as having a block interdependency. It depends on having a
@@ -112,7 +107,20 @@ public abstract sealed class BaseBinding implements Binding {
     void trackBlockLocalTarget(Map<Anonymous, Boolean> map) {
     }
 
-    public static final class Void extends BaseBinding {
+    /**
+     * Defines a binding which is always stable.
+     */
+    public static abstract sealed class Stable extends BaseBinding {
+        Stable() {
+        }
+
+        @Override
+        public final boolean isStable() {
+            return true;
+        }
+    }
+
+    public static final class Void extends Stable {
         public static final Void THE = new Void();
 
         private Void() {
@@ -124,7 +132,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
     }
 
-    public static final class Null extends BaseBinding {
+    public static final class Null extends Stable {
         public static final Null THE = new Null();
 
         private Null() {
@@ -136,7 +144,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
     }
 
-    public static final class Constant extends BaseBinding {
+    public static final class Constant extends Stable {
         public static Constant from(BaseType type, Object value) {
             return InternSet.apply(new Constant(type, value));
         }
@@ -243,7 +251,7 @@ public abstract sealed class BaseBinding implements Binding {
 
         @Override
         public boolean isStable() {
-            return mField.isFinal();
+            return mInstance.isStable() && mField.isFinal();
         }
 
         public BaseBinding instance() {
@@ -295,6 +303,11 @@ public abstract sealed class BaseBinding implements Binding {
             return tupleType().fieldType(mIndex);
         }
 
+        @Override
+        public boolean isStable() {
+            return mTuple.isStable();
+        }
+
         public BaseBinding tuple() {
             return mTuple;
         }
@@ -321,7 +334,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
     }
 
-    public static abstract sealed class Local extends BaseBinding {
+    public static abstract sealed class Local extends Stable {
         final BaseType mType;
 
         /**
@@ -427,7 +440,7 @@ public abstract sealed class BaseBinding implements Binding {
     /**
      * Defines a binding which refers to code which can be passed to a macro call.
      */
-    public static final class Code extends BaseBinding {
+    public static final class Code extends Stable {
         public static Code from(BaseType resultType, BaseBlock block) {
             return new Code(resultType, block);
         }
