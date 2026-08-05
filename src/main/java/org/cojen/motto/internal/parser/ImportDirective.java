@@ -26,19 +26,16 @@ import org.cojen.motto.internal.model.BasePath;
  * @author Brian S. O'Neill
  */
 public final class ImportDirective implements Element {
-    public final List<Token.Identifier> modifiers;
     public final List<Token.Identifier> name;
     public final Token wildcard;
 
     private BasePath mPath;
 
     /**
-     * @param modifiers required; might be empty
      * @param name required
      * @param wildcard optional
      */
-    ImportDirective(List<Token.Identifier> modifiers, List<Token.Identifier> name, Token wildcard) {
-        this.modifiers = modifiers;
+    ImportDirective(List<Token.Identifier> name, Token wildcard) {
         this.name = name;
         this.wildcard = wildcard;
     }

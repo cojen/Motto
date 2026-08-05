@@ -34,7 +34,7 @@ public final class CompilationEnv {
     /**
      * @param sourceFile optional
      */
-    CompilationEnv(Compiler compiler, File sourceFile) {
+    public CompilationEnv(Compiler compiler, File sourceFile) {
         mCompiler = Objects.requireNonNull(compiler);
         mSourceFile = sourceFile;
     }

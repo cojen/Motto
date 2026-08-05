@@ -83,10 +83,99 @@ public final class Parser implements Closeable {
      * the CompilationUnit should be considered to be broken.
      */
     public CompilationUnit parse() throws IOException {
-        // FIXME
-        throw null;
+        List<Token.Identifier> packageName = List.of();
+        List<ImportDirective> imports = List.of();
+
+        directives: while (true) {
+            Token t1 = nextToken();
+
+            if (t1 instanceof Token.Identifier id && !id.quoted) {
+                String text = id.text;
+
+                if ("import".equals(text)) {
+                    List<Token.Identifier> name = tryParseQualifiedIdentifier();
+
+                    if (name == null) {
+                        errorAtNext(t1, "import path expected");
+                        continue directives;
+                    }
+
+                    Token wildcard = null;
+
+                    wildcard: {
+                        Token t2 = nextToken();
+
+                        switch (t2.type()) {
+                            case T_CUSTOM_OP -> {
+                                if (".*".equals(((Token.Custom) t2).text)) {
+                                    wildcard = new Token.Basic
+                                        (t2.line(), t2.column() + 1, 1, T_MUL);
+                                    break wildcard;
+                                }
+                            }
+                            case T_DOT -> {
+                                Token t3 = nextToken();
+                                if (t3.type() == T_MUL) {
+                                    wildcard = t3;
+                                    break wildcard;
+                                }
+                                pushToken(t3);
+                            }
+                        }
+
+                        pushToken(t2);
+                    }
+
+                    if (imports.isEmpty()) {
+                        imports = new ArrayList<>();
+                    }
+
+                    imports.add(new ImportDirective(name, wildcard));
+
+                    continue directives;
+                }
+
+                if ("package".equals(text)) {
+                    List<Token.Identifier> name = tryParseQualifiedIdentifier();
+                    if (name == null) {
+                        errorAtNext(t1, "package name expected");
+                    }
+
+                    if (!packageName.isEmpty()) {
+                        error(t1, "package is already specified");
+                    } else if (!imports.isEmpty()) {
+                        error(t1, "cannot specify package after imports");
+                    } else {
+                        packageName = name;
+                    }
+
+                    continue directives;
+                }
+            }
+
+            switch (t1.type()) {
+                case T_COMMA, T_SEMI -> {
+                    // Directives aren't part of a tuple, and so separators aren't required.
+                    // There's no harm in providing them, so just skip and move on.
+                    continue;
+                }
+                default -> {
+                    pushToken(t1);
+                    break directives;
+                }
+            }
+        }
+
+        List<DefinitionStatement> definitions = List.of();
+
+        // FIXME: definitions
+
+        return new CompilationUnit(mEnv.sourceFile(), packageName, imports, definitions);
     }
 
+    /**
+     * @return null or a non-empty list
+     */
     private List<Token.Identifier> tryParseQualifiedIdentifier() throws IOException {
         Token t = nextToken();
         if (t instanceof Token.Identifier first) {
@@ -99,6 +188,7 @@ public final class Parser implements Closeable {
 
     /**
      * @param first must be an identifier
+     * @return a non-empty list
      */
     private List<Token.Identifier> parseQualifiedIdentifier(Token.Identifier first)
         throws IOException
