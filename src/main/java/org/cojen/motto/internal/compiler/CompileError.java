@@ -22,9 +22,10 @@ import org.cojen.motto.internal.parser.Element;
 import org.cojen.motto.internal.parser.Token;
 
 /**
- * 
- *
- * @author Brian S. O'Neill
+ * @param startLine source code start line, one-based; is 0 if not applicable
+ * @param startColumn source code start column, zero-based; is -1 if not applicable
+ * @param endLine source code end line, inclusive
+ * @param endColumn source code end column, exclusive
  */
 public final record CompileError(int startLine, int startColumn,
                                  int endLine, int endColumn, String message)

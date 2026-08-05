@@ -82,11 +82,12 @@ public final class Parser implements Closeable {
      * Always returns a non-null CompilationUnit. If numErrors returns a non-zero value, then
      * the CompilationUnit should be considered to be broken.
      */
+    @SuppressWarnings("unchecked")
     public CompilationUnit parse() throws IOException {
         List<Token.Identifier> packageName = List.of();
         List<ImportDirective> imports = List.of();
 
-        directives: while (true) {
+        directives: while (true) try {
             Token t1 = nextToken();
 
             if (t1 instanceof Token.Identifier id && !id.quoted) {
@@ -157,20 +158,225 @@ public final class Parser implements Closeable {
                 case T_COMMA, T_SEMI -> {
                     // Directives aren't part of a tuple, and so separators aren't required.
                     // There's no harm in providing them, so just skip and move on.
-                    continue;
+                    continue directives;
                 }
                 default -> {
                     pushToken(t1);
                     break directives;
                 }
             }
+        } catch (IOException e) {
+            if (numErrors() == 0) {
+                throw e;
+            }
         }
 
         List<DefinitionStatement> definitions = List.of();
 
-        // FIXME: definitions
+        try {
+            var statements = new ArrayList<Statement>(4);
+
+            Token endToken = parseStatements(statements, -1);
+            if (endToken.type() != T_EOF) {
+                error(endToken, "unexpected token");
+            }
+
+            boolean broken = false;
+
+            for (Statement st : statements) {
+                if (!(st instanceof DefinitionStatement)) {
+                    broken = true;
+                    error(st, "must be a method or class definition");
+                }
+            }
+
+            if (!broken) {
+                definitions = (List<DefinitionStatement>) (List) statements;
+            }
+        } catch (Abort e) {
+            // Assume an error was reported.
+        } catch (IOException e) {
+            if (numErrors() == 0) {
+                throw e;
+            }
+        }
 
         return new CompilationUnit(mEnv.sourceFile(), packageName, imports, definitions);
+    }
+
+    /**
+     * @param statements parsed statements go here
+     * @param sepTokenType pass -1 if any kind of separator is allowed
+     * @return end token; caller must verify that it's the correct type
+     */
+    private Token parseStatements(List<Statement> statements, int sepTokenType)
+        throws IOException, Abort
+    {
+        final int numErrors = numErrors();
+
+        Token t;
+
+        outer: while (true) {
+            t = nextToken();
+
+            if (isListEnd(t)) {
+                break;
+            }
+
+            int tType = t.type();
+
+            if (tType == T_COMMA || tType == T_SEMI) {
+                if (tType == sepTokenType || sepTokenType == -1) {
+                    statements.add(new EmptyStatement(t));
+                } else if (numErrors == numErrors()) {
+                    sepMessage(sepTokenType);
+                }
+            } else {
+                item: while (true) {
+                    Statement st = parseLabeledStatement(t, null);
+                    statements.add(st);
+
+                    t = nextToken();
+                    tType = t.type();
+
+                    if (tType == sepTokenType) {
+                        break item;
+                    }
+                    
+                    if (isListEnd(t)) {
+                        break outer;
+                    }
+
+                    // Check if the statement can be automatically separated.
+                    if (st.end() instanceof Token.Newline) {
+                        pushToken(t);
+                        break item;
+                    }
+
+                    if (tType == T_COMMA || tType == T_SEMI) {
+                        if (numErrors == numErrors()) {
+                            error(t, sepMessage(sepTokenType));
+                        }
+                        break;
+                    }
+
+                    if (numErrors == numErrors()) {
+                        errorAfter(st.end(), sepMessage(sepTokenType));
+                    }
+                }
+            }
+        }
+
+        return t;
+    }
+
+    private boolean isListEnd(Token t) {
+        return switch (t.type()) {
+            case T_RPAREN, T_RBRACE, T_RBRACK, T_EOF -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * @param which optional type of statement being parsed (used for error reporting)
+     */
+    private Statement parseLabeledStatement(Token t1, String which) throws IOException, Abort {
+        if (t1.type() == T_IDENTIFIER) {
+            Token t2 = nextToken();
+            if (t2.type() == T_COLON) {
+                var label = (Token.Identifier) t1;
+                Statement st;
+                Token t3 = nextToken();
+                switch (t3.type()) {
+                    case T_RPAREN, T_RBRACE, T_COMMA, T_SEMI -> {
+                        pushToken(t3);
+                        st = new EmptyStatement(t2);
+                    }
+                    default -> {
+                        st = parseLabeledStatement(t3, which);
+                    }
+                }
+                return new LabeledStatement(label, st);
+            }
+            pushToken(t2);
+        }
+        pushToken(t1);
+
+        return parseStatement(which);
+    }
+
+    /**
+     * @param which optional type of statement being parsed (used for error reporting)
+     */
+    private Statement parseStatement(String which) throws IOException, Abort {
+        int localErrors = 0;
+
+        while (true) {
+            Statement st = tryParseStatement();
+
+            if (st != null) {
+                return st;
+            }
+
+            Token t = nextToken();
+
+            if (t.type() == T_EOF) {
+                if (numErrors() == 0) {
+                    error(t, "reached end of file while parsing");
+                }
+                throw new Abort(t);
+            }
+
+            if (localErrors++ == 0) {
+                if (isDifferentErrorPosition(t)) {
+                    String message = "unexpected token";
+                    if (which != null) {
+                        message = message + " while parsing " + which;
+                    }
+                    error(t, message);
+                }
+            }
+        }
+    }
+
+    private Statement tryParseStatement() throws IOException, Abort {
+        Statement st = tryParseBaseStatement();
+        if (st != null) {
+            st = tryParseStatementChain(st);
+        }
+        return st;
+    }
+
+    private Statement tryParseStatementChain(Statement st) throws IOException, Abort {
+        while (true) {
+            Statement chained = tryParseChainedStatement(st);
+            if (chained == null) {
+                break;
+            }
+            st = chained;
+        }
+        return st;
+    }
+
+    private Statement tryParseBaseStatement() throws IOException, Abort {
+        Token t1 = nextToken();
+
+        switch (t1.type()) {
+            case T_STRING, T_INT32, T_INT64, T_BIGINT, T_FLOAT32, T_FLOAT64, T_BIGDEC -> {
+                return new LiteralStatement(t1);
+            }
+
+            // FIXME: more cases
+        }
+
+        pushToken(t1);
+
+        return null;
+    }
+
+    private Statement tryParseChainedStatement(Statement st) throws IOException, Abort {
+        // FIXME: chained
+        return null;
     }
 
     /**
@@ -260,6 +466,13 @@ public final class Parser implements Closeable {
         return t;
     }
 
+    /**
+     * @param type expected separator type
+     */
+    private static String sepMessage(int type) {
+        return "expected a `" + (type == T_SEMI ? ';' : ',') + "` separator";
+    }
+
     private void error(Element element, String message) {
         error(new CompileError(element, message));
     }
@@ -299,5 +512,18 @@ public final class Parser implements Closeable {
         } else {
             errorAfter(token, message);
         }
+    }
+
+    /**
+     * @return true if the token is positioned outside the range of the last error, or if the
+     * last error is null
+     */
+    private boolean isDifferentErrorPosition(Element e) {
+        CompileError last = mLastError;
+        return last == null
+            || e.start().line() < last.startLine()
+            || e.end().line() > last.endLine()         // endLine is inclusive
+            || e.start().column() < last.startColumn()
+            || e.end().column() >= last.endColumn();   // endColumn is exclusive
     }
 }
