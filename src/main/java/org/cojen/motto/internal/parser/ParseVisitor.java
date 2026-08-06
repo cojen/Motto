@@ -28,8 +28,6 @@ public interface ParseVisitor<R, P> {
 
     public R visit(CoordinateLoadStatement st, P param);
 
-    public R visit(CoordinateStoreStatement st, P param);
-
     public R visit(DeclarationStatement st, P param);
 
     public R visit(EmptyStatement st, P param);

@@ -25,6 +25,9 @@ import java.util.List;
  * @author Brian S. O'Neill
  */
 public final class Coordinate extends EnclosedStatementList {
+    /**
+     * Used for a simple dimension declaration: `a[]`
+     */
     static final List<Statement> ONE_DIMENSION = new AbstractList<>() {
         @Override
         public int size() {
@@ -36,6 +39,7 @@ public final class Coordinate extends EnclosedStatementList {
             if (index != 0) {
                 throw new IndexOutOfBoundsException();
             }
+            // Null indicates that this is a dimension declaration.
             return null;
         }
     };

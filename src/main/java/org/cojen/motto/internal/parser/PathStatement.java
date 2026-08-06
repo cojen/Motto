@@ -24,7 +24,7 @@ import java.util.List;
  * @author Brian S. O'Neill
  */
 public abstract sealed class PathStatement implements Statement
-    permits LoadStatement, MethodCallStatement, StoreStatement
+    permits LoadStatement, MethodCallStatement
 {
     public final List<Token.Identifier> path;
 

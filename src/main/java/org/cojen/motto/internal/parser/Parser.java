@@ -83,17 +83,17 @@ public final class Parser implements Closeable {
      * the CompilationUnit should be considered to be broken.
      */
     public CompilationUnit parse() throws IOException {
-        List<Token.Identifier> packageName = List.of();
+        List<Identifier> packageName = List.of();
         List<ImportDirective> imports = List.of();
 
         directives: while (true) try {
             Token t1 = nextToken();
 
-            if (t1 instanceof Token.Identifier id && !id.quoted) {
+            if (t1 instanceof Identifier id && !id.quoted) {
                 String text = id.text;
 
                 if ("import".equals(text)) {
-                    List<Token.Identifier> name = tryParseQualifiedIdentifier();
+                    List<Identifier> name = tryParseQualifiedIdentifier();
 
                     if (name == null) {
                         errorAtNext(t1, "import path expected");
@@ -107,9 +107,8 @@ public final class Parser implements Closeable {
 
                         switch (t2.type()) {
                             case T_CUSTOM_OP -> {
-                                if (".*".equals(((Token.Custom) t2).text)) {
-                                    wildcard = new Token.Basic
-                                        (t2.line(), t2.column() + 1, 1, T_MUL);
+                                if (".*".equals(((Custom) t2).text)) {
+                                    wildcard = new Basic(t2.line(), t2.column() + 1, 1, T_MUL);
                                     break wildcard;
                                 }
                             }
@@ -136,7 +135,7 @@ public final class Parser implements Closeable {
                 }
 
                 if ("package".equals(text)) {
-                    List<Token.Identifier> name = tryParseQualifiedIdentifier();
+                    List<Identifier> name = tryParseQualifiedIdentifier();
                     if (name == null) {
                         errorAtNext(t1, "package name expected");
                     }
@@ -226,7 +225,7 @@ public final class Parser implements Closeable {
             Token t2 = nextToken();
 
             if (t2.type() == T_COLON) {
-                var label = (Token.Identifier) t1;
+                var label = (Identifier) t1;
 
                 if (maxLabels <= 0) {
                     error(label, "label isn't allowed");
@@ -295,26 +294,11 @@ public final class Parser implements Closeable {
     private Statement tryParseStatement() throws IOException, Abort {
         Statement st = tryParseBaseStatement();
         if (st != null) {
-            st = tryParseStatementChain(st);
+            st = parseStatementChain(st);
         }
         return st;
     }
 
-    private Statement tryParseStatementChain(Statement st) throws IOException, Abort {
-        while (true) {
-            Statement chained = tryParseChainedStatement(st);
-            if (chained == null) {
-                break;
-            }
-            st = chained;
-        }
-        return st;
-    }
-
-    private Statement tryParseChainedStatement(Statement st) throws IOException, Abort {
-        // FIXME: chained
-        return null;
-    }
 
     private Statement tryParseBaseStatement() throws IOException, Abort {
         Token t1 = nextToken();
@@ -326,16 +310,16 @@ public final class Parser implements Closeable {
 
             case T_IDENTIFIER -> {
                 // FIXME: parseIdentifierStatement
-                //return parseIdentifierStatement((Token.Identifier) t1);
+                //return parseIdentifierStatement((Identifier) t1);
                 throw null;
             }
 
             case T_LPAREN -> {
-                return parseTuple(t1, Token.T_RPAREN);
+                return parseTuple(t1, T_RPAREN);
             }
 
             case T_LBRACE -> {
-                return parseTuple(t1, Token.T_RBRACE);
+                return parseTuple(t1, T_RBRACE);
             }
 
             // FIXME: T_INC, T_DEC
@@ -348,6 +332,111 @@ public final class Parser implements Closeable {
         pushToken(t1);
 
         return null;
+    }
+
+    private Statement parseStatementChain(Statement st) throws IOException, Abort {
+        while (true) {
+            Token t1 = nextToken();
+
+            switch (t1.type()) {
+                default -> {
+                    // The chain doesn't continue.
+                    pushToken(t1);
+                    return st;
+                }
+
+                case T_LBRACK -> {
+                    st = new CoordinateLoadStatement(st, parseCoordinates(t1));
+                }
+
+                case T_DOT -> {
+                    Token t2 = nextToken();
+
+                    if (t2.type() != T_IDENTIFIER) {
+                        // The chain doesn't continue.
+                        pushToken(t2);
+                        pushToken(t1);
+                        return st;
+                    }
+
+                    var name = (Identifier) t2;
+
+                    TupleStatement params;
+
+                    Token t3 = nextToken();
+                    switch (t3.type()) {
+                        default -> {
+                            pushToken(t3);
+                            st = new FieldLoadStatement(st, name);
+                        }
+                        case T_LPAREN -> {
+                            params = parseTuple(t3, T_RPAREN);
+                        }
+                        case T_LBRACE -> {
+                            params = parseTuple(t3, T_RBRACE);
+                        }
+                    }
+
+                    // FIXME: parseMethodCall
+                    //st = parseMethodCall(st, List.of(name), params);
+                    throw null;
+                }
+
+                case T_EQ, T_NE, T_GE, T_LT, T_LE, T_GT, T_AND, T_OR, T_LAND, T_LOR, T_LXOR,
+                    T_PLUS, T_MINUS, T_MUL, T_DIV, T_REM, T_SHL, T_SHR, T_USHR ->
+                {
+                    st = new InfixStatement(st, t1, parseStatement("infix statement"));
+                }
+
+                case T_INC, T_DEC -> {
+                    // FIXME: T_INC, T_DEC
+                    throw null;
+                }
+
+                case T_INT32, T_INT64, T_BIGINT, T_FLOAT32, T_FLOAT64, T_BIGDEC -> {
+                    // Check if there's a need to convert this: `a -1` to this: `a - 1`
+                    var num = (Num) t1;
+                    if (!num.negated) {
+                        // The chain doesn't continue.
+                        pushToken(t1);
+                        return st;
+                    }
+                    // Synthesize a minus operator.
+                    t1 = new Basic(0, -1, 0, T_MINUS);
+                    pushToken(num.negate());
+                    st = new InfixStatement(st, t1, parseStatement("infix statement"));
+                }
+
+                case T_ASSIGN -> {
+                    // Assignment terminates the chain.
+                    return new StoreStatement(st, parseStatement("assignment source"));
+                }
+
+                case T_LAND_A, T_LOR_A, T_LXOR_A,
+                    T_PLUS_A, T_MINUS_A, T_MUL_A, T_DIV_A, T_REM_A, T_SHL_A, T_SHR_A, T_USHR_A ->
+                {
+                    // Convert `a += b` to `a = a + b`. Assignment terminates the chain.
+                    Statement source = parseStatement("assignment source");
+                    return new StoreStatement(st, new InfixStatement(st, t1, source));
+                }
+
+                case T_CUSTOM_OP -> {
+                    var op = (Custom) t1;
+                    String opText = op.text;
+
+                    if (opText.endsWith("=")) {
+                        // Convert `a <op>= b` to `a = a <op> b`. Assignment terminates the chain.
+                        Statement source = parseStatement("assignment source");
+                        // Drop the "=" suffix from the operator.
+                        op = new Custom(op.line(), op.column(), op.length(),
+                                        opText.substring(0, opText.length() - 1));
+                        return new StoreStatement(st, new InfixStatement(st, op, source));
+                    }
+
+                    st = new InfixStatement(st, t1, parseStatement("infix statement"));
+                }
+            }
+        }
     }
 
     private TupleStatement parseTuple(Token open, int closeTokenType) throws IOException, Abort {
@@ -369,13 +458,13 @@ public final class Parser implements Closeable {
                             statements.add(st);
 
                             Token lastToken = st.end();
-                            if (!(lastToken instanceof Token.Newline)) {
+                            if (!(lastToken instanceof Newline)) {
                                 errorAfter(lastToken, sepMessage(','));
                             }
                         } else {
                             sequence.add(st);
                             Token lastToken = sequence.getLast().end();
-                            if (!(lastToken instanceof Token.Newline)) {
+                            if (!(lastToken instanceof Newline)) {
                                 String message;
                                 if (statements.isEmpty()) {
                                     message = sepMessage(';');
@@ -419,23 +508,12 @@ public final class Parser implements Closeable {
 
                 case T_RPAREN, T_RBRACE, T_RBRACK, T_EOF -> {
                     if (tType != closeTokenType) {
-
-                        String message = "incorrect tuple terminator";
-
-                        detail: {
-                            char c;
-                            if (closeTokenType == T_RPAREN) {
-                                c = ')';
-                            } else if (closeTokenType == T_RBRACE) {
-                                c = '}';
-                            } else {
-                                break detail;
-                            }
-
-                            message = message + " (expected a `" + c + "` character)";
-                        }
-
-                        error(t, message);
+                        char termChar = switch (closeTokenType) {
+                            case T_RPAREN -> ')';
+                            case T_RBRACE -> '}';
+                            default -> '\0';
+                        };
+                        error(t, termMessage("tuple", termChar));
                     }
 
                     if (sequence != null) {
@@ -459,12 +537,92 @@ public final class Parser implements Closeable {
         return sequence.size() == 1 ? sequence.getFirst() : new SequenceStatement(sequence);
     }
 
+    private List<Coordinate> tryParseCoordinates() throws IOException, Abort {
+        Coordinate c1 = tryParseCoordinate();
+        return c1 == null ? null : parseCoordinates(c1);
+    }
+
+    private List<Coordinate> parseCoordinates(Token lbrack) throws IOException, Abort {
+        return parseCoordinates(parseCoordinate(lbrack));
+    }
+
+    private List<Coordinate> parseCoordinates(Coordinate c1) throws IOException, Abort {
+        Coordinate cn = tryParseCoordinate();
+
+        if (cn == null) {
+            return List.of(c1);
+        }
+
+        var coordinates = new ArrayList<Coordinate>(4);
+        coordinates.add(c1);
+        coordinates.add(cn);
+
+        while ((cn = tryParseCoordinate()) != null) {
+            coordinates.add(cn);
+        }
+
+        return coordinates;
+    }
+
+    private Coordinate tryParseCoordinate() throws IOException, Abort {
+        Token t = nextToken();
+        if (t.type() != T_LBRACK) {
+            pushToken(t);
+            return null;
+        }
+        return parseCoordinate(t);
+    }
+
+    private Coordinate parseCoordinate(Token lbrack) throws IOException, Abort {
+        List<Statement> items = new ArrayList<>(4);
+        Statement nextItem = null;
+        Token t;
+
+        loop: while (true) {
+            t = nextToken();
+
+            switch (t.type()) {
+                case T_COMMA -> {
+                    items.add(nextItem);
+                    nextItem = null;
+                }
+
+                case T_SEMI -> {
+                    items.add(nextItem);
+                    nextItem = null;
+                    error(t, sepMessage(','));
+                }
+
+                case T_RBRACK -> {
+                    break loop;
+                }
+
+                case T_RPAREN, T_RBRACE, T_EOF -> {
+                    error(t, termMessage("coordinate", ']'));
+                    break loop;
+                }
+
+                default -> {
+                    nextItem = parseLabeledStatement(t, 0, "coordinate item");
+                }
+            }
+        }
+
+        if (nextItem == null && items.isEmpty()) {
+            items = Coordinate.ONE_DIMENSION;
+        } else {
+            items.add(nextItem);
+        }
+
+        return new Coordinate(lbrack, items, t);
+    }
+
     /**
      * @return null or a non-empty list
      */
-    private List<Token.Identifier> tryParseQualifiedIdentifier() throws IOException {
+    private List<Identifier> tryParseQualifiedIdentifier() throws IOException {
         Token t = nextToken();
-        if (t instanceof Token.Identifier first) {
+        if (t instanceof Identifier first) {
             return parseQualifiedIdentifier(first);
         } else {
             pushToken(t);
@@ -476,16 +634,16 @@ public final class Parser implements Closeable {
      * @param first must be an identifier
      * @return a non-empty list
      */
-    private List<Token.Identifier> parseQualifiedIdentifier(Token.Identifier first)
+    private List<Identifier> parseQualifiedIdentifier(Identifier first)
         throws IOException
     {
-        ArrayList<Token.Identifier> list;
+        ArrayList<Identifier> list;
 
         quick: {
             Token t1 = nextToken();
             if (t1.type() == T_DOT) {
                 Token t2 = nextToken();
-                if (t2 instanceof Token.Identifier id) {
+                if (t2 instanceof Identifier id) {
                     list = new ArrayList<>(4);
                     list.add(first);
                     list.add(id);
@@ -501,7 +659,7 @@ public final class Parser implements Closeable {
             Token t1 = nextToken();
             if (t1.type() == T_DOT) {
                 Token t2 = nextToken();
-                if (t2 instanceof Token.Identifier id) {
+                if (t2 instanceof Identifier id) {
                     list.add(id);
                     continue;
                 }
@@ -521,7 +679,7 @@ public final class Parser implements Closeable {
             }
 
             if (t1.type() == T_UNCLOSED) {
-                String which = switch (((Token.Unclosed) t1).unclosedType) {
+                String which = switch (((Unclosed) t1).unclosedType) {
                     case T_IDENTIFIER -> "quoted identifier";
                     case T_STRING -> "string";
                     case T_COMMENT -> "multiline comment";
@@ -547,10 +705,22 @@ public final class Parser implements Closeable {
     }
 
     /**
-     * @param type expected separator type
+     * @param sepChar expected separator character
      */
-    private static String sepMessage(char type) {
-        return "expected a `" + type + "` separator";
+    private static String sepMessage(char sepChar) {
+        return "expected a `" + sepChar + "` separator";
+    }
+
+    /**
+     * @param which type of statement being parsed
+     * @param termChar expected terminator character (pass 0 if unspecified)
+     */
+    private static String termMessage(String which, char termChar) {
+        String message = "incorrect " + which + " terminator";
+        if (termChar != 0) {
+            message += " (expected a `" + termChar + "` character)";
+        }
+        return message;
     }
 
     private void error(Element element, String message) {

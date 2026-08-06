@@ -19,18 +19,16 @@ package org.cojen.motto.internal.parser;
 import java.util.List;
 
 /**
- * Example: `a = b` or `a.b = c`
+ * Examples: `a = b`, `a.b = c`, or `a[0] = b`
  *
  * @author Brian S. O'Neill
  */
-public final class StoreStatement extends PathStatement {
+public final class StoreStatement implements Statement {
+    public final Statement target;
     public final Statement source;
 
-    /**
-     * @param path path to variable or field
-     */
-    StoreStatement(List<Token.Identifier> path, Statement source) {
-        super(path);
+    StoreStatement(Statement target, Statement source) {
+        this.target = target;
         this.source = source;
     }
 
@@ -41,7 +39,7 @@ public final class StoreStatement extends PathStatement {
 
     @Override
     public Token start() {
-        return path.getFirst();
+        return target.start();
     }
 
     @Override
