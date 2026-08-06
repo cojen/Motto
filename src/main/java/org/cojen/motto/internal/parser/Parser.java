@@ -424,7 +424,7 @@ public final class Parser implements Closeable {
                     var op = (Custom) t1;
                     String opText = op.text;
 
-                    if (opText.endsWith("=")) {
+                    if (opText.indexOf('=') == (opText.length() - 1)) {
                         // Convert `a <op>= b` to `a = a <op> b`. Assignment terminates the chain.
                         Statement source = parseStatement("assignment source");
                         // Drop the "=" suffix from the operator.
