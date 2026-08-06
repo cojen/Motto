@@ -26,24 +26,28 @@ import java.util.List;
 public abstract sealed class EnclosedStatementList extends StatementList
     permits Coordinate, TupleStatement
 {
-    public final Token first;
-    public final Token last;
+    public final Token open;
+    public final Token close;
 
-    EnclosedStatementList(Token first, List<Statement> items, Token last) {
+    /**
+     * @param open left paren or brace token
+     * @param close right paren or brace token
+     */
+    EnclosedStatementList(Token open, List<Statement> items, Token close) {
         super(items);
-        this.first = first;
-        this.last = last;
+        this.open = open;
+        this.close = close;
     }
 
     @Override
     public final Token start() {
-        Token start = first;
+        Token start = open;
 
         if (start == null) {
             if (!items.isEmpty()) {
                 start = items.getFirst().start();
             } else {
-                start = last;
+                start = close;
             }
         }
 
@@ -52,6 +56,6 @@ public abstract sealed class EnclosedStatementList extends StatementList
 
     @Override
     public final Token end() {
-        return last;
+        return close;
     }
 }

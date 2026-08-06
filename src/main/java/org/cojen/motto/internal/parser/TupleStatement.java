@@ -25,11 +25,11 @@ import java.util.List;
  */
 public final class TupleStatement extends EnclosedStatementList implements Statement {
     /**
-     * @param first T_LPAREN or T_LBRACE
-     * @param last T_RPAREN or T_RBRACE
+     * @param open T_LPAREN or T_LBRACE
+     * @param open T_RPAREN or T_RBRACE
      */
-    TupleStatement(Token first, List<Statement> items, Token last) {
-        super(first, items, last);
+    TupleStatement(Token open, List<Statement> items, Token close) {
+        super(open, items, close);
     }
 
     @Override

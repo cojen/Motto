@@ -47,6 +47,10 @@ public final class LabeledStatement implements Statement {
 
     @Override
     public Statement delabel() {
-        return source.delabel();
+        LabeledStatement labeled = this;
+        while (labeled.source instanceof LabeledStatement ls) {
+            labeled = ls;
+        }
+        return labeled.source;
     }
 }

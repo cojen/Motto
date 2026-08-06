@@ -82,7 +82,6 @@ public final class Parser implements Closeable {
      * Always returns a non-null CompilationUnit. If numErrors returns a non-zero value, then
      * the CompilationUnit should be considered to be broken.
      */
-    @SuppressWarnings("unchecked")
     public CompilationUnit parse() throws IOException {
         List<Token.Identifier> packageName = List.of();
         List<ImportDirective> imports = List.of();
@@ -174,25 +173,7 @@ public final class Parser implements Closeable {
         List<DefinitionStatement> definitions = List.of();
 
         try {
-            var statements = new ArrayList<Statement>(4);
-
-            Token endToken = parseStatements(statements, -1);
-            if (endToken.type() != T_EOF) {
-                error(endToken, "unexpected token");
-            }
-
-            boolean broken = false;
-
-            for (Statement st : statements) {
-                if (!(st instanceof DefinitionStatement)) {
-                    broken = true;
-                    error(st, "must be a method or class definition");
-                }
-            }
-
-            if (!broken) {
-                definitions = (List<DefinitionStatement>) (List) statements;
-            }
+            definitions = parseDefinitions();
         } catch (Abort e) {
             // Assume an error was reported.
         } catch (IOException e) {
@@ -204,108 +185,80 @@ public final class Parser implements Closeable {
         return new CompilationUnit(mEnv.sourceFile(), packageName, imports, definitions);
     }
 
-    /**
-     * @param statements parsed statements go here
-     * @param sepTokenType pass -1 if any kind of separator is allowed
-     * @return end token; caller must verify that it's the correct type
-     */
-    private Token parseStatements(List<Statement> statements, int sepTokenType)
-        throws IOException, Abort
-    {
-        final int numErrors = numErrors();
-
-        Token t;
+    private List<DefinitionStatement> parseDefinitions() throws IOException, Abort {
+        var definitions = new ArrayList<DefinitionStatement>(1);
 
         outer: while (true) {
-            t = nextToken();
+            Token t = nextToken();
 
-            if (isListEnd(t)) {
-                break;
-            }
-
-            int tType = t.type();
-
-            if (tType == T_COMMA || tType == T_SEMI) {
-                if (tType == sepTokenType || sepTokenType == -1) {
-                    statements.add(new EmptyStatement(t));
-                } else if (numErrors == numErrors()) {
-                    sepMessage(sepTokenType);
+            switch (t.type()) {
+                case T_EOF -> {
+                    return definitions;
                 }
-            } else {
-                item: while (true) {
-                    Statement st = parseLabeledStatement(t, null);
-                    statements.add(st);
 
-                    t = nextToken();
-                    tType = t.type();
+                case T_COMMA, T_SEMI -> {
+                    continue outer;
+                }
 
-                    if (tType == sepTokenType) {
-                        break item;
-                    }
-                    
-                    if (isListEnd(t)) {
-                        break outer;
-                    }
-
-                    // Check if the statement can be automatically separated.
-                    if (st.end() instanceof Token.Newline) {
-                        pushToken(t);
-                        break item;
-                    }
-
-                    if (tType == T_COMMA || tType == T_SEMI) {
-                        if (numErrors == numErrors()) {
-                            error(t, sepMessage(sepTokenType));
-                        }
-                        break;
-                    }
-
-                    if (numErrors == numErrors()) {
-                        errorAfter(st.end(), sepMessage(sepTokenType));
+                default -> {
+                    Statement st = parseLabeledStatement(t, 0, "definition");
+                    if (st instanceof DefinitionStatement def) {
+                        definitions.add(def);
+                    } else {
+                        error(st, "must be a method or class definition");
                     }
                 }
             }
         }
-
-        return t;
-    }
-
-    private boolean isListEnd(Token t) {
-        return switch (t.type()) {
-            case T_RPAREN, T_RBRACE, T_RBRACK, T_EOF -> true;
-            default -> false;
-        };
     }
 
     /**
+     * Parse an optionally labeled statement.
+     *
+     * @param int maxLabels if the statement has more labels than this, report an error and
+     * skip the extra ones
      * @param which optional type of statement being parsed (used for error reporting)
      */
-    private Statement parseLabeledStatement(Token t1, String which) throws IOException, Abort {
+    private Statement parseLabeledStatement(Token t1, int maxLabels, String which)
+        throws IOException, Abort
+    {
         if (t1.type() == T_IDENTIFIER) {
             Token t2 = nextToken();
+
             if (t2.type() == T_COLON) {
                 var label = (Token.Identifier) t1;
+
+                if (maxLabels <= 0) {
+                    error(label, "label isn't allowed");
+                }
+
                 Statement st;
                 Token t3 = nextToken();
+
                 switch (t3.type()) {
                     case T_RPAREN, T_RBRACE, T_COMMA, T_SEMI -> {
                         pushToken(t3);
                         st = new EmptyStatement(t2);
                     }
                     default -> {
-                        st = parseLabeledStatement(t3, which);
+                        st = parseLabeledStatement(t3, maxLabels - 1, which);
                     }
                 }
-                return new LabeledStatement(label, st);
+
+                return maxLabels <= 0 ? st : new LabeledStatement(label, st);
             }
+
             pushToken(t2);
         }
+
         pushToken(t1);
 
         return parseStatement(which);
     }
 
     /**
+     * Parse a non-labeled statement.
+     *
      * @param which optional type of statement being parsed (used for error reporting)
      */
     private Statement parseStatement(String which) throws IOException, Abort {
@@ -358,6 +311,11 @@ public final class Parser implements Closeable {
         return st;
     }
 
+    private Statement tryParseChainedStatement(Statement st) throws IOException, Abort {
+        // FIXME: chained
+        return null;
+    }
+
     private Statement tryParseBaseStatement() throws IOException, Abort {
         Token t1 = nextToken();
 
@@ -366,7 +324,25 @@ public final class Parser implements Closeable {
                 return new LiteralStatement(t1);
             }
 
-            // FIXME: more cases
+            case T_IDENTIFIER -> {
+                // FIXME: parseIdentifierStatement
+                //return parseIdentifierStatement((Token.Identifier) t1);
+                throw null;
+            }
+
+            case T_LPAREN -> {
+                return parseTuple(t1, Token.T_RPAREN);
+            }
+
+            case T_LBRACE -> {
+                return parseTuple(t1, Token.T_RBRACE);
+            }
+
+            // FIXME: T_INC, T_DEC
+
+            case T_BANG, T_TILDE, T_PLUS, T_MINUS -> {
+                return new PrefixStatement(t1, parseStatement("prefix statement"));
+            }
         }
 
         pushToken(t1);
@@ -374,9 +350,113 @@ public final class Parser implements Closeable {
         return null;
     }
 
-    private Statement tryParseChainedStatement(Statement st) throws IOException, Abort {
-        // FIXME: chained
-        return null;
+    private TupleStatement parseTuple(Token open, int closeTokenType) throws IOException, Abort {
+        List<Statement> statements = new ArrayList<>(4);
+
+        Statement st = null;
+        List<Statement> sequence = null;
+
+        while (true) {
+            Token t = nextToken();
+            int tType = t.type();
+
+            switch (tType) {
+                default -> {
+                    if (st != null) {
+                        // Check if the statement can be automatically separated.
+
+                        if (sequence == null) {
+                            statements.add(st);
+
+                            Token lastToken = st.end();
+                            if (!(lastToken instanceof Token.Newline)) {
+                                errorAfter(lastToken, sepMessage(','));
+                            }
+                        } else {
+                            sequence.add(st);
+                            Token lastToken = sequence.getLast().end();
+                            if (!(lastToken instanceof Token.Newline)) {
+                                String message;
+                                if (statements.isEmpty()) {
+                                    message = sepMessage(';');
+                                } else {
+                                    message = "expected a `;` or ',' separator";
+                                }
+                                errorAfter(lastToken, message);
+                            }
+                        }
+                    }
+
+                    st = parseLabeledStatement(t, Integer.MAX_VALUE, null);
+                }
+
+                case T_COMMA -> {
+                    if (sequence == null) {
+                        if (st == null) {
+                            st = new EmptyStatement(t);
+                        }
+                    } else {
+                        if (st != null) {
+                            sequence.add(st);
+                        }
+                        st = toSequenceStatement(sequence);
+                        sequence = null;
+                    }
+                    statements.add(st);
+                    st = null;
+                }
+
+                case T_SEMI -> {
+                    if (sequence == null) {
+                        sequence = new ArrayList<Statement>(4);
+                    }
+                    if (st == null) {
+                        st = new EmptyStatement(t);
+                    }
+                    sequence.add(st);
+                    st = null;
+                }
+
+                case T_RPAREN, T_RBRACE, T_RBRACK, T_EOF -> {
+                    if (tType != closeTokenType) {
+
+                        String message = "incorrect tuple terminator";
+
+                        detail: {
+                            char c;
+                            if (closeTokenType == T_RPAREN) {
+                                c = ')';
+                            } else if (closeTokenType == T_RBRACE) {
+                                c = '}';
+                            } else {
+                                break detail;
+                            }
+
+                            message = message + " (expected a `" + c + "` character)";
+                        }
+
+                        error(t, message);
+                    }
+
+                    if (sequence != null) {
+                        if (st != null) {
+                            sequence.add(st);
+                        }
+                        statements.add(toSequenceStatement(sequence));
+                    } else if (st != null) {
+                        statements.add(st);
+                    } else if (statements.isEmpty()) {
+                        statements = List.of();
+                    }
+
+                    return new TupleStatement(open, statements, t);
+                }
+            }
+        }
+    }
+
+    private static Statement toSequenceStatement(List<Statement> sequence) {
+        return sequence.size() == 1 ? sequence.getFirst() : new SequenceStatement(sequence);
     }
 
     /**
@@ -469,8 +549,8 @@ public final class Parser implements Closeable {
     /**
      * @param type expected separator type
      */
-    private static String sepMessage(int type) {
-        return "expected a `" + (type == T_SEMI ? ';' : ',') + "` separator";
+    private static String sepMessage(char type) {
+        return "expected a `" + type + "` separator";
     }
 
     private void error(Element element, String message) {
