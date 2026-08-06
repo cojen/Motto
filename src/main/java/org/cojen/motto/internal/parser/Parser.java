@@ -322,16 +322,37 @@ public final class Parser implements Closeable {
                 return parseTuple(t1, T_RBRACE);
             }
 
-            // FIXME: T_INC, T_DEC
-
             case T_BANG, T_TILDE, T_PLUS, T_MINUS -> {
                 return new PrefixStatement(t1, parseStatement("prefix statement"));
             }
+
+            case T_INC -> {
+                return parsePreArith(t1, "increment", T_PLUS);
+            }
+
+            case T_DEC -> {
+                return parsePreArith(t1, "decrement", T_MINUS);
+            }
+
+            default -> {
+                pushToken(t1);
+                return null;
+            }
         }
+    }
 
-        pushToken(t1);
+    /**
+     * Convert `++a` to `a = a + 1` or `--a` to `a = a - 1`.
+     *
+     * @param t1 T_INC or T_DEC
+     */
+    private Statement parsePreArith(Token t1, String which, int tType) throws IOException, Abort {
+        // This is quite lenient. Later compilation phases must deal with it.
+        Statement st = parseStatement("pre-" + which);
 
-        return null;
+        return new StoreStatement
+            (st, new InfixStatement
+             (st, new Basic(t1, tType), new LiteralStatement(new Int32(t1, 1))));
     }
 
     private Statement parseStatementChain(Statement st) throws IOException, Abort {
@@ -428,8 +449,7 @@ public final class Parser implements Closeable {
                         // Convert `a <op>= b` to `a = a <op> b`. Assignment terminates the chain.
                         Statement source = parseStatement("assignment source");
                         // Drop the "=" suffix from the operator.
-                        op = new Custom(op.line(), op.column(), op.length(),
-                                        opText.substring(0, opText.length() - 1));
+                        op = new Custom(op, opText.substring(0, opText.length() - 1));
                         return new StoreStatement(st, new InfixStatement(st, op, source));
                     }
 

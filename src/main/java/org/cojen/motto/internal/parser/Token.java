@@ -129,6 +129,10 @@ public abstract sealed class Token implements Element {
             mType = type;
         }
 
+        Basic(Token pos, int type) {
+            this(pos.line(), pos.column(), pos.length(), type);
+        }
+
         @Override
         public int type() {
             return mType;
@@ -193,6 +197,10 @@ public abstract sealed class Token implements Element {
     public static final class Custom extends Text {
         Custom(int line, int column, int length, String text) {
             super(line, column, length, text);
+        }
+
+        Custom(Token pos, String text) {
+            this(pos.line(), pos.column(), pos.length(), text);
         }
 
         @Override
@@ -267,6 +275,10 @@ public abstract sealed class Token implements Element {
         Int32(int line, int column, int length, boolean negated, int value) {
             super(line, column, length, negated);
             this.value = value;
+        }
+
+        Int32(Token pos, int value) {
+            this(pos.line(), pos.column(), pos.length(), false, value);
         }
 
         @Override
