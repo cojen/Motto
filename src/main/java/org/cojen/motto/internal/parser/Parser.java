@@ -252,19 +252,26 @@ public final class Parser implements Closeable {
 
         pushToken(t1);
 
-        return parseStatement(which);
+        return parseStatement(which, true);
     }
 
     /**
-     * Parse a non-labeled statement.
+     * Parse a non-labeled statement. The allowNewSymbol option, when false, disables the
+     * parsing of statements which define a new symbol. These are declarations, definitions,
+     * and labels, although this method never parses labels anyhow. The allowNewSymbol option
+     * isn't recursive, and so statements which reference other statements can pass along a
+     * different value for the option.
      *
      * @param which optional type of statement being parsed (used for error reporting)
+     * @param allowNewSymbol when false, don't parse statements which can define a new symbol
      */
-    private Statement parseStatement(String which) throws IOException, Abort {
+    private Statement parseStatement(String which, boolean allowNewSymbol)
+        throws IOException, Abort
+    {
         int localErrors = 0;
 
         while (true) {
-            Statement st = tryParseStatement();
+            Statement st = tryParseStatement(allowNewSymbol);
 
             if (st != null) {
                 return st;
@@ -291,8 +298,13 @@ public final class Parser implements Closeable {
         }
     }
 
-    private Statement tryParseStatement() throws IOException, Abort {
-        Statement st = tryParseBaseStatement();
+    /**
+     * Try to parse a non-labeled statement.
+     *
+     * @param allowNewSymbol see parseStatement
+     */
+    private Statement tryParseStatement(boolean allowNewSymbol) throws IOException, Abort {
+        Statement st = tryParseBaseStatement(allowNewSymbol);
         if (st != null) {
             st = parseStatementChain(st);
         }
@@ -300,7 +312,12 @@ public final class Parser implements Closeable {
     }
 
 
-    private Statement tryParseBaseStatement() throws IOException, Abort {
+    /**
+     * Try to parse a non-labeled base statement.
+     *
+     * @param allowNewSymbol see parseStatement
+     */
+    private Statement tryParseBaseStatement(boolean allowNewSymbol) throws IOException, Abort {
         Token t1 = nextToken();
 
         switch (t1.type()) {
@@ -309,8 +326,8 @@ public final class Parser implements Closeable {
             }
 
             case T_IDENTIFIER -> {
-                // FIXME: parseIdentifierStatement
-                //return parseIdentifierStatement((Identifier) t1);
+                // FIXME: parseIdentifierStatement (be sure to honor allowNewSymbol=false)
+                //return parseIdentifierStatement((Identifier) t1, allowNewSymbol);
                 throw null;
             }
 
@@ -323,7 +340,7 @@ public final class Parser implements Closeable {
             }
 
             case T_BANG, T_TILDE, T_PLUS, T_MINUS -> {
-                return new PrefixStatement(t1, parseStatement("prefix statement"));
+                return new PrefixStatement(t1, parseStatement("prefix statement", true));
             }
 
             case T_INC -> {
@@ -348,7 +365,7 @@ public final class Parser implements Closeable {
      */
     private Statement parsePreArith(Token t1, String which, int tType) throws IOException, Abort {
         // This is quite lenient. Later compilation phases must deal with it.
-        Statement st = parseStatement("pre-" + which);
+        Statement st = parseStatement("pre-" + which, true);
 
         return new StoreStatement
             (st, new InfixStatement
@@ -389,6 +406,7 @@ public final class Parser implements Closeable {
                         default -> {
                             pushToken(t3);
                             st = new FieldLoadStatement(st, name);
+                            continue;
                         }
                         case T_LPAREN -> {
                             params = parseTuple(t3, T_RPAREN);
@@ -398,15 +416,13 @@ public final class Parser implements Closeable {
                         }
                     }
 
-                    // FIXME: parseMethodCall
-                    //st = parseMethodCall(st, List.of(name), params);
-                    throw null;
+                    st = parseMethodCall(st, List.of(name), params);
                 }
 
                 case T_EQ, T_NE, T_GE, T_LT, T_LE, T_GT, T_AND, T_OR, T_LAND, T_LOR, T_LXOR,
                     T_PLUS, T_MINUS, T_MUL, T_DIV, T_REM, T_SHL, T_SHR, T_USHR ->
                 {
-                    st = new InfixStatement(st, t1, parseStatement("infix statement"));
+                    st = new InfixStatement(st, t1, parseStatement("infix statement", true));
                 }
 
                 case T_INC, T_DEC -> {
@@ -425,19 +441,19 @@ public final class Parser implements Closeable {
                     // Synthesize a minus operator.
                     t1 = new Basic(0, -1, 0, T_MINUS);
                     pushToken(num.negate());
-                    st = new InfixStatement(st, t1, parseStatement("infix statement"));
+                    st = new InfixStatement(st, t1, parseStatement("infix statement", true));
                 }
 
                 case T_ASSIGN -> {
                     // Assignment terminates the chain.
-                    return new StoreStatement(st, parseStatement("assignment source"));
+                    return new StoreStatement(st, parseStatement("assignment source", true));
                 }
 
                 case T_LAND_A, T_LOR_A, T_LXOR_A,
                     T_PLUS_A, T_MINUS_A, T_MUL_A, T_DIV_A, T_REM_A, T_SHL_A, T_SHR_A, T_USHR_A ->
                 {
                     // Convert `a += b` to `a = a + b`. Assignment terminates the chain.
-                    Statement source = parseStatement("assignment source");
+                    Statement source = parseStatement("assignment source", true);
                     return new StoreStatement(st, new InfixStatement(st, t1, source));
                 }
 
@@ -447,13 +463,13 @@ public final class Parser implements Closeable {
 
                     if (opText.indexOf('=') == (opText.length() - 1)) {
                         // Convert `a <op>= b` to `a = a <op> b`. Assignment terminates the chain.
-                        Statement source = parseStatement("assignment source");
+                        Statement source = parseStatement("assignment source", true);
                         // Drop the "=" suffix from the operator.
                         op = new Custom(op, opText.substring(0, opText.length() - 1));
                         return new StoreStatement(st, new InfixStatement(st, op, source));
                     }
 
-                    st = new InfixStatement(st, t1, parseStatement("infix statement"));
+                    st = new InfixStatement(st, t1, parseStatement("infix statement", true));
                 }
             }
         }
@@ -638,6 +654,71 @@ public final class Parser implements Closeable {
     }
 
     /**
+     * @param source optional
+     */
+    private MethodCallStatement parseMethodCall(Statement source, List<Identifier> name,
+                                                TupleStatement params)
+        throws IOException, Abort
+    {
+        // Try to parse method call segments, stopping when a separator is seen, or if the last
+        // parsed statement ends with an automatic separator.
+        List<CallSegment> segments;
+        if (params.end() instanceof Newline) {
+            segments = List.of();
+        } else {
+            segments = parseCallSegments();
+        }
+
+        if (source == null) {
+            return new MethodCallStatement(name, params, segments);
+        } else {
+            return new MethodCallStatement(source, simpleName(name), params, segments);
+        }
+    }
+
+    private List<CallSegment> parseCallSegments() throws IOException, Abort {
+        List<CallSegment> segments = List.of();
+
+        while (true) {
+            Token t = nextToken();
+
+            Identifier segName;
+            if (t.type() == T_IDENTIFIER) {
+                segName = (Identifier) t;
+            } else {
+                pushToken(t);
+                t = null;
+                segName = null;
+            }
+
+            // Must pass false for allowNewSymbol because when the statement leads with more
+            // than one identifier, it absorbs identifiers which should be interpreted as
+            // segment names. The inability to declare or define symbols as standalone
+            // statements isn't big issue, considering that in practice the symbol would be in
+            // a lone inaccessible scope. If this behavior is desired, the
+            // declaration/definition must be wrapped in a tuple statement.
+            Statement segStatement = tryParseBaseStatement(false);
+
+            if (segStatement == null) {
+                if (t != null) {
+                    pushToken(t);
+                }
+                return segments;
+            }
+
+            if (segments.isEmpty()) {
+                segments = new ArrayList<>(4);
+            }
+
+            segments.add(new CallSegment(segName, segStatement));
+
+            if (segStatement.end() instanceof Newline) {
+                return segments;
+            }
+        }
+    }
+
+    /**
      * @return null or a non-empty list
      */
     private List<Identifier> tryParseQualifiedIdentifier() throws IOException {
@@ -722,6 +803,30 @@ public final class Parser implements Closeable {
         Token t = nextToken();
         pushToken(t);
         return t;
+    }
+
+    /**
+     * Returns the first item from the qualified name. An error is reported if the qualified
+     * name has more than one identifier.
+     */
+    private Identifier simpleName(List<Identifier> qualified) {
+        return simpleName(qualified, "name");
+    }
+
+    /**
+     * Returns the first item from the qualified name. An error is reported if the qualified
+     * name has more than one identifier.
+     *
+     * @param which type of name to report in the error
+     */
+    private Identifier simpleName(List<Identifier> qualified, String which) {
+        Identifier name = qualified.getFirst();
+
+        if (qualified.size() > 1) {
+            error(name, qualified.getLast(), which + " must be simple (no dots)");
+        }
+
+        return name;
     }
 
     /**
