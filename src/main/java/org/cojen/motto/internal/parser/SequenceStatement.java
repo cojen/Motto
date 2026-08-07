@@ -42,12 +42,12 @@ public final class SequenceStatement extends StatementList implements Statement 
     }
 
     @Override
-    public final Token start() {
+    public Token start() {
         return items.getFirst().start();
     }
 
     @Override
-    public final Token end() {
+    public Token end() {
         return items.getLast().end();
     }
 }

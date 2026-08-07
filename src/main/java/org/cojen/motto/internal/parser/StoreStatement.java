@@ -16,8 +16,6 @@
 
 package org.cojen.motto.internal.parser;
 
-import java.util.List;
-
 /**
  * Examples: `a = b`, `a.b = c`, or `a[0] = b`
  *
