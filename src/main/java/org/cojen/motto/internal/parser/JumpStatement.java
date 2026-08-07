@@ -27,7 +27,7 @@ public final class JumpStatement implements Statement {
 
     /**
      * @param keyword goto, break, or continue
-     * @param target required for goto
+     * @param target usually required
      */
     JumpStatement(Token.Identifier keyword, Token.Identifier target) {
         this.keyword = keyword;

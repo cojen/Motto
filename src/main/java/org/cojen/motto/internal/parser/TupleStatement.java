@@ -43,4 +43,11 @@ public final class TupleStatement extends EnclosedStatementList implements State
     public boolean isEvaluated() {
         return open.type() == Token.T_LPAREN;
     }
+
+    /**
+     * Returns true of the tuple starts with a `{`, representing a code scope.
+     */
+    public boolean isUnevaluated() {
+        return open.type() == Token.T_LBRACE;
+    }
 }

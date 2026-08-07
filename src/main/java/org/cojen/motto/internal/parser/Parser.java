@@ -40,18 +40,21 @@ import static org.cojen.motto.internal.parser.Token.*;
  * @author Brian S. O'Neill
  */
 public final class Parser implements Closeable {
-    /* Note regarding quoted identifiers:
+    /*
+      Note regarding quoted identifiers:
 
-       In some cases identifiers are interpreted as context-sensitive keywords, which in turn
-       steers the parser in a specific direction. When these identifiers are quoted (using
-       backticks), they're interpreted as plain identifiers. If an identifier is parsed by code
-       which doesn't recognize it as a keyword, then the quotes don't make a difference.
-     */
+      In some cases identifiers are interpreted as context-sensitive keywords, which in turn
+      steers the parser in a specific direction. When these identifiers are quoted (using
+      backticks), they're interpreted as plain identifiers. If an identifier is parsed by code
+      which doesn't recognize it as a keyword, then the quotes don't make a difference.
+    */
 
     private final CompilationEnv mEnv;
     private final Tokenizer mTokenizer;
 
     private final ArrayDeque<Token> mTokenStack;
+
+    private DefinitionContext mContextStack;
 
     private CompileError mLastError;
 
@@ -214,7 +217,7 @@ public final class Parser implements Closeable {
     /**
      * Parse an optionally labeled statement.
      *
-     * @param int maxLabels if the statement has more labels than this, report an error and
+     * @param maxLabels if the statement has more labels than this, report an error and
      * skip the extra ones
      * @param which optional type of statement being parsed (used for error reporting)
      */
@@ -252,26 +255,19 @@ public final class Parser implements Closeable {
 
         pushToken(t1);
 
-        return parseStatement(which, true);
+        return parseStatement(which);
     }
 
     /**
-     * Parse a non-labeled statement. The allowNewSymbol option, when false, disables the
-     * parsing of statements which define a new symbol. These are declarations, definitions,
-     * and labels, although this method never parses labels anyhow. The allowNewSymbol option
-     * isn't recursive, and so statements which reference other statements can pass along a
-     * different value for the option.
+     * Parse a non-labeled statement.
      *
      * @param which optional type of statement being parsed (used for error reporting)
-     * @param allowNewSymbol when false, don't parse statements which can define a new symbol
      */
-    private Statement parseStatement(String which, boolean allowNewSymbol)
-        throws IOException, Abort
-    {
+    private Statement parseStatement(String which) throws IOException, Abort {
         int localErrors = 0;
 
         while (true) {
-            Statement st = tryParseStatement(allowNewSymbol);
+            Statement st = tryParseStatement(true);
 
             if (st != null) {
                 return st;
@@ -299,9 +295,13 @@ public final class Parser implements Closeable {
     }
 
     /**
-     * Try to parse a non-labeled statement.
+     * Try to parse a non-labeled statement. The allowNewSymbol option, when false, disables
+     * the parsing of statements which define a new symbol. These are declarations,
+     * definitions, and labels, although this method never parses labels anyhow. The
+     * allowNewSymbol option isn't recursive, and so statements which reference other
+     * statements can pass along a different value for the option.
      *
-     * @param allowNewSymbol see parseStatement
+     * @param allowNewSymbol when false, don't parse statements which can define a new symbol
      */
     private Statement tryParseStatement(boolean allowNewSymbol) throws IOException, Abort {
         Statement st = tryParseBaseStatement(allowNewSymbol);
@@ -311,11 +311,10 @@ public final class Parser implements Closeable {
         return st;
     }
 
-
     /**
      * Try to parse a non-labeled base statement.
      *
-     * @param allowNewSymbol see parseStatement
+     * @param allowNewSymbol see tryParseStatement
      */
     private Statement tryParseBaseStatement(boolean allowNewSymbol) throws IOException, Abort {
         Token t1 = nextToken();
@@ -338,7 +337,7 @@ public final class Parser implements Closeable {
             }
 
             case T_BANG, T_TILDE, T_PLUS, T_MINUS -> {
-                return new PrefixStatement(t1, parseStatement("prefix statement", true));
+                return new PrefixStatement(t1, parseStatement("prefix statement"));
             }
 
             case T_INC -> {
@@ -363,7 +362,7 @@ public final class Parser implements Closeable {
      */
     private Statement parsePreArith(Token t1, String which, int tType) throws IOException, Abort {
         // This is quite lenient. Later compilation phases must deal with it.
-        Statement st = parseStatement("pre-" + which, true);
+        Statement st = parseStatement("pre-" + which);
 
         return new StoreStatement
             (st, new InfixStatement
@@ -420,11 +419,11 @@ public final class Parser implements Closeable {
                 case T_EQ, T_NE, T_GE, T_LT, T_LE, T_GT, T_AND, T_OR, T_LAND, T_LOR, T_LXOR,
                     T_PLUS, T_MINUS, T_MUL, T_DIV, T_REM, T_SHL, T_SHR, T_USHR ->
                 {
-                    st = new InfixStatement(st, t1, parseStatement("infix statement", true));
+                    st = new InfixStatement(st, t1, parseStatement("infix statement"));
                 }
 
                 case T_INC, T_DEC -> {
-                    // FIXME: T_INC, T_DEC
+                    // FIXME: post T_INC, T_DEC
                     throw null;
                 }
 
@@ -439,19 +438,19 @@ public final class Parser implements Closeable {
                     // Synthesize a minus operator.
                     t1 = new Basic(0, -1, 0, T_MINUS);
                     pushToken(num.negate());
-                    st = new InfixStatement(st, t1, parseStatement("infix statement", true));
+                    st = new InfixStatement(st, t1, parseStatement("infix statement"));
                 }
 
                 case T_ASSIGN -> {
                     // Assignment terminates the chain.
-                    return new StoreStatement(st, parseStatement("assignment source", true));
+                    return new StoreStatement(st, parseStatement("assignment source"));
                 }
 
                 case T_LAND_A, T_LOR_A, T_LXOR_A,
                     T_PLUS_A, T_MINUS_A, T_MUL_A, T_DIV_A, T_REM_A, T_SHL_A, T_SHR_A, T_USHR_A ->
                 {
                     // Convert `a += b` to `a = a + b`. Assignment terminates the chain.
-                    Statement source = parseStatement("assignment source", true);
+                    Statement source = parseStatement("assignment source");
                     return new StoreStatement(st, new InfixStatement(st, t1, source));
                 }
 
@@ -461,19 +460,50 @@ public final class Parser implements Closeable {
 
                     if (opText.indexOf('=') == (opText.length() - 1)) {
                         // Convert `a <op>= b` to `a = a <op> b`. Assignment terminates the chain.
-                        Statement source = parseStatement("assignment source", true);
+                        Statement source = parseStatement("assignment source");
                         // Drop the "=" suffix from the operator.
                         op = new Custom(op, opText.substring(0, opText.length() - 1));
                         return new StoreStatement(st, new InfixStatement(st, op, source));
                     }
 
-                    st = new InfixStatement(st, t1, parseStatement("infix statement", true));
+                    st = new InfixStatement(st, t1, parseStatement("infix statement"));
                 }
             }
         }
     }
 
+    private TupleStatement parseTuple(Token open) throws IOException, Abort {
+        int closeTokenType = switch (open.type()) {
+            case T_LPAREN -> T_RPAREN;
+            case T_LBRACE -> T_RBRACE;
+            case T_LBRACK -> T_RBRACK;
+            default -> throw new AssertionError();
+        };
+
+        return parseTuple(open, closeTokenType);
+    }
+
     private TupleStatement parseTuple(Token open, int closeTokenType) throws IOException, Abort {
+        DefinitionContext context = mContextStack;
+
+        if (context != null) {
+            if (closeTokenType == T_RBRACE) {
+                context.scopeDepth++;
+            } else {
+                context = null;
+            }
+        }
+
+        try {
+            return doParseTuple(open, closeTokenType);
+        } finally {
+            if (context != null) {
+                context.scopeDepth--;
+            }
+        }
+    }
+
+    private TupleStatement doParseTuple(Token open, int closeTokenType) throws IOException, Abort {
         List<Statement> statements = new ArrayList<>(4);
 
         Statement st = null;
@@ -695,7 +725,7 @@ public final class Parser implements Closeable {
             // statements isn't big issue, considering that in practice the symbol would be in
             // a lone inaccessible scope. If this behavior is desired, the
             // declaration/definition must be wrapped in a tuple statement.
-            Statement segStatement = tryParseBaseStatement(false);
+            Statement segStatement = tryParseStatement(false);
 
             if (segStatement == null) {
                 if (t != null) {
@@ -720,27 +750,31 @@ public final class Parser implements Closeable {
      * Parses a statement which leads with an identifier.
      *
      * @param first must be an identifier
-     * @param allowNewSymbol see parseStatement
+     * @param allowNewSymbol see tryParseStatement
      */
-    private Statement parseIdentifierStatement(Identifier first, boolean allowNewSymbol)
+    private Statement parseIdentifierStatement(final Identifier first, boolean allowNewSymbol)
         throws IOException, Abort
     {
         List<Identifier> qname = parseQualifiedIdentifier(first);
 
         if (qname.size() == 1 && !first.quoted) {
-            // Look for a context specific keyword.
+            // Look for a context-sensitive keyword.
 
             switch (first.text) {
+                case "yield" -> {
+                    return new YieldStatement(first, tryParseStatement(true));
+                }
+
                 case "return" -> {
                     return new ReturnStatement(first, tryParseStatement(true));
                 }
 
                 case "throw" -> {
-                    return new ThrowStatement(first, parseStatement("throw statement", true));
+                    return new ThrowStatement(first, parseStatement("throw statement"));
                 }
 
                 case "break", "continue" -> {
-                    return new JumpStatement(first, tryParseLabel(null));
+                    return new JumpStatement(first, tryParseLabel(first));
                 }
 
                 case "goto" -> {
@@ -752,17 +786,249 @@ public final class Parser implements Closeable {
                 }
 
                 case "class", "interface" -> {
-                    if (allowNewSymbol) {
-                        return parseClassDefinitionStatement(List.of(), first);
-                    }
+                    return parseClassDefinitionStatement(List.of(), first, allowNewSymbol);
                 }
             }
         }
 
-        // FIXME: parseIdentifierStatement (be sure to honor allowNewSymbol=false)
+        /*
+          qname: qualified name (can have dots)
+          sname: simple name (no dots)
+          vtype: ( qname | tuple ) [ coordinates ]
+          ctype: class type (class or interface)
 
-        // FIXME
-        throw null;
+          - MethodCall             qname Tuple ...
+          - CoordinateStore        qname[a] = v
+          - CoordinateLoad         qname[a]
+          - Store                  qname = v
+          - Load                   qname
+          - ClassDefinition        [ modifiers ] ctype sname UnevaluatedTuple
+          - ConstructorDefinition  [ modifiers ] sname Tuple UnevaluatedTuple
+          - MethodDefinition       [ modifiers ] vtype sname Tuple ...
+          - Declaration            [ modifiers ] vtype sname | [ = v ]
+
+          Gather as many modifiers as possible. They must be simple unquoted identifiers, and
+          they must match modifier keywords. If a class type is observed, then parse a
+          ClassDefinition.
+
+          As a side-effect, qname is updated, and it might be null if the last token
+          encountered wasn't an identifier.
+        */
+
+        List<Identifier> modifiers;
+
+        {
+            modifiers = List.of();
+
+            List<Identifier> qual = qname;
+            qname = null;
+
+            loop: while (true) {
+                if (qual.size() > 1) {
+                    break loop;
+                }
+
+                Identifier id = qual.getFirst();
+
+                if (id.quoted) {
+                    break loop;
+                }
+
+                switch (id.text) {
+                    default -> {
+                        break loop;
+                    }
+
+                    case "public", "internal", "protected", "private", "static", "final",
+                        "synchronized", "volatile", "transient", "native", "abstract", "enum",
+                        "struct", "sealed", "non-sealed", "override", "macro" ->
+                    {
+                        if (modifiers.isEmpty()) {
+                            modifiers = new ArrayList<>(4);
+                        }
+                        modifiers.add(id);
+                    }
+
+                    case "class", "interface" -> {
+                        return parseClassDefinitionStatement(modifiers, id, allowNewSymbol);
+                    }
+                }
+
+                qual = tryParseQualifiedIdentifier();
+
+                if (qual == null) {
+                    break loop;
+                }
+            }
+
+            qname = qual;
+        }
+
+        /*
+          The following forms are still possible:
+
+          - MethodCall             qname Tuple ...
+          - CoordinateStore        qname[a] = v
+          - CoordinateLoad         qname[a]
+          - Store                  qname = v
+          - Load                   qname
+          - ConstructorDefinition  [ modifiers ] sname Tuple UnevaluatedTuple
+          - MethodDefinition       [ modifiers ] vtype sname Tuple ...
+          - Declaration            [ modifiers ] vtype sname | [ = v ]
+
+          If qname is null and the next token is T_LPAREN, then parse MethodDefinition or
+          Declaration. This only handles the tuple case of vtype.
+        */
+
+        if (qname == null) {
+            // If this point is reached, then at least one modifier was parsed.
+
+            Token t = nextToken();
+
+            if (t.type() == T_LPAREN) {
+                TupleStatement tuple = parseTuple(t);
+                List<Coordinate> coordinates = tryParseCoordinates();
+
+                var vtype = new TupleVarType(tuple, coordinates);
+
+                qname = tryParseQualifiedIdentifier();
+
+                t = nextToken();
+                Statement source;
+
+                switch (t.type()) {
+                    case T_LPAREN, T_LBRACE -> {
+                        qname = requireName(qname, t, "method definition name");
+                        return parseMethodDefinition
+                            (modifiers, vtype, qname, parseTuple(t), allowNewSymbol);
+                    }
+                    case T_ASSIGN -> {
+                        qname = requireName(qname, t, "declaration name");
+                        source = parseStatement("assignment source");
+                    }
+                    default -> {
+                        qname = requireName(qname, t, "declaration name");
+                        source = null;
+                    }
+                }
+
+                Identifier name = simpleName(qname, "declaration name");
+
+                if (!allowNewSymbol) {
+                    error(first, "unscoped declaration not allowed");
+                }
+
+                return new DeclarationStatement(modifiers, vtype, name, source);
+            }
+
+            // Going forward, a qname is needed, so take back the last modifier.
+
+            qname = List.of(modifiers.removeLast());
+
+            if (modifiers.isEmpty()) {
+                modifiers = List.of();
+            }
+        }
+
+        List<Coordinate> coordinates = tryParseCoordinates();
+
+        VarType vtype;
+
+        vtype: {
+            Token t = nextToken();
+
+            TupleStatement params;            
+
+            params: { 
+                switch (t.type()) {
+                    case T_ASSIGN -> {
+                        if (!modifiers.isEmpty()) {
+                            error(modifiers, "modifiers aren't allowed here");
+                        }
+                        Statement source = parseStatement("assignment source");
+                        Statement target = new LoadStatement(qname);
+                        if (coordinates != null) {
+                            target = new CoordinateLoadStatement(target, coordinates);
+                        }
+                        return new StoreStatement(target, source);
+                    }
+
+                    case T_LPAREN, T_LBRACE -> {
+                        if (coordinates == null) {
+                            params = parseTuple(t);
+                            break params;
+                        }
+                    }
+
+                    case T_IDENTIFIER -> {
+                        vtype = new SimpleVarType(qname, coordinates);
+                        qname = parseQualifiedIdentifier((Identifier) t);
+                        break vtype;
+                    }
+                }
+
+                pushToken(t);
+
+                if (modifiers.isEmpty()) {
+                    Statement st = new LoadStatement(qname);
+                    if (coordinates != null) {
+                        st = new CoordinateLoadStatement(st, coordinates);
+                    }
+                    return st;
+                }
+
+                vtype = new SimpleVarType(List.of(modifiers.removeLast()), null);
+
+                if (modifiers.isEmpty()) {
+                    modifiers = List.of();
+                }
+
+                break vtype;
+            }
+
+            Statement st = tryParseConstructorDefinition(modifiers, qname, params, allowNewSymbol);
+
+            if (st == null) {
+                if (!modifiers.isEmpty()) {
+                    error(qname, "mismatched constructor name");
+                }
+                st = parseMethodCall(null, qname, params);
+            }
+
+            return st;
+        }
+
+        /*
+          The following forms are still possible:
+
+          - MethodDefinition       [ modifiers ] vtype sname Tuple ...
+          - Declaration            [ modifiers ] vtype sname | [ = v ]
+        */
+
+        Token t = nextToken();
+        Statement source;
+
+        switch (t.type()) {
+            case T_LPAREN, T_LBRACE -> {
+                return parseMethodDefinition
+                    (modifiers, vtype, qname, parseTuple(t), allowNewSymbol);
+            }
+            case T_ASSIGN -> {
+                source = parseStatement("assignment source");
+            }
+            default -> {
+                pushToken(t);
+                source = null;
+            }
+        }
+
+        Identifier sname = simpleName(qname, "declaration name");
+
+        if (!allowNewSymbol) {
+            error(first, "unscoped declaration not allowed");
+        }
+
+        return new DeclarationStatement(modifiers, vtype, sname, source);
     }
 
     /**
@@ -788,7 +1054,7 @@ public final class Parser implements Closeable {
      * If the format is wrong, an error is reported and an incorrect statement is returned.
      */
     private Statement parseNewStatement(Identifier newKeyword) throws IOException, Abort {
-        Statement st = parseStatement("new statement", true);
+        Statement st = parseStatement("new statement");
         Statement newSt = tryConvertToNewStatement(st);
         if (newSt != null) {
             return newSt;
@@ -809,7 +1075,7 @@ public final class Parser implements Closeable {
                         return new MethodCallStatement(newSource, name, what.params, what.segments);
                     }
                 }
-            } else if (what.params.isEvaluated()) {
+            } else {
                 List<CallSegment> segments = what.segments;
                 if (segments.isEmpty()) {
                     return new NewStatement(what.path, what.params);
@@ -817,7 +1083,7 @@ public final class Parser implements Closeable {
                 if (segments.size() == 1) {
                     CallSegment seg = segments.getFirst();
                     if (seg.name == null && seg.statement instanceof TupleStatement code
-                        && !code.isEvaluated())
+                        && code.isUnevaluated())
                     {
                         return new NewClassDefinitionStatement(what.path, what.params, code);
                     }
@@ -846,13 +1112,228 @@ public final class Parser implements Closeable {
 
     /**
      * @param ctype "class" or "interface"
+     * @param allowNewSymbol see tryParseStatement
      */
     private ClassDefinitionStatement parseClassDefinitionStatement
-        (List<Identifier> modifiers, Identifier ctype)
+        (List<Identifier> modifiers, Identifier ctype, boolean allowNewSymbol)
         throws IOException, Abort
     {
-        // FIXME: parseClassDefinitionStatement
-        throw null;
+        if (!allowNewSymbol) {
+            error(ctype, "unscoped definition not allowed");
+        }
+
+        List<Identifier> cname = tryParseQualifiedIdentifier();
+
+        if (cname == null) {
+            errorAtNext(ctype, "class name expected");
+            cname = List.of(ctype);
+        }
+
+        List<Clause> clauses = parseClauses();
+
+        pushDefinitionContext(cname, DefinitionContext.T_CLASS);
+
+        try {
+            Identifier sname = simpleName(cname, "class name");
+            TupleStatement code = codeScope(parseStatement("class definition"));
+            return new ClassDefinitionStatement(modifiers, ctype, sname, clauses, code);
+        } finally {
+            popDefinitionContext();
+        }
+    }
+
+    /**
+     * @param allowNewSymbol see tryParseStatement
+     */
+    private Statement parseMethodDefinition(List<Identifier> modifiers, VarType returnType,
+                                            List<Identifier> qname, TupleStatement params,
+                                            boolean allowNewSymbol)
+        throws IOException, Abort
+    {
+        Identifier sname = simpleName(qname, "method name");
+
+        List<DefinitionSegment> segments = List.of();
+
+        while (true) {
+            DefinitionSegment seg = tryParseDefinitionSegment();
+
+            if (seg == null) {
+                break;
+            }
+
+            if (segments.isEmpty()) {
+                segments = new ArrayList<>(4);
+            }
+
+            segments.add(seg);
+        }
+
+        List<Clause> clauses = parseClauses();
+
+        if (!allowNewSymbol) {
+            error(sname, "unscoped definition not allowed");
+        }
+
+        TupleStatement code;
+
+        if (params.end() instanceof Newline nl) {
+            errorAfter(nl, "an explicit terminator is required when no code is provided");
+            code = null;
+        } else {
+            pushDefinitionContext(qname, DefinitionContext.T_METHOD);
+
+            try {
+                Token peek = peekToken();
+
+                switch (peek.type()) {
+                    default -> {
+                        code = codeScope(parseStatement("method definition"));
+                    }
+                    case T_COMMA, T_SEMI -> {
+                        code = null;
+                    }
+                }
+            } finally {
+                popDefinitionContext();
+            }
+        }
+
+        return new MethodDefinitionStatement
+            (modifiers, sname, clauses, code, returnType, params, segments);
+    }
+
+    private DefinitionSegment tryParseDefinitionSegment() throws IOException, Abort {
+        Token repToken = nextToken();
+        int repetition;
+
+        switch (repToken.type()) {
+            default -> {
+                pushToken(repToken);
+                return null;
+            }
+            case T_COLON -> { // once
+                repetition = -1;
+            }
+            case T_MUL -> { // zero or more
+                repetition = 0;
+            }
+            case T_PLUS -> { // one or more
+                repetition = 1;
+            }
+        }
+
+        Token t = nextToken();
+
+        Identifier name = null;
+
+        if (t.type() == T_IDENTIFIER) {
+            name = (Identifier) t;
+            t = nextToken();
+        }
+
+        TupleStatement params;
+
+        switch (t.type()) {
+            case T_LPAREN -> {
+                params = parseTuple(t, T_RPAREN);
+            }
+
+            case T_LBRACE -> {
+                params = parseTuple(t, T_RBRACE);
+            }
+
+            default -> {
+                params = null;
+                error(t, "illegal parameter type");
+            }
+        }
+
+        return new DefinitionSegment(repetition, name, params);
+    }
+
+    /**
+     * @param allowNewSymbol see tryParseStatement
+     */
+    private ConstructorDefinitionStatement tryParseConstructorDefinition
+        (List<Identifier> modifiers, List<Identifier> qname, TupleStatement params,
+         boolean allowNewSymbol)
+        throws IOException, Abort
+    {
+        DefinitionContext ctx = mContextStack;
+
+        if (ctx == null || ctx.scopeDepth != 1 ||
+            ctx.type != DefinitionContext.T_CLASS || !qname.equals(ctx.qname))
+        {
+            // Note that the constructor name check is applied early. Otherwise `int a() {}`
+            // would look like a constructor definition with an `int` modifier. Most likely,
+            // it's a method which returns `int`.
+            return null;
+        }
+
+        List<Clause> clauses = parseClauses();
+
+        if (peekToken().type() != T_LBRACE && clauses.isEmpty()) {
+            return null;
+        }
+
+        Identifier sname = simpleName(qname, "constructor name");
+
+        if (!allowNewSymbol) {
+            error(sname, "unscoped definition not allowed");
+        }
+
+        pushDefinitionContext(qname, DefinitionContext.T_CONSTRUCTOR);
+
+        try {
+            TupleStatement code = codeScope(parseStatement("constructor definition"));
+            return new ConstructorDefinitionStatement(modifiers, sname, clauses, code, params);
+        } finally {
+            popDefinitionContext();
+        }
+    }
+
+    private List<Clause> parseClauses() throws IOException {
+        Clause clause = tryParseClause();
+
+        if (clause == null) {
+            return List.of();
+        }
+
+        var clauses = new ArrayList<Clause>(4);
+
+        do {
+            clauses.add(clause);
+        } while ((clause = tryParseClause()) != null);
+
+        return clauses;
+    }
+
+    private Clause tryParseClause() throws IOException {
+        List<Identifier> qual = tryParseQualifiedIdentifier();
+
+        if (qual == null) {
+            return null;
+        }
+
+        Identifier kind = simpleName(qual, "clause");
+
+        var items = new ArrayList<List<Identifier>>(4);
+
+        while (true) {
+            List<Identifier> item = tryParseQualifiedIdentifier();
+            if (item == null) {
+                errorAfter(kind, "identifier required");
+                break;
+            }
+            items.add(item);
+            Token t = nextToken();
+            if (t.type() != T_COMMA) {
+                pushToken(t);
+                break;
+            }
+        }
+
+        return new Clause(kind, items);
     }
 
     /**
@@ -943,6 +1424,38 @@ public final class Parser implements Closeable {
     }
 
     /**
+     * Is used to determine if a method definition is a constructor, by comparing the name to
+     * an enclosing class name.
+     *
+     * @param qname name of the definition being parsed
+     * @param type DefinitionContext T_* type
+     */
+    private void pushDefinitionContext(List<Identifier> qname, int type) {
+        mContextStack = new DefinitionContext(mContextStack, qname, type);
+    }
+
+    private void popDefinitionContext() {
+        mContextStack = mContextStack.prev;
+    }
+
+    private static final class DefinitionContext {
+        static final int T_CLASS = 1, T_CONSTRUCTOR = 2, T_METHOD = 3;
+
+        final DefinitionContext prev;
+        final List<Identifier> qname;
+        final int type;
+
+        // Counts the number of times a code scope tuple has been entered.
+        int scopeDepth;
+
+        DefinitionContext(DefinitionContext prev, List<Identifier> qname, int type) {
+            this.prev = prev;
+            this.qname = qname;
+            this.type = type;
+        }
+    }
+
+    /**
      * Returns the first item from the qualified name. An error is reported if the qualified
      * name has more than one identifier.
      */
@@ -964,6 +1477,33 @@ public final class Parser implements Closeable {
         }
 
         return name;
+    }
+
+    /**
+     * Returns the given name if not null, or else reports an error and returns a fake name.
+     *
+     * @param which type of name which is required
+     * @return a non-null name list
+     */
+    private List<Identifier> requireName(List<Identifier> name, Token t, String which) {
+        if (name != null) {
+            return name;
+        }
+        error(t, which + " expected");
+        return List.of(new Identifier(t.line(), t.column(), 0, "", false));
+    }
+
+    /**
+     * Returns the given statement if it's an unevaluated TupleStatement, or else report an
+     * error and return null.
+     */
+    private TupleStatement codeScope(Statement st) {
+        if (st instanceof TupleStatement tuple && tuple.isUnevaluated()) {
+            return tuple;
+        } else {
+            error(st, "code scope required");
+            return null;
+        }
     }
 
     /**

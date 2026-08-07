@@ -24,14 +24,14 @@ package org.cojen.motto.internal.parser;
 public final class DefinitionSegment {
     public final int repetition;
     public final Token.Identifier name;
-    public final Statement params;
+    public final TupleStatement params;
 
     /**
      * @param repetition -1: once, 0: zero or more, 1: one or more
      * @param name optional
-     * @param params is a TupleStatement or a `_` LiteralStatement to accept any statement
+     * @param params required, unless the definition is broken
      */
-    DefinitionSegment(int repetition, Token.Identifier name, Statement params) {
+    DefinitionSegment(int repetition, Token.Identifier name, TupleStatement params) {
         this.repetition = repetition;
         this.name = name;
         this.params = params;
