@@ -102,7 +102,6 @@ final class Tokenizer implements Closeable {
                     unread(skipWhitespace());
                     break;
                 }
-                // FIXME: possibly a custom string delimiter
                 return parseOperator(c);
 
             case '(':
@@ -163,6 +162,48 @@ final class Tokenizer implements Closeable {
 
             case '`':
                 return parseQuoted(T_IDENTIFIER, "`");
+
+            case '#':
+                /*
+                  Check if defining a string or identifier using a custom delimiter.
+
+                  Example: #"abc"message is "hello""abc"
+                  Result:  message is "hello"
+
+                  If the custom delimiter is enclosed in double or single quotes, then the
+                  result string is normal string. If backticks, then the result string is an
+                  identifier.
+
+                  The delimiter string itself is parsed as a normal string. To be matched, it
+                  must appear again exactly, enclosed by the same quotes.
+                */
+
+                c = read();
+
+                int qtype;
+                String quote;
+
+                switch (c) {
+                    case '"' -> {
+                        qtype = T_STRING;
+                        quote = "\"";
+                    }
+                    case '\'' -> {
+                        qtype = T_STRING;
+                        quote = "'";
+                    }
+                    case '`' -> {
+                        qtype = T_IDENTIFIER;
+                        quote = "`";
+                    }
+                    default -> {
+                        return parseOperator(c);
+                    }
+                }
+
+                String delimiter = quote + ((Text) parseQuoted(qtype, quote)).text + quote;
+
+                return parseQuoted(qtype, delimiter);
 
             case '0': case '1': case '2': case '3': case '4':
             case '5': case '6': case '7': case '8': case '9':
@@ -395,10 +436,8 @@ final class Tokenizer implements Closeable {
         mWord.setLength(0);
 
         int delimiterLength = delimiter.length();
-        int delimiterChar = delimiter.charAt(0);
-        int delimiterPos = 1;
 
-        while (true) {
+        readLoop: while (true) {
             int c = read();
             if (c < 0) {
                 return new Unclosed(line, column, delimiter.length() + mWord.length(), type);
@@ -406,15 +445,16 @@ final class Tokenizer implements Closeable {
 
             mWord.append((char) c);
 
-            if (c == delimiterChar) {
-                if (delimiterPos >= delimiterLength) {
-                    mWord.setLength(mWord.length() - delimiterLength);
-                    break;
+            final int dpos = mWord.length() - delimiterLength;
+
+            if (dpos >= 0) {
+                for (int i=0, j=dpos; i<delimiterLength; i++, j++) {
+                    if (delimiter.charAt(i) != mWord.charAt(j)) {
+                        continue readLoop;
+                    }
                 }
-                delimiterChar = delimiter.charAt(delimiterPos++);
-            } else if (delimiterPos > 1) {
-                delimiterChar = delimiter.charAt(0);
-                delimiterPos = 1;
+                mWord.setLength(dpos);
+                break;
             }
         }
 
