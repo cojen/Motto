@@ -326,9 +326,7 @@ public final class Parser implements Closeable {
             }
 
             case T_IDENTIFIER -> {
-                // FIXME: parseIdentifierStatement (be sure to honor allowNewSymbol=false)
-                //return parseIdentifierStatement((Identifier) t1, allowNewSymbol);
-                throw null;
+                return parseIdentifierStatement((Identifier) t1, allowNewSymbol);
             }
 
             case T_LPAREN -> {
@@ -716,6 +714,145 @@ public final class Parser implements Closeable {
                 return segments;
             }
         }
+    }
+
+    /**
+     * Parses a statement which leads with an identifier.
+     *
+     * @param first must be an identifier
+     * @param allowNewSymbol see parseStatement
+     */
+    private Statement parseIdentifierStatement(Identifier first, boolean allowNewSymbol)
+        throws IOException, Abort
+    {
+        List<Identifier> qname = parseQualifiedIdentifier(first);
+
+        if (qname.size() == 1 && !first.quoted) {
+            // Look for a context specific keyword.
+
+            switch (first.text) {
+                case "return" -> {
+                    return new ReturnStatement(first, tryParseStatement(true));
+                }
+
+                case "throw" -> {
+                    return new ThrowStatement(first, parseStatement("throw statement", true));
+                }
+
+                case "break", "continue" -> {
+                    return new JumpStatement(first, tryParseLabel(null));
+                }
+
+                case "goto" -> {
+                    return new JumpStatement(first, tryParseLabel(first));
+                }
+
+                case "new" -> {
+                    return parseNewStatement(first);
+                }
+
+                case "class", "interface" -> {
+                    if (allowNewSymbol) {
+                        return parseClassDefinitionStatement(List.of(), first);
+                    }
+                }
+            }
+        }
+
+        // FIXME: parseIdentifierStatement (be sure to honor allowNewSymbol=false)
+
+        // FIXME
+        throw null;
+    }
+
+    /**
+     * @param required when non-null, an error is reported if no statement could be parsed
+     */
+    private Identifier tryParseLabel(Token required) throws IOException, Abort {
+        Statement st = tryParseStatement(true);
+
+        if (st instanceof LoadStatement ls) {
+            return simpleName(ls.path, "label");
+        }
+
+        if (st != null) {
+            error(st, "illegal label");
+        } else if (required != null) {
+            errorAtNext(required, "label expected");
+        }
+
+        return null;
+    }
+
+    /**
+     * If the format is wrong, an error is reported and an incorrect statement is returned.
+     */
+    private Statement parseNewStatement(Identifier newKeyword) throws IOException, Abort {
+        Statement st = parseStatement("new statement", true);
+        Statement newSt = tryConvertToNewStatement(st);
+        if (newSt != null) {
+            return newSt;
+        }
+        error(newKeyword, st.end(), "invalid new statement");
+        return st;
+    }
+
+    private Statement tryConvertToNewStatement(Statement st) throws IOException, Abort {
+        if (st instanceof MethodCallStatement what) {
+            Statement source = what.source;
+
+            if (source != null) {
+                if (what.path.size() == 1) {
+                    Identifier name = what.path.getFirst();
+                    Statement newSource = tryConvertToNewStatement(source);
+                    if (newSource != null) {
+                        return new MethodCallStatement(newSource, name, what.params, what.segments);
+                    }
+                }
+            } else if (what.params.isEvaluated()) {
+                List<CallSegment> segments = what.segments;
+                if (segments.isEmpty()) {
+                    return new NewStatement(what.path, what.params);
+                }
+                if (segments.size() == 1) {
+                    CallSegment seg = segments.getFirst();
+                    if (seg.name == null && seg.statement instanceof TupleStatement code
+                        && !code.isEvaluated())
+                    {
+                        return new NewClassDefinitionStatement(what.path, what.params, code);
+                    }
+                }
+            }
+        } else if (st instanceof CoordinateLoadStatement what) {
+            if (what.source instanceof LoadStatement ls) {
+                TupleStatement values;
+                {
+                    Token t = nextToken();
+                    if (t.type() != T_LPAREN) {
+                        pushToken(t);
+                        values = null;
+                    } else {
+                        values = parseTuple(t, T_RPAREN);
+                    }
+                }
+
+                var base = new SimpleVarType(ls.path, null);
+                return new NewArrayStatement(base, what.coordinates, values);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param ctype "class" or "interface"
+     */
+    private ClassDefinitionStatement parseClassDefinitionStatement
+        (List<Identifier> modifiers, Identifier ctype)
+        throws IOException, Abort
+    {
+        // FIXME: parseClassDefinitionStatement
+        throw null;
     }
 
     /**

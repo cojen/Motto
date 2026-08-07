@@ -36,4 +36,11 @@ public final class TupleStatement extends EnclosedStatementList implements State
     public <R, P> R accept(ParseVisitor<R, P> v, P param) {
         return v.visit(this, param);
     }
+
+    /**
+     * Returns true of the tuple starts with a `(`.
+     */
+    public boolean isEvaluated() {
+        return open.type() == Token.T_LPAREN;
+    }
 }
