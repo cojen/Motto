@@ -19,7 +19,7 @@ package org.cojen.motto.internal.parser;
 import java.util.List;
 
 /**
- * Example: `new int[10]`
+ * Example: `new int[10]` or `new int[] (1, 2, 3)`
  *
  * @author Brian S. O'Neill
  */

@@ -884,8 +884,9 @@ public final class Parser implements Closeable {
             // If this point is reached, then at least one modifier was parsed.
 
             Token t = nextToken();
+            int tType = t.type();
 
-            if (t.type() == T_LPAREN) {
+            if (tType == T_LPAREN || tType == T_LBRACE) {
                 TupleStatement tuple = parseTuple(t);
                 List<Coordinate> coordinates = tryParseCoordinates();
 
@@ -1094,12 +1095,14 @@ public final class Parser implements Closeable {
                 TupleStatement values;
                 {
                     Token t = nextToken();
-                    if (t.type() != T_LPAREN) {
-                        pushToken(t);
-                        values = null;
-                    } else {
-                        values = parseTuple(t, T_RPAREN);
-                    }
+                    values = switch (t.type()) {
+                        case T_LPAREN -> parseTuple(t, T_RPAREN);
+                        case T_LBRACE -> parseTuple(t, T_RBRACE);
+                        default -> {
+                            pushToken(t);
+                            yield null;
+                        }
+                    };
                 }
 
                 var base = new SimpleVarType(ls.path, null);
