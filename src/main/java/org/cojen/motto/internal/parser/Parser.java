@@ -264,10 +264,26 @@ public final class Parser implements Closeable {
      * @param which optional type of statement being parsed (used for error reporting)
      */
     private Statement parseStatement(String which) throws IOException, Abort {
+        return parseStatement(which, true);
+    }
+
+    /**
+     * Parse a non-labeled statement. The allowNewSymbol option, when false, disables
+     * the parsing of statements which generate a new symbol -- the corresponding rules are
+     * simply ignored. These are declarations, definitions, and labels, although this method
+     * never parses labels anyhow. The allowNewSymbol option isn't recursive, and so statements
+     * which reference other statements can pass along a different value for the option.
+     *
+     * @param which optional type of statement being parsed (used for error reporting)
+     * @param allowNewSymbol when false, don't parse statements which can define a new symbol
+     */
+    private Statement parseStatement(String which, boolean allowNewSymbol)
+        throws IOException, Abort
+    {
         int localErrors = 0;
 
         while (true) {
-            Statement st = tryParseStatement(true);
+            Statement st = tryParseStatement(allowNewSymbol);
 
             if (st != null) {
                 return st;
@@ -295,26 +311,57 @@ public final class Parser implements Closeable {
     }
 
     /**
-     * Try to parse a non-labeled statement. The allowNewSymbol option, when false, disables
-     * the parsing of statements which generate a new symbol -- the corresponding rules are
-     * simply ignored. These are declarations, definitions, and labels, although this method
-     * never parses labels anyhow. The allowNewSymbol option isn't recursive, and so statements
-     * which reference other statements can pass along a different value for the option.
+     * Try to parse a non-labeled statement.
      *
-     * @param allowNewSymbol when false, don't parse statements which can define a new symbol
+     * @param allowNewSymbol see parseStatement
      */
     private Statement tryParseStatement(boolean allowNewSymbol) throws IOException, Abort {
         Statement st = tryParseBaseStatement(allowNewSymbol);
-        if (st != null) {
-            st = parseStatementChain(st);
+
+        if (st == null) {
+            return null;
         }
-        return st;
+
+        st = parseStatementChain(st);
+
+        // Check if the tuple is the start of a declaration or method definition, unless new
+        // symbols aren't allowed.
+
+        if (!allowNewSymbol || st.end() instanceof Newline) {
+            return st;
+        }
+
+        // What follows needs to be a simple name (not a qualified name with dots).
+
+        Token t = nextToken();
+        TupleVarType vtype;
+
+        check: {
+            if (t.type() == T_IDENTIFIER && peekToken().type() != T_DOT) {
+                if (st instanceof TupleStatement ts) {
+                    vtype = new TupleVarType(ts, null);
+                    break check;
+                } else if (st instanceof CoordinateLoadStatement cls &&
+                           cls.source instanceof TupleStatement ts)
+                {
+                    vtype = new TupleVarType(ts, cls.coordinates);
+                    break check;
+                }
+            }
+
+            pushToken(t);
+            return st;
+        }
+
+        var sname = (Token.Identifier) t;
+
+        return parseDefinitionOrDeclaration(List.of(), vtype, List.of(sname));
     }
 
     /**
      * Try to parse a non-labeled base statement.
      *
-     * @param allowNewSymbol see tryParseStatement
+     * @param allowNewSymbol see parseStatement
      */
     private Statement tryParseBaseStatement(boolean allowNewSymbol) throws IOException, Abort {
         Token t1 = nextToken();
@@ -750,7 +797,7 @@ public final class Parser implements Closeable {
      * Parses a statement which leads with an identifier.
      *
      * @param first must be an identifier
-     * @param allowNewSymbol see tryParseStatement
+     * @param allowNewSymbol see parseStatement
      */
     private Statement parseIdentifierStatement(final Identifier first, boolean allowNewSymbol)
         throws IOException, Abort
@@ -807,7 +854,7 @@ public final class Parser implements Closeable {
           - ClassDefinition        [ modifiers ] ctype sname UnevaluatedTuple
           - ConstructorDefinition  [ modifiers ] sname Tuple UnevaluatedTuple
           - MethodDefinition       [ modifiers ] vtype sname Tuple ...
-          - Declaration            [ modifiers ] vtype sname | [ = v ]
+          - Declaration            [ modifiers ] vtype sname [ = v ]
 
           Gather as many modifiers as possible. They must be simple unquoted identifiers, and
           they must match modifier keywords. If a class type is observed, then parse a
@@ -877,7 +924,7 @@ public final class Parser implements Closeable {
           - Load                   qname
           - ConstructorDefinition  [ modifiers ] sname Tuple UnevaluatedTuple
           - MethodDefinition       [ modifiers ] vtype sname Tuple ...
-          - Declaration            [ modifiers ] vtype sname | [ = v ]
+          - Declaration            [ modifiers ] vtype sname [ = v ]
 
           If qname is null and the next token is T_LPAREN, then parse MethodDefinition or
           Declaration. This only handles the tuple case of vtype.
@@ -1006,15 +1053,21 @@ public final class Parser implements Closeable {
             return st;
         }
 
-        /*
-          If this point is reached, allowNewSymbol must be true.
+        // If this point is reached, allowNewSymbol must be true.
 
-          The following forms are still possible:
+        return parseDefinitionOrDeclaration(modifiers, vtype, qname);
+    }
 
-          - MethodDefinition       [ modifiers ] vtype sname Tuple ...
-          - Declaration            [ modifiers ] vtype sname | [ = v ]
-        */
-
+    /**
+     * Parses these forms:
+     *
+     * - MethodDefinition       [ modifiers ] vtype sname Tuple ...
+     * - Declaration            [ modifiers ] vtype sname [ = v ]
+     */
+    private Statement parseDefinitionOrDeclaration(List<Identifier> modifiers,
+                                                   VarType vtype, List<Identifier> qname)
+        throws IOException, Abort
+    {
         Token t = nextToken();
         Statement source;
 
@@ -1136,7 +1189,7 @@ public final class Parser implements Closeable {
 
         try {
             Identifier sname = simpleName(cname, "class name");
-            TupleStatement code = codeScope(parseStatement("class definition"));
+            TupleStatement code = codeScope(parseStatement("class definition", false));
             return new ClassDefinitionStatement(modifiers, ctype, sname, clauses, code);
         } finally {
             popDefinitionContext();
@@ -1180,7 +1233,7 @@ public final class Parser implements Closeable {
 
                 switch (peek.type()) {
                     default -> {
-                        code = codeScope(parseStatement("method definition"));
+                        code = codeScope(parseStatement("method definition", false));
                     }
                     case T_COMMA, T_SEMI -> {
                         code = null;
@@ -1270,7 +1323,7 @@ public final class Parser implements Closeable {
         pushDefinitionContext(qname, DefinitionContext.T_CONSTRUCTOR);
 
         try {
-            TupleStatement code = codeScope(parseStatement("constructor definition"));
+            TupleStatement code = codeScope(parseStatement("constructor definition", false));
             return new ConstructorDefinitionStatement(modifiers, sname, clauses, code, params);
         } finally {
             popDefinitionContext();

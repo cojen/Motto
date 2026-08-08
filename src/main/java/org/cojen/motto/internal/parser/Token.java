@@ -154,8 +154,8 @@ public abstract sealed class Token implements Element {
     }
 
     /**
-     * This token indicates that what originally followed the token was a newline. It only
-     * needs to be used in special cases: `)` or `}`
+     * This token indicates that what originally followed the token was a newline. It's only
+     * used when the token is `)` or `}`.
      */
     public static final class Newline extends Basic {
         Newline(int line, int column, int length, int type) {
