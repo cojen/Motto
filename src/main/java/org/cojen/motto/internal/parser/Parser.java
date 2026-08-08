@@ -1223,7 +1223,7 @@ public final class Parser implements Closeable {
         TupleStatement code;
 
         if (params.end() instanceof Newline nl) {
-            errorAfter(nl, "an explicit terminator is required when no code is provided");
+            errorAfter(nl, "an explicit `;` terminator is required when no code is provided");
             code = null;
         } else {
             pushDefinitionContext(qname, DefinitionContext.T_METHOD);
