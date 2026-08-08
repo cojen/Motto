@@ -296,10 +296,10 @@ public final class Parser implements Closeable {
 
     /**
      * Try to parse a non-labeled statement. The allowNewSymbol option, when false, disables
-     * the parsing of statements which define a new symbol. These are declarations,
-     * definitions, and labels, although this method never parses labels anyhow. The
-     * allowNewSymbol option isn't recursive, and so statements which reference other
-     * statements can pass along a different value for the option.
+     * the parsing of statements which generate a new symbol -- the corresponding rules are
+     * simply ignored. These are declarations, definitions, and labels, although this method
+     * never parses labels anyhow. The allowNewSymbol option isn't recursive, and so statements
+     * which reference other statements can pass along a different value for the option.
      *
      * @param allowNewSymbol when false, don't parse statements which can define a new symbol
      */
@@ -720,7 +720,7 @@ public final class Parser implements Closeable {
             }
 
             // Must pass false for allowNewSymbol because when the statement leads with more
-            // than one identifier, it absorbs identifiers which should be interpreted as
+            // than one identifier, it consumes identifiers which should be interpreted as
             // segment names. The inability to declare or define symbols as standalone
             // statements isn't big issue, considering that in practice the symbol would be in
             // a lone inaccessible scope. If this behavior is desired, the
@@ -786,7 +786,9 @@ public final class Parser implements Closeable {
                 }
 
                 case "class", "interface" -> {
-                    return parseClassDefinitionStatement(List.of(), first, allowNewSymbol);
+                    if (allowNewSymbol) {
+                        return parseClassDefinitionStatement(List.of(), first);
+                    }
                 }
             }
         }
@@ -813,13 +815,14 @@ public final class Parser implements Closeable {
 
           As a side-effect, qname is updated, and it might be null if the last token
           encountered wasn't an identifier.
+
+          If allowNewSymbol is false, modifiers aren't gathered, because they're only consumed
+          by rules which generate new symbols.
         */
 
-        List<Identifier> modifiers;
+        List<Identifier> modifiers = List.of();
 
-        {
-            modifiers = List.of();
-
+        if (allowNewSymbol) {
             List<Identifier> qual = qname;
             qname = null;
 
@@ -850,7 +853,7 @@ public final class Parser implements Closeable {
                     }
 
                     case "class", "interface" -> {
-                        return parseClassDefinitionStatement(modifiers, id, allowNewSymbol);
+                        return parseClassDefinitionStatement(modifiers, id);
                     }
                 }
 
@@ -881,7 +884,8 @@ public final class Parser implements Closeable {
         */
 
         if (qname == null) {
-            // If this point is reached, then at least one modifier was parsed.
+            // If this point is reached, then at least one modifier was parsed. It also implies
+            // that allowNewSymbol is true.
 
             Token t = nextToken();
             int tType = t.type();
@@ -900,8 +904,7 @@ public final class Parser implements Closeable {
                 switch (t.type()) {
                     case T_LPAREN, T_LBRACE -> {
                         qname = requireName(qname, t, "method definition name");
-                        return parseMethodDefinition
-                            (modifiers, vtype, qname, parseTuple(t), allowNewSymbol);
+                        return parseMethodDefinition(modifiers, vtype, qname, parseTuple(t));
                     }
                     case T_ASSIGN -> {
                         qname = requireName(qname, t, "declaration name");
@@ -914,10 +917,6 @@ public final class Parser implements Closeable {
                 }
 
                 Identifier name = simpleName(qname, "declaration name");
-
-                if (!allowNewSymbol) {
-                    error(first, "unscoped declaration not allowed");
-                }
 
                 return new DeclarationStatement(modifiers, vtype, name, source);
             }
@@ -949,6 +948,8 @@ public final class Parser implements Closeable {
                         Statement source = parseStatement("assignment source");
                         Statement target = new LoadStatement(qname);
                         if (coordinates != null) {
+                            // Effectively becomes a CoordinateStore when combined with the
+                            // StoreStatement below.
                             target = new CoordinateLoadStatement(target, coordinates);
                         }
                         return new StoreStatement(target, source);
@@ -970,6 +971,8 @@ public final class Parser implements Closeable {
 
                 pushToken(t);
 
+                // At this point, if allowNewSymbol is false, then modifiers is empty.
+
                 if (modifiers.isEmpty()) {
                     Statement st = new LoadStatement(qname);
                     if (coordinates != null) {
@@ -977,6 +980,8 @@ public final class Parser implements Closeable {
                     }
                     return st;
                 }
+
+                // If this point is reached, allowNewSymbol must be true.
 
                 vtype = new SimpleVarType(List.of(modifiers.removeLast()), null);
 
@@ -987,7 +992,9 @@ public final class Parser implements Closeable {
                 break vtype;
             }
 
-            Statement st = tryParseConstructorDefinition(modifiers, qname, params, allowNewSymbol);
+            // If this point is reached, allowNewSymbol must be true.
+
+            Statement st = tryParseConstructorDefinition(modifiers, qname, params);
 
             if (st == null) {
                 if (!modifiers.isEmpty()) {
@@ -1000,6 +1007,8 @@ public final class Parser implements Closeable {
         }
 
         /*
+          If this point is reached, allowNewSymbol must be true.
+
           The following forms are still possible:
 
           - MethodDefinition       [ modifiers ] vtype sname Tuple ...
@@ -1011,8 +1020,7 @@ public final class Parser implements Closeable {
 
         switch (t.type()) {
             case T_LPAREN, T_LBRACE -> {
-                return parseMethodDefinition
-                    (modifiers, vtype, qname, parseTuple(t), allowNewSymbol);
+                return parseMethodDefinition(modifiers, vtype, qname, parseTuple(t));
             }
             case T_ASSIGN -> {
                 source = parseStatement("assignment source");
@@ -1024,10 +1032,6 @@ public final class Parser implements Closeable {
         }
 
         Identifier sname = simpleName(qname, "declaration name");
-
-        if (!allowNewSymbol) {
-            error(first, "unscoped declaration not allowed");
-        }
 
         return new DeclarationStatement(modifiers, vtype, sname, source);
     }
@@ -1115,16 +1119,10 @@ public final class Parser implements Closeable {
 
     /**
      * @param ctype "class" or "interface"
-     * @param allowNewSymbol see tryParseStatement
      */
     private ClassDefinitionStatement parseClassDefinitionStatement
-        (List<Identifier> modifiers, Identifier ctype, boolean allowNewSymbol)
-        throws IOException, Abort
+        (List<Identifier> modifiers, Identifier ctype) throws IOException, Abort
     {
-        if (!allowNewSymbol) {
-            error(ctype, "unscoped definition not allowed");
-        }
-
         List<Identifier> cname = tryParseQualifiedIdentifier();
 
         if (cname == null) {
@@ -1145,12 +1143,8 @@ public final class Parser implements Closeable {
         }
     }
 
-    /**
-     * @param allowNewSymbol see tryParseStatement
-     */
     private Statement parseMethodDefinition(List<Identifier> modifiers, VarType returnType,
-                                            List<Identifier> qname, TupleStatement params,
-                                            boolean allowNewSymbol)
+                                            List<Identifier> qname, TupleStatement params)
         throws IOException, Abort
     {
         Identifier sname = simpleName(qname, "method name");
@@ -1172,10 +1166,6 @@ public final class Parser implements Closeable {
         }
 
         List<Clause> clauses = parseClauses();
-
-        if (!allowNewSymbol) {
-            error(sname, "unscoped definition not allowed");
-        }
 
         TupleStatement code;
 
@@ -1254,12 +1244,8 @@ public final class Parser implements Closeable {
         return new DefinitionSegment(repetition, name, params);
     }
 
-    /**
-     * @param allowNewSymbol see tryParseStatement
-     */
     private ConstructorDefinitionStatement tryParseConstructorDefinition
-        (List<Identifier> modifiers, List<Identifier> qname, TupleStatement params,
-         boolean allowNewSymbol)
+        (List<Identifier> modifiers, List<Identifier> qname, TupleStatement params)
         throws IOException, Abort
     {
         DefinitionContext ctx = mContextStack;
@@ -1280,10 +1266,6 @@ public final class Parser implements Closeable {
         }
 
         Identifier sname = simpleName(qname, "constructor name");
-
-        if (!allowNewSymbol) {
-            error(sname, "unscoped definition not allowed");
-        }
 
         pushDefinitionContext(qname, DefinitionContext.T_CONSTRUCTOR);
 
