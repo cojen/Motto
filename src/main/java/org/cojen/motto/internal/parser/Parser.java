@@ -1257,13 +1257,13 @@ public final class Parser implements Closeable {
                 pushToken(repToken);
                 return null;
             }
-            case T_COLON -> { // once
+            case T_COLON_COLON -> { // once
                 repetition = -1;
             }
-            case T_MUL -> { // zero or more
+            case T_COLON_MUL -> { // zero or more
                 repetition = 0;
             }
-            case T_PLUS -> { // one or more
+            case T_COLON_PLUS -> { // one or more
                 repetition = 1;
             }
         }

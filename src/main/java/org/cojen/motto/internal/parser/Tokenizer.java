@@ -826,6 +826,17 @@ final class Tokenizer implements Closeable {
             int c2 = mWord.charAt(1);
 
             switch (mWord.charAt(0)) {
+                case ':' -> {
+                    if (c2 == ':') {
+                        type = T_COLON_COLON;
+                    } else if (c2 == '+') {
+                        type = T_COLON_PLUS;
+                    } else if (c2 == '*') {
+                        type = T_COLON_MUL;
+                    } else {
+                        break l2;
+                    }
+                }
                 case '+' -> {
                     if (c2 == '=') {
                         type = T_PLUS_A;
