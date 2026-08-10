@@ -758,27 +758,40 @@ public final class Parser implements Closeable {
             Token t = nextToken();
 
             Identifier segName;
-            if (t.type() == T_IDENTIFIER) {
-                segName = (Identifier) t;
-            } else {
-                pushToken(t);
-                t = null;
-                segName = null;
-            }
+            Statement segStatement;
 
-            // Must pass false for allowNewSymbol because when the statement leads with more
-            // than one identifier, it consumes identifiers which should be interpreted as
-            // segment names. The inability to declare or define symbols as standalone
-            // statements isn't big issue, considering that in practice the symbol would be in
-            // a lone inaccessible scope. If this behavior is desired, the
-            // declaration/definition must be wrapped in a tuple statement.
-            Statement segStatement = tryParseStatement(false);
+            switch (t.type()) {
+                case T_IDENTIFIER -> {
+                    segName = (Identifier) t;
 
-            if (segStatement == null) {
-                if (t != null) {
-                    pushToken(t);
+                    // Must pass false for allowNewSymbol because when the statement leads with
+                    // more than one identifier, it consumes identifiers which should be
+                    // interpreted as segment names. The inability to declare or define symbols
+                    // as standalone statements isn't big issue, considering that in practice
+                    // the symbol would be in a lone inaccessible scope. If this behavior is
+                    // desired, the declaration/definition must be wrapped in a tuple statement.
+                    segStatement = tryParseStatement(false);
+
+                    if (segStatement == null) {
+                        pushToken(t);
+                        return segments;
+                    }
                 }
-                return segments;
+
+                case T_LPAREN -> {
+                    segName = null;
+                    segStatement = parseTuple(t, T_RPAREN);
+                }
+
+                case T_LBRACE -> {
+                    segName = null;
+                    segStatement = parseTuple(t, T_RBRACE);
+                }
+
+                default -> {
+                    pushToken(t);
+                    return segments;
+                }
             }
 
             if (segments.isEmpty()) {
