@@ -22,19 +22,23 @@ import java.util.Objects;
 /**
  * Example: `a(0)` or `a.b(0)`
  *
+ * Note that segment parsing is quite lenient. When matching calls to defined methods, the
+ * segments need further processing. In particular, those that implement PathStatement. If the
+ * path is simple (it has one element), then it might match to a segment name.
+ *
  * @author Brian S. O'Neill
  */
 public final class MethodCallStatement extends PathStatement {
     public final Statement source;
     public final TupleStatement params;
-    public final List<CallSegment> segments;
+    public final List<Statement> segments;
 
     /**
      * @param path path to variable or field
      * @param segments required; can be empty
      */
     MethodCallStatement(List<Token.Identifier> path, TupleStatement params,
-                        List<CallSegment> segments)
+                        List<Statement> segments)
     {
         super(path);
         this.source = null;
@@ -48,7 +52,7 @@ public final class MethodCallStatement extends PathStatement {
      * @param segments required; can be empty
      */
     MethodCallStatement(Statement source, Token.Identifier name, TupleStatement params,
-                        List<CallSegment> segments)
+                        List<Statement> segments)
     {
         super(List.of(name));
         this.source = Objects.requireNonNull(source);
@@ -69,7 +73,7 @@ public final class MethodCallStatement extends PathStatement {
     @Override
     public Token end() {
         if (!segments.isEmpty()) {
-            return segments.getLast().statement.end();
+            return segments.getLast().end();
         }
         return params.end();
     }

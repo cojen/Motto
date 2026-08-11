@@ -737,7 +737,7 @@ public final class Parser implements Closeable {
     {
         // Try to parse method call segments, stopping when a separator is seen, or if the last
         // parsed statement ends with an automatic separator.
-        List<CallSegment> segments;
+        List<Statement> segments;
         if (params.end() instanceof Newline) {
             segments = List.of();
         } else {
@@ -751,58 +751,35 @@ public final class Parser implements Closeable {
         }
     }
 
-    private List<CallSegment> parseCallSegments() throws IOException, Abort {
-        List<CallSegment> segments = List.of();
+    private List<Statement> parseCallSegments() throws IOException, Abort {
+        List<Statement> segments = List.of();
 
         while (true) {
-            Token t = nextToken();
+            // Must pass false for allowNewSymbol because when the statement leads with
+            // more than one identifier, it consumes identifiers which should be
+            // interpreted as segment names. The inability to declare or define symbols
+            // as standalone statements isn't big issue, considering that in practice
+            // the symbol would be in a lone inaccessible scope. If this behavior is
+            // desired, the declaration/definition must be wrapped in a tuple statement.
+            Statement st = tryParseStatement(false);
 
-            Identifier segName;
-            Statement segStatement;
+            if (st == null) {
+                return segments;
+            }
 
-            switch (t.type()) {
-                case T_IDENTIFIER -> {
-                    segName = (Identifier) t;
-
-                    // Must pass false for allowNewSymbol because when the statement leads with
-                    // more than one identifier, it consumes identifiers which should be
-                    // interpreted as segment names. The inability to declare or define symbols
-                    // as standalone statements isn't big issue, considering that in practice
-                    // the symbol would be in a lone inaccessible scope. If this behavior is
-                    // desired, the declaration/definition must be wrapped in a tuple statement.
-                    segStatement = tryParseStatement(false);
-
-                    if (segStatement == null) {
-                        pushToken(t);
-                        return segments;
-                    }
+            if (st.end() instanceof Newline) {
+                if (segments.isEmpty()) {
+                    return List.of(st);
                 }
-
-                case T_LPAREN -> {
-                    segName = null;
-                    segStatement = parseTuple(t, T_RPAREN);
-                }
-
-                case T_LBRACE -> {
-                    segName = null;
-                    segStatement = parseTuple(t, T_RBRACE);
-                }
-
-                default -> {
-                    pushToken(t);
-                    return segments;
-                }
+                segments.add(st);
+                return segments;
             }
 
             if (segments.isEmpty()) {
                 segments = new ArrayList<>(4);
             }
 
-            segments.add(new CallSegment(segName, segStatement));
-
-            if (segStatement.end() instanceof Newline) {
-                return segments;
-            }
+            segments.add(st);
         }
     }
 
@@ -1023,9 +1000,11 @@ public final class Parser implements Closeable {
                     }
 
                     case T_IDENTIFIER -> {
-                        vtype = new SimpleVarType(qname, coordinates);
-                        qname = parseQualifiedIdentifier((Identifier) t);
-                        break vtype;
+                        if (allowNewSymbol) {
+                            vtype = new SimpleVarType(qname, coordinates);
+                            qname = parseQualifiedIdentifier((Identifier) t);
+                            break vtype;
+                        }
                     }
                 }
 
@@ -1052,18 +1031,17 @@ public final class Parser implements Closeable {
                 break vtype;
             }
 
-            // If this point is reached, allowNewSymbol must be true.
-
-            Statement st = tryParseConstructorDefinition(modifiers, qname, params);
-
-            if (st == null) {
+            if (allowNewSymbol) {
+                Statement st = tryParseConstructorDefinition(modifiers, qname, params);
+                if (st != null) {
+                    return st;
+                }
                 if (!modifiers.isEmpty()) {
                     error(qname, "mismatched constructor name");
                 }
-                st = parseMethodCall(null, qname, params);
             }
 
-            return st;
+            return parseMethodCall(null, qname, params);
         }
 
         // If this point is reached, allowNewSymbol must be true.
@@ -1147,15 +1125,13 @@ public final class Parser implements Closeable {
                     }
                 }
             } else {
-                List<CallSegment> segments = what.segments;
+                List<Statement> segments = what.segments;
                 if (segments.isEmpty()) {
                     return new NewStatement(what.path, what.params);
                 }
                 if (segments.size() == 1) {
-                    CallSegment seg = segments.getFirst();
-                    if (seg.name == null && seg.statement instanceof TupleStatement code
-                        && code.isUnevaluated())
-                    {
+                    Statement seg = segments.getFirst();
+                    if (seg instanceof TupleStatement code && code.isUnevaluated()) {
                         return new NewClassDefinitionStatement(what.path, what.params, code);
                     }
                 }
