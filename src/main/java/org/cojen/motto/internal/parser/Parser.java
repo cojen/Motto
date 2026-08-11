@@ -388,27 +388,12 @@ public final class Parser implements Closeable {
                 return parseTuple(t, T_RBRACE);
             }
 
-            case T_BANG, T_TILDE, T_PLUS, T_MINUS -> {
+            case T_BANG, T_TILDE, T_PLUS, T_MINUS, T_INC, T_DEC -> {
                 if (tType != T_BANG || !peekToken().isTextOperator()) {
                     Statement source = tryParseBaseStatement(ID_BASIC);
                     if (source != null) {
                         return new PrefixStatement(t, source);
                     }
-                }
-            }
-
-            case T_INC, T_DEC -> {
-                // Convert `++a` to `a = a + 1` or `--a` to `a = a - 1`.
-
-                // This is quite lenient. Later compilation phases must deal with it.
-                Statement st = tryParseBaseStatement(ID_BASIC);
-
-                if (st != null) {
-                    tType = tType == T_INC ? T_PLUS : T_MINUS;
-
-                    return new StoreStatement
-                        (st, new InfixStatement
-                         (st, new Basic(t, tType), new LiteralStatement(new Int32(t, 1))));
                 }
             }
 
