@@ -781,12 +781,8 @@ public final class Parser implements Closeable {
         List<Statement> segments = List.of();
 
         while (true) {
-            Token peek = peekToken();
-
             // Stop if a context-sensitive keyword is seen.
-            if (peek instanceof Identifier id && !id.quoted &&
-                ("as".equals(id.text) || "is".equals(id.text)))
-            {
+            if (peekToken().isTextOperator()) {
                 break;
             }
 
@@ -867,13 +863,18 @@ public final class Parser implements Closeable {
             }
         }
 
+        // Stop if a context-sensitive keyword is seen, which isn't a generic identifier.
+        // Assume that parseStatementChain will handle it.
+        if (peekToken().isTextOperator()) {
+            return new LoadStatement(qname);
+        }
+
         /*
           qname: qualified name (can have dots)
           sname: simple name (no dots)
           vtype: ( qname | tuple ) [ coordinates ]
           ctype: class type (class or interface)
 
-          - TextOperator           qname ( "as" | "is" ) ...
           - MethodCall             qname Tuple ...
           - CoordinateStore        qname[a] = v
           - CoordinateLoad         qname[a]
@@ -935,22 +936,6 @@ public final class Parser implements Closeable {
                     break loop;
                 }
             }
-        }
-
-        if (modifiers.isEmpty()) {
-            // Check if the TextOperator rule applies.
-
-            Token t = nextToken();
-
-            if (t instanceof Identifier id && !id.quoted) {
-                if ("as".equals(id.text)) {
-                    return new AsStatement(new LoadStatement(qname), parseVarType());
-                } else if ("is".equals(id.text)) {
-                    return new IsStatement(new LoadStatement(qname), null, parseVarType());
-                }
-            }
-
-            pushToken(t);
         }
 
         /*

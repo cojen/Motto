@@ -122,6 +122,13 @@ public abstract sealed class Token implements Element {
         return null;
     }
 
+    /**
+     * Returns true if this token is an unquoted identifier which matches "as" or "is".
+     */
+    boolean isTextOperator() {
+        return false;
+    }
+
     public static sealed class Basic extends Token {
         private final int mType;
 
@@ -221,6 +228,11 @@ public abstract sealed class Token implements Element {
         @Override
         public int type() {
             return T_IDENTIFIER;
+        }
+
+        @Override
+        boolean isTextOperator() {
+            return !quoted && ("as".equals(text) || "is".equals(text));
         }
 
         @Override
