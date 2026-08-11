@@ -384,6 +384,7 @@ public final class Parser implements Closeable {
             }
 
             case T_BANG, T_TILDE, T_PLUS, T_MINUS -> {
+                // FIXME: Precedence is wrong. Consider: `-a + b`
                 return new PrefixStatement(t1, parseStatement("prefix statement"));
             }
 
@@ -486,6 +487,31 @@ public final class Parser implements Closeable {
                     t1 = new Basic(0, -1, 0, T_MINUS);
                     pushToken(num.negate());
                     st = new InfixStatement(st, t1, parseStatement("infix statement"));
+                }
+
+                case T_BANG -> {
+                    Token t2 = nextToken();
+                    if (t2 instanceof Identifier id && !id.quoted && id.text.equals("is")) {
+                        return new IsStatement(st, (Basic) t1, parseVarType());
+                    }
+                    // The chain doesn't continue.
+                    pushToken(t2);
+                    pushToken(t1);
+                    return st;
+                }
+
+                case T_IDENTIFIER -> {
+                    var id = (Identifier) t1;
+                    if (!id.quoted) {
+                        if ("as".equals(id.text)) {
+                            return new AsStatement(st, parseVarType());
+                        } else if ("is".equals(id.text)) {
+                            return new IsStatement(st, null, parseVarType());
+                        }
+                    }
+                    // The chain doesn't continue.
+                    pushToken(t1);
+                    return st;
                 }
 
                 case T_ASSIGN -> {
@@ -755,6 +781,15 @@ public final class Parser implements Closeable {
         List<Statement> segments = List.of();
 
         while (true) {
+            Token peek = peekToken();
+
+            // Stop if a context-sensitive keyword is seen.
+            if (peek instanceof Identifier id && !id.quoted &&
+                ("as".equals(id.text) || "is".equals(id.text)))
+            {
+                break;
+            }
+
             // Must pass false for allowNewSymbol because when the statement leads with
             // more than one identifier, it consumes identifiers which should be
             // interpreted as segment names. The inability to declare or define symbols
@@ -764,7 +799,7 @@ public final class Parser implements Closeable {
             Statement st = tryParseStatement(false);
 
             if (st == null) {
-                return segments;
+                break;
             }
 
             if (st.end() instanceof Newline) {
@@ -772,7 +807,7 @@ public final class Parser implements Closeable {
                     return List.of(st);
                 }
                 segments.add(st);
-                return segments;
+                break;
             }
 
             if (segments.isEmpty()) {
@@ -781,6 +816,8 @@ public final class Parser implements Closeable {
 
             segments.add(st);
         }
+
+        return segments;
     }
 
     /**
@@ -836,6 +873,7 @@ public final class Parser implements Closeable {
           vtype: ( qname | tuple ) [ coordinates ]
           ctype: class type (class or interface)
 
+          - TextOperator           qname ( "as" | "is" ) ...
           - MethodCall             qname Tuple ...
           - CoordinateStore        qname[a] = v
           - CoordinateLoad         qname[a]
@@ -860,15 +898,12 @@ public final class Parser implements Closeable {
         List<Identifier> modifiers = List.of();
 
         if (allowNewSymbol) {
-            List<Identifier> qual = qname;
-            qname = null;
-
             loop: while (true) {
-                if (qual.size() > 1) {
+                if (qname.size() > 1) {
                     break loop;
                 }
 
-                Identifier id = qual.getFirst();
+                Identifier id = qname.getFirst();
 
                 if (id.quoted) {
                     break loop;
@@ -894,14 +929,28 @@ public final class Parser implements Closeable {
                     }
                 }
 
-                qual = tryParseQualifiedIdentifier();
+                qname = tryParseQualifiedIdentifier();
 
-                if (qual == null) {
+                if (qname == null) {
                     break loop;
                 }
             }
+        }
 
-            qname = qual;
+        if (modifiers.isEmpty()) {
+            // Check if the TextOperator rule applies.
+
+            Token t = nextToken();
+
+            if (t instanceof Identifier id && !id.quoted) {
+                if ("as".equals(id.text)) {
+                    return new AsStatement(new LoadStatement(qname), parseVarType());
+                } else if ("is".equals(id.text)) {
+                    return new IsStatement(new LoadStatement(qname), null, parseVarType());
+                }
+            }
+
+            pushToken(t);
         }
 
         /*
@@ -1078,6 +1127,38 @@ public final class Parser implements Closeable {
         Identifier sname = simpleName(qname, "declaration name");
 
         return new DeclarationStatement(modifiers, vtype, sname, source);
+    }
+
+    private VarType parseVarType() throws IOException, Abort {
+        // vtype: ( qname | tuple ) [ coordinates ]
+
+        Token t = nextToken();
+
+        if (t instanceof Identifier id) {
+            return new SimpleVarType(parseQualifiedIdentifier(id), tryParseCoordinates());
+        }
+
+        TupleStatement tuple;
+
+        switch (t.type()) {
+            case T_LPAREN -> {
+                tuple = parseTuple(t, T_RPAREN);
+            }
+
+            case T_LBRACE -> {
+                tuple = parseTuple(t, T_RBRACE);
+            }
+
+            default -> {
+                // Parse the rest and throw it away.
+                Statement type = parseLabeledStatement(t, 0, null);
+                error(type, "illegal type");
+                // Create a bogus type.
+                tuple = new TupleStatement(type.start(), List.of(), type.end());
+            }
+        }
+
+        return new TupleVarType(tuple, tryParseCoordinates());
     }
 
     /**

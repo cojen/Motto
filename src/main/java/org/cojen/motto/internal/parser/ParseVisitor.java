@@ -22,6 +22,8 @@ package org.cojen.motto.internal.parser;
  * @author Brian S. O'Neill
  */
 public interface ParseVisitor<R, P> {
+    public R visit(AsStatement st, P param);
+
     public R visit(ClassDefinitionStatement st, P param);
 
     public R visit(ConstructorDefinitionStatement st, P param);
@@ -35,6 +37,8 @@ public interface ParseVisitor<R, P> {
     public R visit(FieldLoadStatement st, P param);
 
     public R visit(InfixStatement st, P param);
+
+    public R visit(IsStatement st, P param);
 
     public R visit(JumpStatement st, P param);
 

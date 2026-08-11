@@ -22,11 +22,11 @@ package org.cojen.motto.internal.parser;
  * @author Brian S. O'Neill
  */
 public final class PostfixStatement implements Statement {
-    public final Statement param;
+    public final Statement source;
     public final Token operator;
 
-    PostfixStatement(Statement param, Token operator) {
-        this.param = param;
+    PostfixStatement(Statement source, Token operator) {
+        this.source = source;
         this.operator = operator;
     }
 
@@ -37,7 +37,7 @@ public final class PostfixStatement implements Statement {
 
     @Override
     public Token start() {
-        return param.start();
+        return source.start();
     }
 
     @Override

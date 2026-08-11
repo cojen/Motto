@@ -17,17 +17,24 @@
 package org.cojen.motto.internal.parser;
 
 /**
- * Example: `-a`
+ * 
  *
  * @author Brian S. O'Neill
  */
-public final class PrefixStatement implements Statement {
-    public final Token operator;
+public final class IsStatement implements Statement {
     public final Statement source;
+    public final Token.Basic not;
+    public final VarType type;
 
-    PrefixStatement(Token operator, Statement source) {
-        this.operator = operator;
+    /**
+     * @param source required
+     * @param not optional
+     * @param type required
+     */
+    IsStatement(Statement source, Token.Basic not, VarType type) {
         this.source = source;
+        this.not = not;
+        this.type = type;
     }
 
     @Override
@@ -37,11 +44,11 @@ public final class PrefixStatement implements Statement {
 
     @Override
     public Token start() {
-        return operator;
+        return not != null ? not : source.start();
     }
 
     @Override
     public Token end() {
-        return source.end();
+        return type.end();
     }
 }

@@ -22,11 +22,11 @@ package org.cojen.motto.internal.parser;
  * @author Brian S. O'Neill
  */
 public sealed interface Statement extends Element permits
-    CoordinateLoadStatement, DeclarationStatement, DefinitionStatement, EmptyStatement,
-    FieldLoadStatement, InfixStatement, JumpStatement, LabeledStatement, LiteralStatement,
-    NewArrayStatement, NewStatement, PathStatement, PostfixStatement, PrefixStatement,
-    ReturnStatement, SequenceStatement, StoreStatement, ThrowStatement, TupleStatement,
-    YieldStatement
+    AsStatement, CoordinateLoadStatement, DeclarationStatement, DefinitionStatement,
+    EmptyStatement, FieldLoadStatement, InfixStatement, IsStatement, JumpStatement,
+    LabeledStatement, LiteralStatement, NewArrayStatement, NewStatement, PathStatement,
+    PostfixStatement, PrefixStatement, ReturnStatement, SequenceStatement, StoreStatement,
+    ThrowStatement, TupleStatement, YieldStatement
 {
     public <R, P> R accept(ParseVisitor<R, P> v, P param);
 
