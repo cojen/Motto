@@ -49,6 +49,14 @@ public final class Parser implements Closeable {
       which doesn't recognize it as a keyword, then the quotes don't make a difference.
     */
 
+    // Defines parsing levels for rules which start with an identifier. It's mostly enforced by
+    // the parseIdentifierStatement method. The level isn't recursive, and so statements which
+    // reference other statements can pass along a different level.
+    private static final int
+        ID_BASIC          = 1, // Parse keywords, Load, CoordinateLoad, and MethodCall
+        ID_NO_NEW_SYMBOLS = 2, // Parse Store and CoordinateStore
+        ID_FULL           = 3; // Parse Declaration and *Definition (these define new symbols)
+
     private final CompilationEnv mEnv;
     private final Tokenizer mTokenizer;
 
@@ -264,26 +272,22 @@ public final class Parser implements Closeable {
      * @param which optional type of statement being parsed (used for error reporting)
      */
     private Statement parseStatement(String which) throws IOException, Abort {
-        return parseStatement(which, true);
+        return parseStatement(which, ID_FULL);
     }
 
     /**
-     * Parse a non-labeled statement. The allowNewSymbol option, when false, disables
-     * the parsing of statements which generate a new symbol -- the corresponding rules are
-     * simply ignored. These are declarations, definitions, and labels, although this method
-     * never parses labels anyhow. The allowNewSymbol option isn't recursive, and so statements
-     * which reference other statements can pass along a different value for the option.
+     * Parse a non-labeled statement.
      *
      * @param which optional type of statement being parsed (used for error reporting)
-     * @param allowNewSymbol when false, don't parse statements which can define a new symbol
+     * @param idLevel see ID_* constants
      */
-    private Statement parseStatement(String which, boolean allowNewSymbol)
+    private Statement parseStatement(String which, int idLevel)
         throws IOException, Abort
     {
         int localErrors = 0;
 
         while (true) {
-            Statement st = tryParseStatement(allowNewSymbol);
+            Statement st = tryParseStatement(idLevel);
 
             if (st != null) {
                 return st;
@@ -313,10 +317,10 @@ public final class Parser implements Closeable {
     /**
      * Try to parse a non-labeled statement.
      *
-     * @param allowNewSymbol see parseStatement
+     * @param idLevel see ID_* constants
      */
-    private Statement tryParseStatement(boolean allowNewSymbol) throws IOException, Abort {
-        Statement st = tryParseBaseStatement(allowNewSymbol);
+    private Statement tryParseStatement(int idLevel) throws IOException, Abort {
+        Statement st = tryParseBaseStatement(idLevel);
 
         if (st == null) {
             return null;
@@ -327,7 +331,7 @@ public final class Parser implements Closeable {
         // Check if the statement is a tuple which starts a declaration or method definition,
         // unless new symbols aren't allowed.
 
-        if (!allowNewSymbol || st.end() instanceof Newline) {
+        if (idLevel <= ID_NO_NEW_SYMBOLS || st.end() instanceof Newline) {
             return st;
         }
 
@@ -361,60 +365,70 @@ public final class Parser implements Closeable {
     /**
      * Try to parse a non-labeled base statement.
      *
-     * @param allowNewSymbol see parseStatement
+     * @param idLevel see ID_* constants
      */
-    private Statement tryParseBaseStatement(boolean allowNewSymbol) throws IOException, Abort {
-        Token t1 = nextToken();
+    private Statement tryParseBaseStatement(int idLevel) throws IOException, Abort {
+        Token t = nextToken();
+        int tType = t.type();
 
-        switch (t1.type()) {
+        switch (tType) {
             case T_STRING, T_INT32, T_INT64, T_BIGINT, T_FLOAT32, T_FLOAT64, T_BIGDEC -> {
-                return new LiteralStatement(t1);
+                return new LiteralStatement(t);
             }
 
             case T_IDENTIFIER -> {
-                return parseIdentifierStatement((Identifier) t1, allowNewSymbol);
+                return parseIdentifierStatement((Identifier) t, idLevel);
             }
 
             case T_LPAREN -> {
-                return parseTuple(t1, T_RPAREN);
+                return parseTuple(t, T_RPAREN);
             }
 
             case T_LBRACE -> {
-                return parseTuple(t1, T_RBRACE);
+                return parseTuple(t, T_RBRACE);
             }
 
             case T_BANG, T_TILDE, T_PLUS, T_MINUS -> {
-                // FIXME: Precedence is wrong. Consider: `-a + b`
-                return new PrefixStatement(t1, parseStatement("prefix statement"));
+                if (tType != T_BANG || !peekToken().isTextOperator()) {
+                    Statement source = tryParseBaseStatement(ID_BASIC);
+                    if (source != null) {
+                        return new PrefixStatement(t, source);
+                    }
+                }
             }
 
-            case T_INC -> {
-                return parsePreArith(t1, "increment", T_PLUS);
-            }
-
-            case T_DEC -> {
-                return parsePreArith(t1, "decrement", T_MINUS);
+            case T_INC, T_DEC -> {
+                Statement st = tryParsePreArith(t, tType == T_INC ? T_PLUS : T_MINUS);
+                if (st != null) {
+                    return st;
+                }
             }
 
             default -> {
-                pushToken(t1);
-                return null;
             }
         }
+
+        pushToken(t);
+
+        return null;
     }
 
     /**
      * Convert `++a` to `a = a + 1` or `--a` to `a = a - 1`.
      *
-     * @param t1 T_INC or T_DEC
+     * @param t T_INC or T_DEC
      */
-    private Statement parsePreArith(Token t1, String which, int tType) throws IOException, Abort {
+    private Statement tryParsePreArith(Token t, int tType) throws IOException, Abort {
         // This is quite lenient. Later compilation phases must deal with it.
-        Statement st = parseStatement("pre-" + which);
+        Statement st = tryParseBaseStatement(ID_BASIC);
+
+        if (st == null) {
+            return null;
+        }
 
         return new StoreStatement
             (st, new InfixStatement
-             (st, new Basic(t1, tType), new LiteralStatement(new Int32(t1, 1))));
+             (st, new Basic(t, tType), new LiteralStatement(new Int32(t, 1))));
     }
 
     private Statement parseStatementChain(Statement st) throws IOException, Abort {
@@ -786,13 +800,13 @@ public final class Parser implements Closeable {
                 break;
             }
 
-            // Must pass false for allowNewSymbol because when the statement leads with
-            // more than one identifier, it consumes identifiers which should be
-            // interpreted as segment names. The inability to declare or define symbols
-            // as standalone statements isn't big issue, considering that in practice
-            // the symbol would be in a lone inaccessible scope. If this behavior is
-            // desired, the declaration/definition must be wrapped in a tuple statement.
-            Statement st = tryParseStatement(false);
+            // Must not parse new symbols because when the statement leads with more than one
+            // identifier, it consumes identifiers which should be interpreted as segment
+            // names. The inability to declare or define symbols as standalone statements isn't
+            // big issue, considering that in practice the symbol would be in a lone
+            // inaccessible scope. If this behavior is desired, the declaration/definition must
+            // be wrapped in a tuple statement.
+            Statement st = tryParseStatement(ID_NO_NEW_SYMBOLS);
 
             if (st == null) {
                 break;
@@ -820,9 +834,9 @@ public final class Parser implements Closeable {
      * Parses a statement which leads with an identifier.
      *
      * @param first must be an identifier
-     * @param allowNewSymbol see parseStatement
+     * @param idLevel see ID_* constants
      */
-    private Statement parseIdentifierStatement(final Identifier first, boolean allowNewSymbol)
+    private Statement parseIdentifierStatement(final Identifier first, int idLevel)
         throws IOException, Abort
     {
         List<Identifier> qname = parseQualifiedIdentifier(first);
@@ -832,11 +846,11 @@ public final class Parser implements Closeable {
 
             switch (first.text) {
                 case "yield" -> {
-                    return new YieldStatement(first, tryParseStatement(true));
+                    return new YieldStatement(first, tryParseStatement(ID_FULL));
                 }
 
                 case "return" -> {
-                    return new ReturnStatement(first, tryParseStatement(true));
+                    return new ReturnStatement(first, tryParseStatement(ID_FULL));
                 }
 
                 case "throw" -> {
@@ -856,7 +870,7 @@ public final class Parser implements Closeable {
                 }
 
                 case "class", "interface" -> {
-                    if (allowNewSymbol) {
+                    if (idLevel > ID_NO_NEW_SYMBOLS) {
                         return parseClassDefinitionStatement(List.of(), first);
                     }
                 }
@@ -892,13 +906,13 @@ public final class Parser implements Closeable {
           As a side-effect, qname is updated, and it might be null if the last token
           encountered wasn't an identifier.
 
-          If allowNewSymbol is false, modifiers aren't gathered, because they're only consumed
-          by rules which generate new symbols.
+          If new symbols cannot be defined, modifiers aren't gathered, because they're only
+          consumed by rules which generate new symbols.
         */
 
         List<Identifier> modifiers = List.of();
 
-        if (allowNewSymbol) {
+        if (idLevel > ID_NO_NEW_SYMBOLS) {
             loop: while (true) {
                 if (qname.size() > 1) {
                     break loop;
@@ -956,7 +970,7 @@ public final class Parser implements Closeable {
 
         if (qname == null) {
             // If this point is reached, then at least one modifier was parsed. It also implies
-            // that allowNewSymbol is true.
+            // that idLevel is greater than ID_NO_NEW_SYMBOLS.
 
             Token t = nextToken();
             int tType = t.type();
@@ -1013,17 +1027,19 @@ public final class Parser implements Closeable {
             params: {
                 switch (t.type()) {
                     case T_ASSIGN -> {
-                        if (!modifiers.isEmpty()) {
-                            error(modifiers, "modifiers aren't allowed here");
+                        if (idLevel > ID_BASIC) {
+                            if (!modifiers.isEmpty()) {
+                                error(modifiers, "modifiers aren't allowed here");
+                            }
+                            Statement source = parseStatement("assignment source");
+                            Statement target = new LoadStatement(qname);
+                            if (coordinates != null) {
+                                // Effectively becomes a CoordinateStore when combined with the
+                                // StoreStatement below.
+                                target = new CoordinateLoadStatement(target, coordinates);
+                            }
+                            return new StoreStatement(target, source);
                         }
-                        Statement source = parseStatement("assignment source");
-                        Statement target = new LoadStatement(qname);
-                        if (coordinates != null) {
-                            // Effectively becomes a CoordinateStore when combined with the
-                            // StoreStatement below.
-                            target = new CoordinateLoadStatement(target, coordinates);
-                        }
-                        return new StoreStatement(target, source);
                     }
 
                     case T_LPAREN, T_LBRACE -> {
@@ -1034,7 +1050,7 @@ public final class Parser implements Closeable {
                     }
 
                     case T_IDENTIFIER -> {
-                        if (allowNewSymbol) {
+                        if (idLevel > ID_NO_NEW_SYMBOLS) {
                             vtype = new SimpleVarType(qname, coordinates);
                             qname = parseQualifiedIdentifier((Identifier) t);
                             break vtype;
@@ -1044,7 +1060,7 @@ public final class Parser implements Closeable {
 
                 pushToken(t);
 
-                // At this point, if allowNewSymbol is false, then modifiers is empty.
+                // At this point, if idLevel doesn't allow new symbols, then modifiers is empty.
 
                 if (modifiers.isEmpty()) {
                     Statement st = new LoadStatement(qname);
@@ -1054,7 +1070,7 @@ public final class Parser implements Closeable {
                     return st;
                 }
 
-                // If this point is reached, allowNewSymbol must be true.
+                // If this point is reached, idLevel must allow new symbols.
 
                 vtype = new SimpleVarType(List.of(modifiers.removeLast()), null);
 
@@ -1065,7 +1081,7 @@ public final class Parser implements Closeable {
                 break vtype;
             }
 
-            if (allowNewSymbol) {
+            if (idLevel > ID_NO_NEW_SYMBOLS) {
                 Statement st = tryParseConstructorDefinition(modifiers, qname, params);
                 if (st != null) {
                     return st;
@@ -1078,7 +1094,7 @@ public final class Parser implements Closeable {
             return parseMethodCall(null, qname, params);
         }
 
-        // If this point is reached, allowNewSymbol must be true.
+        // If this point is reached, idLevel must allow new symbols.
 
         return parseDefinitionOrDeclaration(modifiers, vtype, qname);
     }
@@ -1150,7 +1166,7 @@ public final class Parser implements Closeable {
      * @param required when non-null, an error is reported if no statement could be parsed
      */
     private Identifier tryParseLabel(Token required) throws IOException, Abort {
-        Statement st = tryParseStatement(true);
+        Statement st = tryParseStatement(ID_FULL);
 
         if (st instanceof LoadStatement ls) {
             return simpleName(ls.path, "label");
@@ -1244,7 +1260,7 @@ public final class Parser implements Closeable {
 
         try {
             Identifier sname = simpleName(cname, "class name");
-            TupleStatement code = codeScope(parseStatement("class definition", false));
+            TupleStatement code = codeScope(parseStatement("class definition", ID_BASIC));
             return new ClassDefinitionStatement(modifiers, ctype, sname, clauses, code);
         } finally {
             popDefinitionContext();
@@ -1288,7 +1304,7 @@ public final class Parser implements Closeable {
 
                 switch (peek.type()) {
                     default -> {
-                        code = codeScope(parseStatement("method definition", false));
+                        code = codeScope(parseStatement("method definition", ID_BASIC));
                     }
                     case T_COMMA, T_SEMI -> {
                         code = null;
@@ -1378,7 +1394,7 @@ public final class Parser implements Closeable {
         pushDefinitionContext(qname, DefinitionContext.T_CONSTRUCTOR);
 
         try {
-            TupleStatement code = codeScope(parseStatement("constructor definition", false));
+            TupleStatement code = codeScope(parseStatement("constructor definition", ID_BASIC));
             return new ConstructorDefinitionStatement(modifiers, sname, clauses, code, params);
         } finally {
             popDefinitionContext();
