@@ -398,9 +398,17 @@ public final class Parser implements Closeable {
             }
 
             case T_INC, T_DEC -> {
-                Statement st = tryParsePreArith(t, tType == T_INC ? T_PLUS : T_MINUS);
+                // Convert `++a` to `a = a + 1` or `--a` to `a = a - 1`.
+
+                // This is quite lenient. Later compilation phases must deal with it.
+                Statement st = tryParseBaseStatement(ID_BASIC);
+
                 if (st != null) {
-                    return st;
+                    tType = tType == T_INC ? T_PLUS : T_MINUS;
+
+                    return new StoreStatement
+                        (st, new InfixStatement
+                         (st, new Basic(t, tType), new LiteralStatement(new Int32(t, 1))));
                 }
             }
 
@@ -411,24 +419,6 @@ public final class Parser implements Closeable {
         pushToken(t);
 
         return null;
-    }
-
-    /**
-     * Convert `++a` to `a = a + 1` or `--a` to `a = a - 1`.
-     *
-     * @param t T_INC or T_DEC
-     */
-    private Statement tryParsePreArith(Token t, int tType) throws IOException, Abort {
-        // This is quite lenient. Later compilation phases must deal with it.
-        Statement st = tryParseBaseStatement(ID_BASIC);
-
-        if (st == null) {
-            return null;
-        }
-
-        return new StoreStatement
-            (st, new InfixStatement
-             (st, new Basic(t, tType), new LiteralStatement(new Int32(t, 1))));
     }
 
     private Statement parseStatementChain(Statement st) throws IOException, Abort {
