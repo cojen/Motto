@@ -31,54 +31,6 @@ import org.cojen.motto.internal.util.InternSet;
 public abstract sealed class BaseBinding implements Binding {
     static final BaseBinding[] EMPTY = new BaseBinding[0];
 
-    /* FIXME: Define an Unresolved binding type. It refers to name, and a macro is responsible
-       for replacing the binding. If any unresolved bindings remain after the macro is called,
-       then report an error. This feature can be used for implementing query macros like prql.
-
-       It might also be possible to rely on declarations instead of unresolved bindings.
-
-       query {
-           // from MyTable
-           MyTable t;
-           filter (t.status == 0);
-       }
-
-       In order for this form to work, definite assignment analysis must be postponed until
-       after the macro is called.
-
-       I wonder if I should introduce new syntax for operating within a context:
-
-       // In the context of tuple or class t:
-       t.{
-           // No need to prefix with t.
-           filter (status == 0);
-
-           // Possibly a standalone expression works as a filter.
-           status == 0;
-       }
-
-       MyTable t.{
-           ...
-       }
-
-       Projection:
-
-       _ sub = table.{yield (status, message)};
-
-       ...which is equivalant to:
-
-       _ sub = (table.status, table.message);
-
-       By the way, I think a `yield` statement (not defined yet) must be required in order for
-       a scope to yield a value. Automatic yield of the last statement is error prone. Imagine
-       this error:
-
-       _ sub = table.{status, message};
-
-       The sub variable would just be message if yield was automatic.
-
-    */
-
     @Override
     public abstract BaseType type();
 

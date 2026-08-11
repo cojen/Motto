@@ -324,8 +324,8 @@ public final class Parser implements Closeable {
 
         st = parseStatementChain(st);
 
-        // Check if the tuple is the start of a declaration or method definition, unless new
-        // symbols aren't allowed.
+        // Check if the statement is a tuple which starts a declaration or method definition,
+        // unless new symbols aren't allowed.
 
         if (!allowNewSymbol || st.end() instanceof Newline) {
             return st;
@@ -1025,7 +1025,7 @@ public final class Parser implements Closeable {
 
             TupleStatement params;            
 
-            params: { 
+            params: {
                 switch (t.type()) {
                     case T_ASSIGN -> {
                         if (!modifiers.isEmpty()) {
