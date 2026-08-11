@@ -460,8 +460,13 @@ public final class Parser implements Closeable {
                 }
 
                 case T_INC, T_DEC -> {
-                    // FIXME: post T_INC, T_DEC
-                    throw null;
+                    if (st instanceof LoadStatement || st instanceof CoordinateLoadStatement) {
+                        st = new PostfixStatement(st, t1);
+                    } else {
+                        // The chain doesn't continue.
+                        pushToken(t1);
+                        return st;
+                    }
                 }
 
                 case T_INT32, T_INT64, T_BIGINT, T_FLOAT32, T_FLOAT64, T_BIGDEC -> {
@@ -481,21 +486,24 @@ public final class Parser implements Closeable {
                 case T_BANG -> {
                     Token t2 = nextToken();
                     if (t2 instanceof Identifier id && !id.quoted && id.text.equals("is")) {
-                        return new IsStatement(st, (Basic) t1, parseVarType());
+                        st = new IsStatement(st, (Basic) t1, parseVarType());
+                    } else {
+                        // The chain doesn't continue.
+                        pushToken(t2);
+                        pushToken(t1);
+                        return st;
                     }
-                    // The chain doesn't continue.
-                    pushToken(t2);
-                    pushToken(t1);
-                    return st;
                 }
 
                 case T_IDENTIFIER -> {
                     var id = (Identifier) t1;
                     if (!id.quoted) {
                         if ("as".equals(id.text)) {
-                            return new AsStatement(st, parseVarType());
+                            st = new AsStatement(st, parseVarType());
+                            continue;
                         } else if ("is".equals(id.text)) {
-                            return new IsStatement(st, null, parseVarType());
+                            st = new IsStatement(st, null, parseVarType());
+                            continue;
                         }
                     }
                     // The chain doesn't continue.
