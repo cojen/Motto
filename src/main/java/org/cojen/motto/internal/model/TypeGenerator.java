@@ -89,13 +89,21 @@ public final class TypeGenerator {
     }
 
     private static byte[] makeTupleClass(String className, DecodedType.TupleT type) {
+        int num = type.numFields();
+
+        if (num == 1 && type.fieldName(0) == null) {
+            // A tuple which wraps a single unnamed field isn't useful, and the code generator
+            // shouldn't use it. The code generator should erase the tuple type or transform it
+            // to something else. If the field is a primitive type, it should be transformed to
+            // the corresponding boxed type.
+            throw new IllegalArgumentException();
+        }
+
         ClassMaker cm = ClassMaker.beginExternal(className).public_().final_().synthetic();
 
         // Tuples cannot be reliably serialized because the class might not have been loaded
         // yet by the time it's read from an ObjectInputStream.
         //cm.implement(Serializable.class);
-
-        int num = type.numFields();
 
         for (int i=0; i<num; i++) {
             cm.addField(type.fieldType(i).asClassDesc(), type.mangledFieldName(i))
