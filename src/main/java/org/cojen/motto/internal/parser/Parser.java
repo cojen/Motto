@@ -460,16 +460,7 @@ public final class Parser implements Closeable {
                 }
 
                 case T_ARROW -> {
-                    VarType inputType;
-
-                    if (st instanceof TupleStatement tuple) {
-                        inputType = tuple.asVarType(this);
-                    } else {
-                        error(st, "left side of lambda must be a tuple");
-                        // Create a bogus type.
-                        inputType = new TupleVarType(st.start(), List.of(), st.end());
-                    }
-
+                    VarType inputType = st.asVarType(this);
                     st = new LambdaStatement(inputType, parseStatement("lambda", ID_BASIC));
                 }
 
