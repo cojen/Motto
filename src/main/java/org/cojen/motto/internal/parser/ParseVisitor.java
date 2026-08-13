@@ -44,6 +44,8 @@ public interface ParseVisitor<R, P> {
 
     public R visit(LabeledStatement st, P param);
 
+    public R visit(LambdaStatement st, P param);
+
     public R visit(LiteralStatement st, P param);
 
     public R visit(LoadStatement st, P param);

@@ -26,9 +26,9 @@ import java.util.List;
 public sealed interface Statement extends Element permits
     AsStatement, CoordinateLoadStatement, DeclarationStatement, DefinitionStatement,
     EmptyStatement, FieldLoadStatement, InfixStatement, IsStatement, JumpStatement,
-    LabeledStatement, LiteralStatement, NewArrayStatement, NewStatement, PathStatement,
-    PostfixStatement, PrefixStatement, ReturnStatement, SequenceStatement, StoreStatement,
-    ThrowStatement, TupleStatement, YieldStatement
+    LabeledStatement, LambdaStatement, LiteralStatement, NewArrayStatement, NewStatement,
+    PathStatement, PostfixStatement, PrefixStatement, ReturnStatement, SequenceStatement,
+    StoreStatement, ThrowStatement, TupleStatement, YieldStatement
 {
     public <R, P> R accept(ParseVisitor<R, P> v, P param);
 

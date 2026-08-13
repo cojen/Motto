@@ -17,9 +17,36 @@
 package org.cojen.motto.internal.parser;
 
 /**
+ * 
+ *
  * @author Brian S. O'Neill
  */
-public sealed interface VarType extends Element
-    permits ArrayVarType, LambdaVarType, NamedVarType, SimpleVarType, TupleVarType
-{
+public final class LambdaStatement implements Statement {
+    public final VarType inputType;
+    public final Statement body;
+
+    LambdaStatement(VarType inputType, Statement body) {
+        this.inputType = inputType;
+        this.body = body;
+    }
+
+    @Override
+    public <R, P> R accept(ParseVisitor<R, P> v, P param) {
+        return v.visit(this, param);
+    }
+
+    @Override
+    public Token start() {
+        return inputType.start();
+    }
+
+    @Override
+    public Token end() {
+        return body.end();
+    }
+
+    @Override
+    public VarType asVarType(Parser p) {
+        return new LambdaVarType(inputType, body.asVarType(p));
+    }
 }

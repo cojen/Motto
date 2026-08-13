@@ -459,6 +459,20 @@ public final class Parser implements Closeable {
                     st = new InfixStatement(st, t1, parseStatement("infix statement"));
                 }
 
+                case T_ARROW -> {
+                    VarType inputType;
+
+                    if (st instanceof TupleStatement tuple) {
+                        inputType = tuple.asVarType(this);
+                    } else {
+                        error(st, "left side of lambda must be a tuple");
+                        // Create a bogus type.
+                        inputType = new TupleVarType(st.start(), List.of(), st.end());
+                    }
+
+                    st = new LambdaStatement(inputType, parseStatement("lambda", ID_BASIC));
+                }
+
                 case T_INC, T_DEC -> {
                     if (st instanceof LoadStatement || st instanceof CoordinateLoadStatement) {
                         st = new PostfixStatement(st, t1);

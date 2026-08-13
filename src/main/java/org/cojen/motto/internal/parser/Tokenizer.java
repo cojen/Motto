@@ -851,6 +851,8 @@ final class Tokenizer implements Closeable {
                         type = T_MINUS_A;
                     } else if (c2 == '-') {
                         type = T_DEC;
+                    } else if (c2 == '>') {
+                        type = T_ARROW;
                     } else {
                         break l2;
                     }
