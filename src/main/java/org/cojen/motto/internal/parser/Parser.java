@@ -1277,8 +1277,10 @@ public final class Parser implements Closeable {
             }
         }
 
+        TupleVarType paramType = params.asTupleVarType(this);
+
         return new MethodDefinitionStatement
-            (modifiers, sname, clauses, code, returnType, params, segments);
+            (modifiers, sname, clauses, code, returnType, paramType, segments);
     }
 
     private DefinitionSegment tryParseDefinitionSegment() throws IOException, Abort {
@@ -1353,11 +1355,13 @@ public final class Parser implements Closeable {
 
         Identifier sname = simpleName(qname, "constructor name");
 
+        TupleVarType paramType = params.asTupleVarType(this);
+
         pushDefinitionContext(qname, DefinitionContext.T_CONSTRUCTOR);
 
         try {
             TupleStatement code = codeScope(parseStatement("constructor definition", ID_BASIC));
-            return new ConstructorDefinitionStatement(modifiers, sname, clauses, code, params);
+            return new ConstructorDefinitionStatement(modifiers, sname, clauses, code, paramType);
         } finally {
             popDefinitionContext();
         }

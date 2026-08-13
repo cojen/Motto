@@ -27,7 +27,7 @@ public abstract sealed class FunctionDefinitionStatement extends DefinitionState
     permits ConstructorDefinitionStatement, MethodDefinitionStatement
 {
     public final VarType returnType;
-    public final StatementList params;
+    public final TupleVarType paramType;
 
     /**
      * @param modifiers required; might be empty
@@ -38,10 +38,10 @@ public abstract sealed class FunctionDefinitionStatement extends DefinitionState
      */
     FunctionDefinitionStatement(List<Token.Identifier> modifiers, Token.Identifier name,
                                 List<Clause> clauses, TupleStatement code,
-                                VarType returnType, TupleStatement params)
+                                VarType returnType, TupleVarType paramType)
     {
         super(modifiers, name, clauses, code);
         this.returnType = returnType;
-        this.params = params;
+        this.paramType = paramType;
     }
 }

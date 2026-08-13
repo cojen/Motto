@@ -35,9 +35,9 @@ public final class MethodDefinitionStatement extends FunctionDefinitionStatement
      */
     MethodDefinitionStatement(List<Token.Identifier> modifiers, Token.Identifier name,
                               List<Clause> clauses, TupleStatement code, VarType returnType,
-                              TupleStatement params, List<DefinitionSegment> segments)
+                              TupleVarType paramType, List<DefinitionSegment> segments)
     {
-        super(modifiers, name, clauses, code, returnType, params);
+        super(modifiers, name, clauses, code, returnType, paramType);
         this.segments = segments;
     }
 
@@ -62,6 +62,6 @@ public final class MethodDefinitionStatement extends FunctionDefinitionStatement
         if (!clauses.isEmpty()) {
             return clauses.getLast().end();
         }
-        return params.end();
+        return paramType.end();
     }
 }

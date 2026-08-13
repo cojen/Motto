@@ -54,6 +54,14 @@ public final class TupleStatement extends EnclosedStatementList implements State
 
     @Override
     public VarType asVarType(Parser p) {
+        return asVarType(p, true);
+    }
+
+    TupleVarType asTupleVarType(Parser p) {
+        return (TupleVarType) asVarType(p, false);
+    }
+
+    private VarType asVarType(Parser p, boolean canUnwrap) {
         List<Statement> items = this.items;
         int size = items.size();
 
@@ -63,7 +71,7 @@ public final class TupleStatement extends EnclosedStatementList implements State
 
         VarType first = items.getFirst().asVarType(p);
 
-        if (size == 1 && !(first instanceof NamedVarType)) {
+        if (canUnwrap && size == 1 && !(first instanceof NamedVarType)) {
             // Unwrap tuple types which consist of a single unnamed element.
             return first;
         }
