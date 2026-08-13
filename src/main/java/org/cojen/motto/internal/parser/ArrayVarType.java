@@ -19,32 +19,35 @@ package org.cojen.motto.internal.parser;
 import java.util.List;
 
 /**
- * Example: `(int a, String b)`
+ * 
  *
  * @author Brian S. O'Neill
  */
-public final class TupleVarType implements VarType {
-    private final Token mOpen;
-    private final List<VarType> mFieldTypes;
-    private final Token mClose;
+public final class ArrayVarType implements VarType {
+    private final VarType mElementType;
+    private final List<Coordinate> mCoordinates;
 
-    TupleVarType(Token open, List<VarType> fieldTypes, Token close) {
-        mOpen = open;
-        mFieldTypes = fieldTypes;
-        mClose = close;
+    /**
+     * @param coordinates must contain at least one element
+     */
+    ArrayVarType(VarType elementType, List<Coordinate> coordinates) {
+        mElementType = elementType;
+        mCoordinates = coordinates;
     }
 
-    @Override
     public Token start() {
-        return mOpen;
+        return mElementType.start();
     }
 
-    @Override
     public Token end() {
-        return mClose;
+        return mCoordinates.getLast().end();
     }
 
-    public List<VarType> fieldTypes() {
-        return mFieldTypes;
+    public VarType elementType() {
+        return mElementType;
+    }
+
+    public List<? extends VarCoordinate> coordinates() {
+        return mCoordinates;
     }
 }

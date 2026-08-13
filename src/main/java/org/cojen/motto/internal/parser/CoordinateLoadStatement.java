@@ -24,10 +24,24 @@ import java.util.List;
  * @author Brian S. O'Neill
  */
 public final class CoordinateLoadStatement implements Statement {
+    /**
+     * Returns a CoordinateLoadStatement, unless no coordinates are given, in which case the
+     * source is returned.
+     */
+    static Statement from(Statement source, List<Coordinate> coordinates) {
+        if (coordinates == null || coordinates.isEmpty()) {
+            return source;
+        }
+        return new CoordinateLoadStatement(source, coordinates);
+    }
+
     public final Statement source;
     public final List<Coordinate> coordinates;
 
-    CoordinateLoadStatement(Statement source, List<Coordinate> coordinates) {
+    /**
+     * @param coordinates must contain at least one element
+     */
+    private CoordinateLoadStatement(Statement source, List<Coordinate> coordinates) {
         this.source = source;
         this.coordinates = coordinates;
     }
@@ -44,6 +58,23 @@ public final class CoordinateLoadStatement implements Statement {
 
     @Override
     public Token end() {
-        return coordinates.isEmpty() ? source.end() : coordinates.getLast().end();
+        return coordinates.getLast().end();
+    }
+
+    @Override
+    public ArrayVarType asVarType(Parser p) {
+        VarType elementType = source.asVarType(p);
+
+        List<Coordinate> coordinates = this.coordinates;
+
+        for (Coordinate c : coordinates) {
+            for (Statement item : c.items) {
+                if (item != null) {
+                    p.error(item, "length not allowed here");
+                }
+            }
+        }
+
+        return new ArrayVarType(elementType, coordinates);
     }
 }

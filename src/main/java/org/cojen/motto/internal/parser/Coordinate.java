@@ -24,7 +24,7 @@ import java.util.List;
  *
  * @author Brian S. O'Neill
  */
-public final class Coordinate extends EnclosedStatementList {
+public final class Coordinate extends EnclosedStatementList implements VarCoordinate {
     /**
      * Used for a simple dimension declaration: `a[]`
      */

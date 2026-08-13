@@ -23,7 +23,7 @@ import java.util.List;
  *
  * @author Brian S. O'Neill
  */
-public final class DeclarationStatement implements Statement {
+public final class DeclarationStatement implements Statement, NamedVarType {
     public final List<Token.Identifier> modifiers;
     public final VarType type;
     public final Token.Identifier name;
@@ -62,6 +62,29 @@ public final class DeclarationStatement implements Statement {
         if (source != null) {
             return source.end();
         }
+        return name;
+    }
+
+    @Override
+    public NamedVarType asVarType(Parser p) {
+        if (source != null) {
+            p.error(this, "default value not allowed");
+        }
+        return this;
+    }
+
+    @Override // NamedVarType
+    public List<Token.Identifier> modifiers() {
+        return modifiers;
+    }
+
+    @Override // NamedVarType
+    public VarType type() {
+        return type;
+    }
+
+    @Override // NamedVarType
+    public Token.Identifier name() {
         return name;
     }
 }

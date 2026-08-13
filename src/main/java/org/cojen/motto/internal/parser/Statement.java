@@ -16,6 +16,8 @@
 
 package org.cojen.motto.internal.parser;
 
+import java.util.List;
+
 /**
  * 
  *
@@ -35,5 +37,11 @@ public sealed interface Statement extends Element permits
      */
     public default Statement delabel() {
         return this;
+    }
+
+    default VarType asVarType(Parser p) {
+        p.error(this, "illegal type");
+        // Return a bogus type.
+        return new TupleVarType(start(), List.of(), end());
     }
 }

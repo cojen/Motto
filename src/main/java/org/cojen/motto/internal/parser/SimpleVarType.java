@@ -23,28 +23,6 @@ import java.util.List;
  *
  * @author Brian S. O'Neill
  */
-public final class SimpleVarType extends VarType {
-    public final List<Token.Identifier> name;
-
-    /**
-     * @param name qualified name of variable or field type
-     * @param coordinates optional; the items of each coordinate must be VarTypes or null
-     */
-    SimpleVarType(List<Token.Identifier> name, List<Coordinate> coordinates) {
-        super(coordinates);
-        this.name = name;
-    }
-
-    @Override
-    public Token start() {
-        return name.getFirst();
-    }
-
-    @Override
-    public Token end() {
-        if (coordinates != null && !coordinates.isEmpty()) {
-            return coordinates.getLast().end();
-        }
-        return name.getLast();
-    }
+public sealed interface SimpleVarType extends VarType permits LoadStatement {
+    public List<Token.Identifier> typeName();
 }

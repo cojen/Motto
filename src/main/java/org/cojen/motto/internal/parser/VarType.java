@@ -16,18 +16,10 @@
 
 package org.cojen.motto.internal.parser;
 
-import java.util.List;
-
 /**
  * @author Brian S. O'Neill
  */
-public abstract sealed class VarType implements Element permits SimpleVarType, TupleVarType {
-    public final List<Coordinate> coordinates;
-
-    /**
-     * @param coordinates optional; items must be VarTypes or null
-     */
-    VarType(List<Coordinate> coordinates) {
-        this.coordinates = coordinates;
-    }
+public sealed interface VarType extends Element
+    permits ArrayVarType, NamedVarType, SimpleVarType, TupleVarType
+{
 }

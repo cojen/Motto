@@ -338,17 +338,17 @@ public final class Parser implements Closeable {
         // What follows needs to be a simple name (not a qualified name with dots).
 
         Token t = nextToken();
-        TupleVarType vtype;
+        VarType vtype;
 
         check: {
             if (t.type() == T_IDENTIFIER && peekToken().type() != T_DOT) {
                 if (st instanceof TupleStatement ts) {
-                    vtype = new TupleVarType(ts, null);
+                    vtype = ts.asVarType(this);
                     break check;
                 } else if (st instanceof CoordinateLoadStatement cls &&
                            cls.source instanceof TupleStatement ts)
                 {
-                    vtype = new TupleVarType(ts, cls.coordinates);
+                    vtype = cls.asVarType(this);
                     break check;
                 }
             }
@@ -418,7 +418,7 @@ public final class Parser implements Closeable {
                 }
 
                 case T_LBRACK -> {
-                    st = new CoordinateLoadStatement(st, parseCoordinates(t1));
+                    st = CoordinateLoadStatement.from(st, parseCoordinates(t1));
                 }
 
                 case T_DOT -> {
@@ -486,7 +486,7 @@ public final class Parser implements Closeable {
                 case T_BANG -> {
                     Token t2 = nextToken();
                     if (t2 instanceof Identifier id && !id.quoted && id.text.equals("is")) {
-                        st = new IsStatement(st, (Basic) t1, parseVarType());
+                        st = new IsStatement(st, (Basic) t1, parsePlainVarType());
                     } else {
                         // The chain doesn't continue.
                         pushToken(t2);
@@ -499,10 +499,10 @@ public final class Parser implements Closeable {
                     var id = (Identifier) t1;
                     if (!id.quoted) {
                         if ("as".equals(id.text)) {
-                            st = new AsStatement(st, parseVarType());
+                            st = new AsStatement(st, parsePlainVarType());
                             continue;
                         } else if ("is".equals(id.text)) {
-                            st = new IsStatement(st, null, parseVarType());
+                            st = new IsStatement(st, null, parsePlainVarType());
                             continue;
                         }
                     }
@@ -676,10 +676,16 @@ public final class Parser implements Closeable {
         return c1 == null ? null : parseCoordinates(c1);
     }
 
+    /**
+     * @return a list with at least one element
+     */
     private List<Coordinate> parseCoordinates(Token lbrack) throws IOException, Abort {
         return parseCoordinates(parseCoordinate(lbrack));
     }
 
+    /**
+     * @return a list with at least one element
+     */
     private List<Coordinate> parseCoordinates(Coordinate c1) throws IOException, Abort {
         Coordinate cn = tryParseCoordinate();
 
@@ -962,7 +968,7 @@ public final class Parser implements Closeable {
                 TupleStatement tuple = parseTuple(t);
                 List<Coordinate> coordinates = tryParseCoordinates();
 
-                var vtype = new TupleVarType(tuple, coordinates);
+                var vtype = CoordinateLoadStatement.from(tuple, coordinates).asVarType(this);
 
                 qname = tryParseQualifiedIdentifier();
 
@@ -1016,11 +1022,9 @@ public final class Parser implements Closeable {
                             }
                             Statement source = parseStatement("assignment source");
                             Statement target = new LoadStatement(qname);
-                            if (coordinates != null) {
-                                // Effectively becomes a CoordinateStore when combined with the
-                                // StoreStatement below.
-                                target = new CoordinateLoadStatement(target, coordinates);
-                            }
+                            // If any coordinates are given, the target effectively becomes a
+                            // CoordinateStore when combined with the StoreStatement.
+                            target = CoordinateLoadStatement.from(target, coordinates);
                             return new StoreStatement(target, source);
                         }
                     }
@@ -1034,7 +1038,8 @@ public final class Parser implements Closeable {
 
                     case T_IDENTIFIER -> {
                         if (idLevel > ID_NO_NEW_SYMBOLS) {
-                            vtype = new SimpleVarType(qname, coordinates);
+                            vtype = CoordinateLoadStatement.from
+                                (new LoadStatement(qname), coordinates).asVarType(this);
                             qname = parseQualifiedIdentifier((Identifier) t);
                             break vtype;
                         }
@@ -1046,16 +1051,12 @@ public final class Parser implements Closeable {
                 // At this point, if idLevel doesn't allow new symbols, then modifiers is empty.
 
                 if (modifiers.isEmpty()) {
-                    Statement st = new LoadStatement(qname);
-                    if (coordinates != null) {
-                        st = new CoordinateLoadStatement(st, coordinates);
-                    }
-                    return st;
+                    return CoordinateLoadStatement.from(new LoadStatement(qname), coordinates);
                 }
 
                 // If this point is reached, idLevel must allow new symbols.
 
-                vtype = new SimpleVarType(List.of(modifiers.removeLast()), null);
+                vtype = new LoadStatement(List.of(modifiers.removeLast())).asVarType(this);
 
                 if (modifiers.isEmpty()) {
                     modifiers = List.of();
@@ -1113,36 +1114,14 @@ public final class Parser implements Closeable {
         return new DeclarationStatement(modifiers, vtype, sname, source);
     }
 
-    private VarType parseVarType() throws IOException, Abort {
-        // vtype: ( qname | tuple ) [ coordinates ]
+    private VarType parsePlainVarType() throws IOException, Abort {
+        VarType type = parseLabeledStatement(nextToken(), 0, "type").asVarType(this);
 
-        Token t = nextToken();
-
-        if (t instanceof Identifier id) {
-            return new SimpleVarType(parseQualifiedIdentifier(id), tryParseCoordinates());
+        if (type instanceof NamedVarType nvt && !nvt.modifiers().isEmpty()) {
+            error(type, "modifiers aren't allowed here");
         }
 
-        TupleStatement tuple;
-
-        switch (t.type()) {
-            case T_LPAREN -> {
-                tuple = parseTuple(t, T_RPAREN);
-            }
-
-            case T_LBRACE -> {
-                tuple = parseTuple(t, T_RBRACE);
-            }
-
-            default -> {
-                // Parse the rest and throw it away.
-                Statement type = parseLabeledStatement(t, 0, null);
-                error(type, "illegal type");
-                // Create a bogus type.
-                tuple = new TupleStatement(type.start(), List.of(), type.end());
-            }
-        }
-
-        return new TupleVarType(tuple, tryParseCoordinates());
+        return type;
     }
 
     /**
@@ -1216,8 +1195,8 @@ public final class Parser implements Closeable {
                     };
                 }
 
-                var base = new SimpleVarType(ls.path, null);
-                return new NewArrayStatement(base, what.coordinates, values);
+                var elementType = new LoadStatement(ls.path).asVarType(this);
+                return new NewArrayStatement(elementType, what.coordinates, values);
             }
         }
 
@@ -1617,7 +1596,7 @@ public final class Parser implements Closeable {
         return message;
     }
 
-    private void error(Element element, String message) {
+    void error(Element element, String message) {
         error(new CompileError(element, message));
     }
 

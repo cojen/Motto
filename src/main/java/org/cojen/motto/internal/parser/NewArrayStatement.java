@@ -24,17 +24,17 @@ import java.util.List;
  * @author Brian S. O'Neill
  */
 public final class NewArrayStatement implements Statement {
-    public final VarType base;
+    public final VarType elementType;
     public final List<Coordinate> coordinates;
     public final TupleStatement values;
 
     /**
-     * @param base required
+     * @param elementType required
      * @param coordinates required
      * @param values optional
      */
-    NewArrayStatement(VarType base, List<Coordinate> coordinates, TupleStatement values) {
-        this.base = base;
+    NewArrayStatement(VarType elementType, List<Coordinate> coordinates, TupleStatement values) {
+        this.elementType = elementType;
         this.coordinates = coordinates;
         this.values = values;
     }
@@ -46,7 +46,7 @@ public final class NewArrayStatement implements Statement {
 
     @Override
     public Token start() {
-        return base.start();
+        return elementType.start();
     }
 
     @Override

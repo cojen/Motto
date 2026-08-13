@@ -19,32 +19,14 @@ package org.cojen.motto.internal.parser;
 import java.util.List;
 
 /**
- * Example: `(int a, String b)`
+ * 
  *
  * @author Brian S. O'Neill
  */
-public final class TupleVarType implements VarType {
-    private final Token mOpen;
-    private final List<VarType> mFieldTypes;
-    private final Token mClose;
+public sealed interface NamedVarType extends VarType permits DeclarationStatement {
+    public List<Token.Identifier> modifiers();
 
-    TupleVarType(Token open, List<VarType> fieldTypes, Token close) {
-        mOpen = open;
-        mFieldTypes = fieldTypes;
-        mClose = close;
-    }
+    public VarType type();
 
-    @Override
-    public Token start() {
-        return mOpen;
-    }
-
-    @Override
-    public Token end() {
-        return mClose;
-    }
-
-    public List<VarType> fieldTypes() {
-        return mFieldTypes;
-    }
+    public Token.Identifier name();
 }

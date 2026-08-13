@@ -16,6 +16,7 @@
 
 package org.cojen.motto.internal.parser;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -49,5 +50,31 @@ public final class TupleStatement extends EnclosedStatementList implements State
      */
     public boolean isUnevaluated() {
         return open.type() == Token.T_LBRACE;
+    }
+
+    @Override
+    public VarType asVarType(Parser p) {
+        List<Statement> items = this.items;
+        int size = items.size();
+
+        if (size == 0) {
+            return new TupleVarType(open, List.of(), close);
+        }
+
+        VarType first = items.getFirst().asVarType(p);
+
+        if (size == 1 && !(first instanceof NamedVarType)) {
+            // Unwrap tuple types which consist of a single unnamed element.
+            return first;
+        }
+
+        var fieldTypes = new ArrayList<VarType>(size);
+        fieldTypes.add(first); 
+
+        for (int i=1; i<size; i++) {
+            fieldTypes.add(items.get(i).asVarType(p));
+        }
+
+        return new TupleVarType(open, fieldTypes, close);
     }
 }

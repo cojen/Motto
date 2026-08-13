@@ -23,7 +23,7 @@ import java.util.List;
  *
  * @author Brian S. O'Neill
  */
-public final class LoadStatement extends PathStatement {
+public final class LoadStatement extends PathStatement implements SimpleVarType {
     /**
      * @param path path to variable or field
      */
@@ -44,5 +44,15 @@ public final class LoadStatement extends PathStatement {
     @Override
     public Token end() {
         return path.getLast();
+    }
+
+    @Override
+    public SimpleVarType asVarType(Parser p) {
+        return this;
+    }
+
+    @Override // SimpleVarType
+    public List<Token.Identifier> typeName() {
+        return path;
     }
 }
