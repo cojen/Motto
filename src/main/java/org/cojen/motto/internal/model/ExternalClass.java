@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import java.util.stream.Stream;
 
@@ -51,12 +51,15 @@ import org.cojen.motto.model.CallSignature;
 public final class ExternalClass extends BaseClassTypeItem
     implements org.cojen.maker.Type.Provider
 {
-    private final Function<String, byte[]> mLoader;
+    private final BiFunction<BasePath, String, byte[]> mLoader;
 
     /**
-     * @param loader loads the class bytes; can return null if not found
+     * @param loader loads the class bytes by package name and class name; can return null if
+     * not found
      */
-    ExternalClass(BasePath packagePath, BasePath namePath, Function<String, byte[]> loader) {
+    public ExternalClass(BasePath packagePath, BasePath namePath,
+                         BiFunction<BasePath, String, byte[]> loader)
+    {
         super(0, packagePath, namePath);
         mLoader = Objects.requireNonNull(loader);
     }
@@ -142,7 +145,7 @@ public final class ExternalClass extends BaseClassTypeItem
         // Set LOADED early in case the load fails, so as not to try loading again.
         setModifierBits(super.modifierBits() | Modifiers.LOADED);
 
-        byte[] classBytes = mLoader.apply(fullMangledName());
+        byte[] classBytes = mLoader.apply(packagePath(), mangledName());
 
         if (classBytes == null) {
             throw new NoClassDefFoundError(displayName());

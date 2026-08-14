@@ -117,6 +117,24 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     /**
+     * Returns the name path, separated with '$' characters, with mangling of special
+     * characters.
+     */
+    public final String mangledName() {
+        BasePath namePath = namePath();
+
+        if (namePath.size() == 1) {
+            return Maker.mangle(namePath.getFirst());
+        }
+
+        var b = new StringBuilder();
+
+        namePath.appendMangledTo(b, '$');
+
+        return b.toString();
+    }
+
+    /**
      * Returns a fully qualified class name, dot separated, with mangling of special
      * characters.
      */
