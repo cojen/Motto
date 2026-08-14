@@ -43,9 +43,10 @@ import org.cojen.maker.MethodMaker;
 import org.cojen.motto.model.CallSignature;
 
 /**
- * 
+ * Access to a class which isn't loaded into the JVM as a Class object.
  *
  * @author Brian S. O'Neill
+ * @see LoadedClass
  */
 public final class ExternalClass extends BaseClassTypeItem
     implements org.cojen.maker.Type.Provider

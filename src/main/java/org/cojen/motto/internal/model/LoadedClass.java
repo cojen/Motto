@@ -16,18 +16,18 @@
 
 package org.cojen.motto.internal.model;
 
-import java.util.Set;
-
-import java.util.stream.Stream;
-
-import org.cojen.motto.internal.util.InternSet;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 
+ * Access to a class which was loaded into the JVM as a Class object. Classes are strongly
+ * referenced by an internal cache, and so they cannot be unloaded.
  *
  * @author Brian S. O'Neill
+ * @see ExternalClass
  */
 public final class LoadedClass extends BaseClassTypeItem {
+    private static final ConcurrentHashMap<Class, LoadedClass> CACHE = new ConcurrentHashMap<>();
+
     public static BaseType from(Class<?> clazz) {
         if (clazz.isPrimitive()) {
             return BasePrimitiveType.trySelectByDescriptor(clazz.descriptorString());
@@ -42,9 +42,7 @@ public final class LoadedClass extends BaseClassTypeItem {
      * @param clazz must not be primitive or an array type
      */
     public static LoadedClass classFrom(Class<?> clazz) {
-        // FIXME: Add a feature to InternSet to find without constructing? Or perhaps define a
-        // custom key? A different kind of cache perhaps? Or just a simple local cache?
-        return InternSet.apply(new LoadedClass(clazz));
+        return CACHE.computeIfAbsent(clazz, k -> new LoadedClass(clazz));
     }
 
     private final Class<?> mClass;
@@ -86,15 +84,5 @@ public final class LoadedClass extends BaseClassTypeItem {
     @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.from(mClass);
-    }
-
-    @Override
-    public int hashCode() {
-        return mClass.hashCode() ^ 233600240;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return this == obj || obj instanceof LoadedClass other && mClass == other.mClass;
     }
 }
