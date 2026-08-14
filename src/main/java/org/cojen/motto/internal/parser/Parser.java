@@ -460,8 +460,7 @@ public final class Parser implements Closeable {
                 }
 
                 case T_ARROW -> {
-                    VarType inputType = st.asVarType(this);
-                    st = new LambdaStatement(inputType, parseStatement("lambda", ID_BASIC));
+                    st = new LambdaStatement(st.asVarType(this), parseStatement("lambda"));
                 }
 
                 case T_INC, T_DEC -> {
