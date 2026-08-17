@@ -28,7 +28,6 @@ import java.util.Optional;
 
 import java.util.stream.Stream;
 
-import org.cojen.motto.model.CallableItem;
 import org.cojen.motto.model.CallSignature;
 import org.cojen.motto.model.FieldItem;
 import org.cojen.motto.model.Item;
@@ -93,17 +92,17 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
-    public default Stream<? extends CallableItem> methods() {
+    public default Stream<? extends BaseCallableItem> methods() {
         return Stream.empty();
     }
 
     @Override
-    public default Stream<? extends CallableItem> methods(String name) {
+    public default Stream<? extends BaseCallableItem> methods(String name) {
         return Stream.empty();
     }
 
     @Override
-    public default CallableItem method(CallSignature sig) {
+    public default BaseCallableItem method(CallSignature sig) {
         throw new NoSuchElementException();
     }
 
@@ -139,7 +138,7 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
-    public default Stream<? extends CallableItem> constructors() {
+    public default Stream<? extends BaseCallableItem> constructors() {
         return Stream.empty();
     }
 
@@ -159,6 +158,21 @@ public sealed interface BaseType extends Type, EncodableType
         (BaseTupleType inputType, Item via)
     {
         return Map.of();
+    }
+
+    @Override
+    public default Stream<? extends BaseClassTypeItem> innerClasses() {
+        return Stream.empty();
+    }
+
+    @Override
+    public default BaseClassTypeItem innerClass(String name) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public default BaseClassTypeItem findInnerClass(String name) {
+        return null;
     }
 
     @Override

@@ -43,4 +43,3 @@ public final class EmptyStatement implements Statement {
         return mToken;
     }
 }
-

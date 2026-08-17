@@ -33,10 +33,11 @@ public interface EncodableType {
 
         // 16..19: reserved for future use
 
-        // FIXME: Define T_REFERENCE which is a simple wrapper around a public field. Is to be
-        // used for supporting lambda functions which need to access variables in the outer
-        // lexical scope. Only use references when the variable isn't effectively final. Can
-        // this create confusing side-effects? Perhaps require a `reference` modifier.
+        // FIXME: Define T_REFERENCE which is a simple wrapper around a collection of public
+        // anonymous fields. It's to be used for supporting inner functions which need to
+        // access variables in the outer lexical scope. Only use references when the variable
+        // isn't effectively final. Can this create confusing side-effects? Perhaps require a
+        // `reference` modifier.
 
         T_INDEXED = 20; // not a real type code; real type codes must have a lower value
 

@@ -31,6 +31,8 @@ import org.cojen.maker.ClassMaker;
 import org.cojen.maker.Maker;
 import org.cojen.maker.MethodMaker;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 import org.cojen.motto.model.CallSignature;
 import org.cojen.motto.model.ClassTypeItem;
 import org.cojen.motto.model.Item;
@@ -38,6 +40,8 @@ import org.cojen.motto.model.ObjectType;
 import org.cojen.motto.model.PrimitiveType;
 import org.cojen.motto.model.TupleType;
 import org.cojen.motto.model.Type;
+
+import static org.cojen.motto.internal.model.Modifiers.*;
 
 /**
  * 
@@ -58,7 +62,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     private Map<String, BaseFieldItem> mFieldMap;
     private Map<String, Map<BaseCallSignature, BaseCallableItem>> mMethodMap;
     private Map<BaseCallSignature, BaseCallableItem> mConstructorMap;
-    //private Map<String, BaseClassTypeItem> mInnerClassesMap;
+    private Map<String, BaseClassTypeItem> mInnerClassesMap;
 
     BaseClassTypeItem(int modifierBits, BasePath packagePath, BasePath namePath) {
         super(modifierBits);
@@ -71,7 +75,14 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         mFieldMap = Map.of();
         mMethodMap = Map.of();
         mConstructorMap = Map.of();
-        //mInnerClassesMap = Map.of();
+        mInnerClassesMap = Map.of();
+    }
+
+    /**
+     * Returns the CompilationEnv for a class which is being compiled. Is null otherwise.
+     */
+    public CompilationEnv env() {
+        return null;
     }
 
     @Override
@@ -114,6 +125,10 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     @Override
     public final BasePath namePath() {
         return mNamePath;
+    }
+
+    public final int fullPathSize() {
+        return packagePath().size() + namePath().size();
     }
 
     /**
@@ -176,8 +191,8 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public final BaseClassTypeItem outerType() {
-        // FIXME
-        throw null;
+        // FIXME: outerType
+        return null;
     }
 
     @Override
@@ -203,7 +218,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public final boolean isInterface() {
-        return (modifierBits() & Modifiers.INTERFACE) != 0;
+        return (modifierBits() & INTERFACE) != 0;
     }
 
     @Override
@@ -262,6 +277,18 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         } else {
             return map.putIfAbsent(name, field) == null ? field : null;
         }
+    }
+
+    /**
+     * Returns the modifiers for the given field name, or else returns -1 if not found.
+     */
+    public int findFieldForImport(String name) {
+        BaseFieldItem field = fieldMap().get(name);
+        if (field == null) {
+            return -1;
+        }
+        int modifierBits = field.modifierBits();
+        return (modifierBits & STATIC) == 0 ? -1 : modifierBits;
     }
 
     @Override
@@ -403,7 +430,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     public final BaseCallableItem tryAddMethod(int modifierBits, BaseCallSignature sig) {
         BaseCallSignature key = sig.noFieldNames();
 
-        if ((modifierBits & Modifiers.STATIC) == 0) {
+        if ((modifierBits & STATIC) == 0) {
             validateThis(sig.inputType());
             key = key.trimFirst();
         }
@@ -425,6 +452,40 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         }
 
         return byName.putIfAbsent(key, method) == null ? method : null;
+    }
+
+    /**
+     * Returns the modifiers for the given method name, or else returns -1 if not found. If
+     * multiple methods with the same name are found, the more accessible static modifier is
+     * selected.
+     */
+    public int findMethodForImport(String name) {
+        Map<BaseCallSignature, BaseCallableItem> byName = methodMap().get(name);
+        if (byName == null) {
+            return -1;
+        }
+        int modifierBits = 0;
+        for (BaseCallableItem method : byName.values()) {
+            int mods = method.modifierBits();
+            if ((mods & STATIC) != 0 &&
+                (modifierBits == 0 || isMoreAccessible(modifierBits, mods)))
+            {
+                modifierBits = mods;
+            }
+        }
+        return (modifierBits & STATIC) == 0 ? -1 : modifierBits;
+    }
+
+    static boolean isMoreAccessible(int existing, int modifierBits) {
+        if ((existing & PUBLIC) != 0) {
+            return false;
+        } else if ((existing & PROTECTED) != 0) {
+            return (modifierBits & PUBLIC) != 0;
+        } else if ((existing & INTERNAL) != 0) {
+            return (modifierBits & (PUBLIC | PROTECTED)) != 0;
+        } else {
+            return (modifierBits & (PUBLIC | PROTECTED | INTERNAL)) != 0;
+        }
     }
 
     @Override
@@ -487,6 +548,37 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
             return map.putIfAbsent(key, ctor) == null ? ctor : null;
         }
     }
+
+    @Override
+    public Stream<? extends BaseClassTypeItem> innerClasses() {
+        return innerClassesMap().values().stream();
+    }
+
+    @Override
+    public BaseClassTypeItem innerClass(String name) {
+        BaseClassTypeItem clazz = innerClassesMap().get(name);
+        if (clazz == null) {
+            throw new NoSuchElementException();
+        }
+        return clazz;
+    }
+
+    private Map<String, BaseClassTypeItem> innerClassesMap() {
+        try {
+            initInnerClasses();
+        } catch (InterruptedException e) {
+            return Map.of();
+        }
+
+        return mInnerClassesMap;
+    }
+
+    @Override
+    public BaseClassTypeItem findInnerClass(String name) {
+        return innerClassesMap().get(name);
+    }
+
+    // FIXME: tryAddInnerClass
 
     @Override
     public final boolean isArray() {
@@ -568,9 +660,9 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
         int modifiers = modifierBits();
 
-        if ((modifiers & Modifiers.INTERFACE) != 0) {
+        if ((modifiers & INTERFACE) != 0) {
             cm.interface_();
-        } else if ((modifiers & Modifiers.ABSTRACT) != 0) {
+        } else if ((modifiers & ABSTRACT) != 0) {
             cm.abstract_();
         }
     }
@@ -676,6 +768,13 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     /**
+     * Override to initialize the inner classes or wait until they're ready. Implementation is
+     * required to check if initInnerClasses has already been called.
+     */
+    protected void initInnerClasses() throws InterruptedException {
+    }
+
+    /**
      * @param map original map, possibly empty
      * @param via can pass null to only return publicly available methods
      * @param base when non-null, it represents the specific type being called (the base type
@@ -714,7 +813,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
                     continue;
                 }
 
-                if ((item.modifierBits() & Modifiers.INTERNAL) != 0) {
+                if ((item.modifierBits() & INTERNAL) != 0) {
                     // Check if an internal method can be inherited. It must be in the same
                     // package as the base.
 

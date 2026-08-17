@@ -25,12 +25,14 @@ import org.cojen.motto.internal.model.BaseItem;
  */
 public sealed interface Item permits BaseItem, ClassTypeItem, FieldItem, CallableItem {
     /**
-     * Returns the nearest enclosing type, which is never null.
+     * Returns the nearest enclosing type, which is never null. If this Item is also a Type,
+     * then the enclosing type is the Item itself.
      */
     public Type enclosingType();
 
     /**
-     * Returns the nearest enclosing class, which is null if the item isn't enclosed by a class.
+     * Returns the nearest enclosing class, which is null if the item isn't enclosed by a
+     * class. If this Item is a ClassTypeItem, then the enclosing class is the Item itself.
      */
     public default ClassTypeItem enclosingClass() {
         Type type = enclosingType();

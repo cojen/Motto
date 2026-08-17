@@ -18,6 +18,11 @@ package org.cojen.motto.internal.parser;
 
 import java.util.List;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
+import org.cojen.motto.internal.model.BaseItem;
+import org.cojen.motto.internal.model.BaseType;
+
 /**
  * 
  *
@@ -35,12 +40,20 @@ public final class ArrayVarType implements VarType {
         mCoordinates = coordinates;
     }
 
+    @Override
     public Token start() {
         return mElementType.start();
     }
 
+    @Override
     public Token end() {
         return mCoordinates.getLast().end();
+    }
+
+    @Override
+    public BaseType tryResolve(CompilationEnv env, BaseItem scope) {
+        // FIXME: tryResolve
+        throw null;
     }
 
     public VarType elementType() {

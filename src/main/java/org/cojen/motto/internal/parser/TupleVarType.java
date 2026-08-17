@@ -18,6 +18,11 @@ package org.cojen.motto.internal.parser;
 
 import java.util.List;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
+import org.cojen.motto.internal.model.BaseItem;
+import org.cojen.motto.internal.model.BaseType;
+
 /**
  * Example: `(int a, String b)`
  *
@@ -42,6 +47,12 @@ public final class TupleVarType implements VarType {
     @Override
     public Token end() {
         return mClose;
+    }
+
+    @Override
+    public BaseType tryResolve(CompilationEnv env, BaseItem scope) {
+        // FIXME: tryResolve
+        throw null;
     }
 
     public List<VarType> fieldTypes() {

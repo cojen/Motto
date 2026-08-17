@@ -30,7 +30,7 @@ import org.cojen.motto.internal.parser.*;
 public class CompileTest {
     public static void main(String[] args) throws Exception {
         File sourceFile = new File(args[0]);
-        var compiler = new Compiler(new ErrorListener.Basic());
+        var compiler = new Compiler(new ErrorListener.Basic(), null);
         var env = new CompilationEnv(compiler, sourceFile);
         var parser = new Parser(env);
 

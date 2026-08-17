@@ -192,7 +192,7 @@ public final class Parser implements Closeable {
             }
         }
 
-        return new CompilationUnit(mEnv.sourceFile(), packageName, imports, definitions);
+        return new CompilationUnit(packageName, imports, definitions);
     }
 
     private List<DefinitionStatement> parseDefinitions() throws IOException, Abort {

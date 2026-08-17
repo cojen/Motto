@@ -16,10 +16,22 @@
 
 package org.cojen.motto.internal.parser;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
+import org.cojen.motto.internal.model.BaseItem;
+import org.cojen.motto.internal.model.BaseType;
+
+
 /**
  * @author Brian S. O'Neill
  */
 public sealed interface VarType extends Element
     permits ArrayVarType, LambdaVarType, NamedVarType, SimpleVarType, TupleVarType
 {
+    /**
+     * Tries to resolve the type. If unable, an error is reported and null is returned.
+     *
+     * @param env used for error reporting and finding classes
+     */
+    public BaseType tryResolve(CompilationEnv env, BaseItem scope);
 }

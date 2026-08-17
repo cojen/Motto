@@ -18,12 +18,23 @@ package org.cojen.motto.internal.parser;
 
 import java.util.List;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
+import org.cojen.motto.internal.model.BaseItem;
+import org.cojen.motto.internal.model.BaseType;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
 public sealed interface NamedVarType extends VarType permits DeclarationStatement {
+    @Override
+    public default BaseType tryResolve(CompilationEnv env, BaseItem scope) {
+        // FIXME: tryResolve
+        throw null;
+    }
+
     public List<Token.Identifier> modifiers();
 
     public VarType type();

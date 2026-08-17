@@ -28,7 +28,6 @@ import org.cojen.motto.internal.model.BasePath;
  * @author Brian S. O'Neill
  */
 public final class CompilationUnit implements Element {
-    public final File sourceFile;
     public final List<Token.Identifier> packageName;
     public final List<ImportDirective> imports;
     public final List<DefinitionStatement> definitions;
@@ -36,17 +35,14 @@ public final class CompilationUnit implements Element {
     private BasePath mPackagePath;
 
     /**
-     * @param sourceFile usually required
      * @param packageName required; can be empty
      * @param imports required; can be empty
      * @param definitions required; can be empty
      */
-    CompilationUnit(File sourceFile,
-                    List<Token.Identifier> packageName,
+    CompilationUnit(List<Token.Identifier> packageName,
                     List<ImportDirective> imports,
                     List<DefinitionStatement> definitions)
     {
-        this.sourceFile = sourceFile;
         this.packageName = packageName;
         this.imports = imports;
         this.definitions = definitions;

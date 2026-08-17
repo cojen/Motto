@@ -16,6 +16,11 @@
 
 package org.cojen.motto.internal.parser;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
+import org.cojen.motto.internal.model.BaseItem;
+import org.cojen.motto.internal.model.BaseType;
+
 /**
  * 
  *
@@ -38,5 +43,11 @@ public final class LambdaVarType implements VarType {
     @Override
     public Token end() {
         return bodyType.end();
+    }
+
+    @Override
+    public BaseType tryResolve(CompilationEnv env, BaseItem scope) {
+        // FIXME: tryResolve
+        throw null;
     }
 }

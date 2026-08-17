@@ -18,11 +18,125 @@ package org.cojen.motto.internal.parser;
 
 import java.util.List;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
+import org.cojen.motto.internal.model.BaseClassTypeItem;
+import org.cojen.motto.internal.model.BaseItem;
+import org.cojen.motto.internal.model.BasePath;
+import org.cojen.motto.internal.model.BasePrimitiveType;
+import org.cojen.motto.internal.model.BaseType;
+import org.cojen.motto.internal.model.BaseUnspecifiedType;
+
 /**
  * Example: `int` or `int[]` or `int...` or `java.lang.String`, etc.
  *
  * @author Brian S. O'Neill
  */
 public sealed interface SimpleVarType extends VarType permits LoadStatement {
+    @Override
+    public default BaseType tryResolve(CompilationEnv env, BaseItem scope) {
+        BaseClassTypeItem clazz = trySelectClass(env, scope);
+
+        if (clazz != null) {
+            return clazz;
+        }
+
+        // Try to select a primitive type as the last resort.
+
+        List<Token.Identifier> name = typeName();
+        Token.Identifier first = name.getFirst();
+
+        if (name.size() > 1 || first.quoted) {
+            return null;
+        }
+
+        String firstText = first.text;
+
+        return "_".equals(firstText) ? BaseUnspecifiedType.THE
+            : BasePrimitiveType.trySelectByName(firstText);
+    }
+
     public List<Token.Identifier> typeName();
+
+    private BaseClassTypeItem trySelectClass(CompilationEnv env, BaseItem scope) {
+        List<Token.Identifier> name = typeName();
+        Token.Identifier first = name.getFirst();
+        String firstText = first.text;
+
+        BaseClassTypeItem clazz = scope.enclosingClass();
+
+        while (clazz != null) {
+            if (clazz.namePath().getLast().equals(firstText)) { 
+                return clazz;
+            }
+
+            // FIXME: Can findInnerClass deadlock?
+            BaseClassTypeItem inner = matchInnerClass(clazz.findInnerClass(firstText));
+
+            if (inner != null) {
+                return inner;
+            }
+
+            clazz = clazz.outerType();
+        }
+
+        BaseClassTypeItem match = matchInnerClass(env.findImportedClass(first));
+
+        // Try to find a class by its fully qualified name. It might match on an inner class,
+        // so permute the path.
+
+        int nameIndex = name.size();
+        BasePath fullName = BasePath.from(name);
+
+        while (true) {
+            clazz = env.findClass(fullName);
+
+            if (clazz != null) {
+                clazz = matchInnerClass(clazz, nameIndex);
+                if (clazz != null) {
+                    if (match == null) {
+                        match = clazz;
+                    } else {
+                        env.error(this, "ambiguous type name");
+                    }
+                }
+            }
+
+            if (--nameIndex <= 0) {
+                break;
+            }
+
+            // Assume that the implementation of findClassItem will obtain a canonical path
+            // when caching the item.
+            fullName = fullName.trimLastNonCanonical();
+        }
+
+        return match;
+    }
+
+    /**
+     * Tries to find an inner class which matches the full name path.
+     *
+     * @param outer optional
+     */
+    private BaseClassTypeItem matchInnerClass(BaseClassTypeItem outer) {
+        return outer == null ? null : matchInnerClass(outer, 1);
+    }
+
+    /**
+     * @param outer required
+     */
+    private BaseClassTypeItem matchInnerClass(BaseClassTypeItem outer, int nameIndex) {
+        List<Token.Identifier> name = typeName();
+
+        for (; nameIndex < name.size(); nameIndex++) {
+            // FIXME: Can findInnerClass deadlock?
+            outer = outer.findInnerClass(name.get(nameIndex).text);
+            if (outer == null) {
+                return null;
+            }
+        }
+
+        return outer;
+    }
 }

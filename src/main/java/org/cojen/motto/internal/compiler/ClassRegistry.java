@@ -198,16 +198,34 @@ public abstract sealed class ClassRegistry
         return Parallel.from(sources);
     }
 
-    private static void importError(ErrorListener el,
-                                    BasePath packagePath, BasePath namePath, String message)
+    /**
+     * @param className optional
+     */
+    static void importError(ErrorListener el,
+                            BasePath packagePath, String className, String message)
+    {
+        BasePath namePath = className == null ? null : BasePath.from(className);
+        importError(el, packagePath, namePath, message);
+    }
+
+    /**
+     * @param namePath optional
+     */
+    static void importError(ErrorListener el,
+                            BasePath packagePath, BasePath namePath, String message)
     {
         var b = new StringBuilder().append("error importing ");
         packagePath.appendTo(b);
-        if (!packagePath.isEmpty()) {
-            b.append('.');
+
+        if (namePath != null) {
+            if (!packagePath.isEmpty()) {
+                b.append('.');
+            }
+            namePath.appendTo(b);
         }
-        namePath.appendTo(b);
+
         b.append(": ").append(message);
+
         el.error(null, 0, -1, 0, -1, b.toString());
     }
 

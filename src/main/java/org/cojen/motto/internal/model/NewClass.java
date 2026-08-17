@@ -19,6 +19,7 @@ package org.cojen.motto.internal.model;
 import java.io.File;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.NoSuchElementException;
 import java.util.Map;
@@ -31,7 +32,11 @@ import org.cojen.maker.FieldMaker;
 import org.cojen.maker.Maker;
 import org.cojen.maker.MethodMaker;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 import org.cojen.motto.model.CallSignature;
+
+import static org.cojen.motto.internal.model.Modifiers.*;
 
 /**
  * 
@@ -39,7 +44,11 @@ import org.cojen.motto.model.CallSignature;
  * @author Brian S. O'Neill
  */
 public final class NewClass extends BaseClassTypeItem {
+    private final CompilationEnv mEnv;
     private final Object mOrigin;
+
+    private Map<String, Integer> mPreparedFields;  // field name to modifierBits
+    private Map<String, Integer> mPreparedMethods; // method name to modifierBits
 
     // 1: initially available, 2: supertype cycle detection has been performed (if necessary)
     private int mAvailable;
@@ -51,9 +60,17 @@ public final class NewClass extends BaseClassTypeItem {
     /**
      * @param origin optional object describing where the class came from (usually a File)
      */
-    NewClass(int modifierBits, BasePath packagePath, BasePath namePath, Object origin) {
+    NewClass(CompilationEnv env,
+             int modifierBits, BasePath packagePath, BasePath namePath, Object origin)
+    {
         super(modifierBits, packagePath, namePath);
+        mEnv = env;
         mOrigin = origin;
+    }
+
+    @Override
+    public CompilationEnv env() {
+        return mEnv;
     }
 
     /**
@@ -131,16 +148,74 @@ public final class NewClass extends BaseClassTypeItem {
     }
 
     /**
+     * Prepare a field such that it can be observed by an import directive. If the field isn't
+     * static, it's ignored. If multiple fields with the same name are prepared, the more
+     * accessible modifier is selected.
+     */
+    public void prepareFieldForImport(int modifierBits, String name) {
+        if ((modifierBits & STATIC) != 0) {
+            mPreparedFields = prepare(mPreparedFields, modifierBits, name);
+        }
+    }
+
+    /**
+     * Prepare a method such that it can be observed by an import directive. If the method isn't
+     * static, it's ignored. If multiple methods with the same name are prepared, the more
+     * accessible modifier is selected.
+     */
+    public void prepareMethodForImport(int modifierBits, String name) {
+        if ((modifierBits & STATIC) != 0) {
+            mPreparedMethods = prepare(mPreparedMethods, modifierBits, name);
+        }
+    }
+
+    private Map<String, Integer> prepare(Map<String, Integer> prepared,
+                                         int modifierBits, String name)
+    {
+        if (prepared == null) {
+            prepared = new HashMap<>();
+        }
+
+        Integer existing = prepared.putIfAbsent(name, modifierBits);
+
+        if (existing != null && isMoreAccessible(existing, modifierBits)) {
+            prepared.put(name, modifierBits);
+        }
+
+        return prepared;
+    }
+
+    @Override
+    public int findFieldForImport(String name) {
+        Map<String, Integer> prepared = mPreparedFields;
+        if (prepared != null) {
+            Integer modifierBits = prepared.get(name);
+            return modifierBits == null ? -1 : modifierBits;
+        }
+        return super.findFieldForImport(name);
+    }
+
+    @Override
+    public int findMethodForImport(String name) {
+        Map<String, Integer> prepared = mPreparedMethods;
+        if (prepared != null) {
+            Integer modifierBits = prepared.get(name);
+            return modifierBits == null ? -1 : modifierBits;
+        }
+        return super.findMethodForImport(name);
+    }
+
+    /**
      * Call to indicate that this class is available for linkage from other classes being
      * compiled. The super types and all members should be provided before calling this method,
      * and no further changes are permitted other than filling in the code.
      */
     public synchronized void available() {
-        /* FIXME
         // Won't need these anymore.
         mPreparedFields = null;
         mPreparedMethods = null;
 
+        /* FIXME
         tryAddClassField();
         */
 
@@ -264,6 +339,11 @@ public final class NewClass extends BaseClassTypeItem {
 
     @Override // BaseClassTypeItem
     protected void initConstructors() throws InterruptedException {
+        waitUntilAvailable();
+    }
+
+    @Override // BaseClassTypeItem
+    protected void initInnerClasses() throws InterruptedException {
         waitUntilAvailable();
     }
 }

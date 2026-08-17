@@ -294,6 +294,25 @@ public sealed interface Type extends Constable
         (TupleType inputType, Item via);
 
     /**
+     * Returns all the inner classes defined explicitly in this type.
+     */
+    public Stream<? extends ClassTypeItem> innerClasses();
+
+    /**
+     * Finds an inner class by name, which might be inherited.
+     *
+     * @throws NoSuchElementException if the inner class doesn't exist
+     */
+    public ClassTypeItem innerClass(String name);
+
+    /**
+     * Tries to finds an accessible inner class by name, which might be inherited.
+     *
+     * @return null if not found
+     */
+    public ClassTypeItem findInnerClass(String name);
+
+    /**
      * Returns true if this type is an array.
      */
     public boolean isArray();
