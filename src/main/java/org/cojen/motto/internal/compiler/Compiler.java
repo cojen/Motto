@@ -58,8 +58,8 @@ public final class Compiler implements ErrorListener {
      * @param sourceFile is null if not applicable
      * @param startLine source code start line, one-based; is 0 if not applicable
      * @param startColumn source code start column, zero-based; is -1 if not applicable
-     * @param endLine source code end line, inclusive
-     * @param endColumn source code end column, exclusive
+     * @param endLine source code end line, inclusive; is 0 if not applicable
+     * @param endColumn source code end column, inclusive; is -1 if not applicable
      */
     @Override
     public synchronized void error(File sourceFile, int startLine, int startColumn,

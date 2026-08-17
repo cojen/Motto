@@ -24,8 +24,8 @@ import org.cojen.motto.internal.parser.Token;
 /**
  * @param startLine source code start line, one-based; is 0 if not applicable
  * @param startColumn source code start column, zero-based; is -1 if not applicable
- * @param endLine source code end line, inclusive
- * @param endColumn source code end column, exclusive
+ * @param endLine source code end line, inclusive; is 0 if not applicable
+ * @param endColumn source code end column, inclusive; is -1 if not applicable
  */
 public final record CompileError(int startLine, int startColumn,
                                  int endLine, int endColumn, String message)
@@ -35,7 +35,15 @@ public final record CompileError(int startLine, int startColumn,
     }
 
     public CompileError(Token start, Token end, String message) {
-        this(start.line(), start.column(), end.line(), end.column() + end.length(), message);
+        int endColumn = end.column();
+        if (endColumn >= 0) {
+            int endLength = end.length();
+            if (endLength > 0) {
+                endColumn = endColumn + endLength - 1;
+            }
+        }
+
+        this(start.line(), start.column(), end.line(), endColumn, message);
     }
 
     public CompileError(Element element, String message) {

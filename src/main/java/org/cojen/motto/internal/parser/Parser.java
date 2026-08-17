@@ -1655,6 +1655,6 @@ public final class Parser implements Closeable {
             || e.start().line() < last.startLine()
             || e.end().line() > last.endLine()         // endLine is inclusive
             || e.start().column() < last.startColumn()
-            || e.end().column() >= last.endColumn();   // endColumn is exclusive
+            || e.end().column() > last.endColumn();   // endColumn is inclusive
     }
 }
