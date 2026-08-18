@@ -16,12 +16,17 @@
 
 package org.cojen.motto.internal.parser;
 
+import java.util.HashSet;
 import java.util.List;
 
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
+import org.cojen.motto.internal.model.BaseClassTypeItem;
 import org.cojen.motto.internal.model.BaseItem;
+import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
+import org.cojen.motto.internal.model.BaseUnspecifiedType;
+import org.cojen.motto.internal.model.Modifiers;
 
 /**
  * Example: `(int a, String b)`
@@ -51,8 +56,78 @@ public final class TupleVarType implements VarType {
 
     @Override
     public BaseType tryResolve(CompilationEnv env, BaseItem scope) {
-        // FIXME: tryResolve
-        throw null;
+        return tryResolve(env, scope, null);
+    }
+
+    /**
+     * Tries to resolve the type and optionally insert a "this" element as the first one. If
+     * the first element exists and is named "this", an error is reported if the type doesn't
+     * match what was given, unless the existing type is unspecified.
+     *
+     * @param insertThis optional
+     */
+    public BaseTupleType tryResolve(CompilationEnv env, BaseItem scope,
+                                    BaseClassTypeItem insertThis)
+    {
+        List<VarType> fieldTypes = mFieldTypes;
+
+        // Check if a required "this" item is already defined.
+        boolean hasThis = insertThis != null && !fieldTypes.isEmpty()
+            && fieldTypes.getFirst() instanceof NamedVarType named
+            && "this".equals(named.name().text);
+
+        BaseType[] types;
+        String[] names;
+        int offset;
+
+        if (insertThis == null || hasThis) {
+            types = new BaseType[fieldTypes.size()];
+            names = new String[types.length];
+            offset = 0;
+        } else {
+            types = new BaseType[1 + fieldTypes.size()];
+            names = new String[types.length];
+            types[0] = insertThis;
+            names[0] = "this";
+            offset = 1;
+        }
+
+        HashSet<String> nameSet = names.length <= 1 ? null : HashSet.newHashSet(names.length);
+
+        boolean error = false;
+
+        for (VarType vtype : fieldTypes) {
+            BaseType type = vtype.tryResolve(env, scope);
+            String name;
+
+            if (type == null) {
+                // Assume an error was reported.
+                error = true;
+                name = null;
+            } else if (vtype instanceof NamedVarType named) {
+                Element.resolveModifiers(env, Modifiers.FINAL, named.modifiers());
+
+                name = named.name().text;
+
+                if (nameSet != null && !nameSet.add(name)) {
+                    env.error(named.name(), "duplicate name");
+                    name = null;
+                }
+
+                if (offset == 0 && hasThis && type != BaseUnspecifiedType.THE &&
+                    !type.equals(insertThis))
+                {
+                    env.error(named.type(), "invalid `this` type");
+                }
+            } else {
+                name = null;
+            }
+
+            types[offset] = type;
+            names[offset++] = name;
+        }
+
+        return error ? null : BaseTupleType.from(types).withNames(names);
     }
 
     public List<VarType> fieldTypes() {

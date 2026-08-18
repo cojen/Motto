@@ -18,6 +18,8 @@ package org.cojen.motto.internal.parser;
 
 import java.util.List;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 /**
  * 
  *
@@ -36,6 +38,15 @@ public sealed interface Statement extends Element permits
      * @see LabeledStatement
      */
     public default Statement delabel() {
+        return this;
+    }
+
+    /**
+     * Delabel and report an error if a label is defined.
+     *
+     * @see LabeledStatement
+     */
+    public default Statement noLabel(CompilationEnv env) {
         return this;
     }
 

@@ -20,6 +20,7 @@ import java.util.List;
 
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
+import org.cojen.motto.internal.model.BaseArrayType;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseType;
 
@@ -52,8 +53,19 @@ public final class ArrayVarType implements VarType {
 
     @Override
     public BaseType tryResolve(CompilationEnv env, BaseItem scope) {
-        // FIXME: tryResolve
-        throw null;
+        BaseType type = mElementType.tryResolve(env, scope);
+
+        if (type != null) {
+            for (Coordinate c : mCoordinates) {
+                if (!c.isSimpleDeclaration()) {
+                    env.error(c, "illegal array declaration");
+                    return null;
+                }
+                type = BaseArrayType.from(type);
+            }
+        }
+
+        return type;
     }
 
     public VarType elementType() {

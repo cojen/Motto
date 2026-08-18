@@ -16,6 +16,8 @@
 
 package org.cojen.motto.internal.parser;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 /**
  * Example: `start: ...`
  *
@@ -52,5 +54,11 @@ public final class LabeledStatement implements Statement {
             labeled = ls;
         }
         return labeled.source;
+    }
+
+    @Override
+    public Statement noLabel(CompilationEnv env) {
+        env.error(label, "label isn't allowed");
+        return delabel();
     }
 }

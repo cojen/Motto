@@ -16,6 +16,12 @@
 
 package org.cojen.motto.internal.parser;
 
+import java.util.List;
+
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
+import static org.cojen.motto.internal.model.Modifiers.*;
+
 /**
  * 
  *
@@ -27,5 +33,49 @@ public abstract sealed interface Element
     public Token start();
 
     public Token end();
+
+    /**
+     * Note: reports errors if any modifiers are unknown, disallowed, or redundant.
+     *
+     * @param allowedBits allowed modifier bits
+     * @return modifierBits
+     * @see org.cojen.motto.internal.model.Modifiers
+     */
+    static int resolveModifiers(CompilationEnv env, int allowedBits,
+                                List<Token.Identifier> modifiers)
+    {
+        // FIXME: reject incompatible combinations
+
+        int modifierBits = 0;
+
+        if (!modifiers.isEmpty()) {
+            for (Token.Identifier token : modifiers) {
+                int selectedBit = switch (token.text) {
+                    default -> 0;
+                    case "public" -> PUBLIC;
+                    case "internal" -> INTERNAL;
+                    case "protected" -> PROTECTED;
+                    case "static" -> STATIC;
+                    case "final" -> FINAL;
+                    case "synchronized" -> SYNCHRONIZED;
+                    case "volatile" -> VOLATILE;
+                    case "transient" -> TRANSIENT;
+                    case "native" -> NATIVE;
+                    case "abstract" -> ABSTRACT;
+                    case "macro" -> MACRO;
+                };
+
+                if ((selectedBit & allowedBits) == 0) {
+                    env.error(token, "illegal modifier");
+                } else if ((modifierBits & selectedBit) != 0) {
+                    env.error(token, "redundant modifier");
+                } else {
+                    modifierBits |= selectedBit;
+                }
+            }
+        }
+
+        return modifierBits;
+    }
 }
 

@@ -31,8 +31,7 @@ import org.cojen.motto.internal.model.BaseType;
 public sealed interface NamedVarType extends VarType permits DeclarationStatement {
     @Override
     public default BaseType tryResolve(CompilationEnv env, BaseItem scope) {
-        // FIXME: tryResolve
-        throw null;
+        return type().tryResolve(env, scope);
     }
 
     public List<Token.Identifier> modifiers();

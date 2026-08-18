@@ -35,25 +35,26 @@ import org.cojen.motto.internal.model.BaseUnspecifiedType;
 public sealed interface SimpleVarType extends VarType permits LoadStatement {
     @Override
     public default BaseType tryResolve(CompilationEnv env, BaseItem scope) {
-        BaseClassTypeItem clazz = trySelectClass(env, scope);
+        BaseType type = trySelectClass(env, scope);
 
-        if (clazz != null) {
-            return clazz;
+        if (type == null) {
+            // Try to select a primitive type as the last resort.
+
+            List<Token.Identifier> name = typeName();
+            Token.Identifier first;
+
+            if (name.size() == 1 && !(first = name.getFirst()).quoted) {
+                String firstText = first.text;
+                type = "_".equals(firstText) ? BaseUnspecifiedType.THE
+                    : BasePrimitiveType.trySelectByName(firstText);
+            }
         }
 
-        // Try to select a primitive type as the last resort.
+        if (type == null) {
+            env.error(this, "cannot resolve type");
+        }        
 
-        List<Token.Identifier> name = typeName();
-        Token.Identifier first = name.getFirst();
-
-        if (name.size() > 1 || first.quoted) {
-            return null;
-        }
-
-        String firstText = first.text;
-
-        return "_".equals(firstText) ? BaseUnspecifiedType.THE
-            : BasePrimitiveType.trySelectByName(firstText);
+        return type;
     }
 
     public List<Token.Identifier> typeName();

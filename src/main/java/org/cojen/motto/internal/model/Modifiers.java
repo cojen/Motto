@@ -38,7 +38,7 @@ public class Modifiers {
         ABSTRACT = 0x0400, STRICT = 0x0800, SYNTHETIC = 0x1000, ANNOTATION = 0x2000, ENUM = 0x4000,
         MODULE = 0x8000;
 
-    static final int LOADED = 0x8000_0000, // see ExternalClass
+    public static final int LOADED = 0x8000_0000, // see ExternalClass
         PSEUDO = 0x4000_0000, CLASS = 0x2000_0000, MACRO = 0x1000_0000;
 
     public static int from(ClassModel model) {
