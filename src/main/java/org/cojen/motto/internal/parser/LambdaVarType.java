@@ -18,7 +18,9 @@ package org.cojen.motto.internal.parser;
 
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
+import org.cojen.motto.internal.model.BaseFunctionType;
 import org.cojen.motto.internal.model.BaseItem;
+import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 
 /**
@@ -47,7 +49,15 @@ public final class LambdaVarType implements VarType {
 
     @Override
     public BaseType tryResolve(CompilationEnv env, BaseItem scope) {
-        // FIXME: tryResolve
-        throw null;
+        BaseType in = inputType.tryResolve(env, scope);
+        BaseType out = bodyType.tryResolve(env, scope);
+
+        if (in == null || out == null) {
+            return null;
+        }
+
+        BaseTupleType inTuple = in instanceof BaseTupleType tt ? tt : BaseTupleType.from(in);
+
+        return BaseFunctionType.from(out, inTuple);
     }
 }
