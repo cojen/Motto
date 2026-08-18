@@ -26,5 +26,5 @@ import org.cojen.motto.internal.model.BaseFunctionType;
 public sealed interface FunctionType extends Type permits BaseFunctionType {
     public Type outputType();
 
-    public TupleType inputType();
+    public Type inputType();
 }

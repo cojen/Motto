@@ -32,16 +32,16 @@ import org.cojen.motto.internal.util.InternSet;
 public final class BaseFunctionType extends GeneratedType
     implements FunctionType, EncodableType.FunctionT
 {
-    public static BaseFunctionType from(BaseType outputType, BaseTupleType inputType) {
+    public static BaseFunctionType from(BaseType outputType, BaseType inputType) {
         return InternSet.apply(new BaseFunctionType(outputType, inputType));
     }
 
     private final BaseType mOutputType;
-    private final BaseTupleType mInputType;
+    private final BaseType mInputType;
 
     private volatile BaseFunctionType mNoFieldNames;
 
-    private BaseFunctionType(BaseType outputType, BaseTupleType inputType) {
+    private BaseFunctionType(BaseType outputType, BaseType inputType) {
         mOutputType = Objects.requireNonNull(outputType);
         mInputType = Objects.requireNonNull(inputType);
     }
@@ -115,7 +115,7 @@ public final class BaseFunctionType extends GeneratedType
     }
 
     @Override
-    public BaseTupleType inputType() {
+    public BaseType inputType() {
         return mInputType;
     }
 }
