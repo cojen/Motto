@@ -20,6 +20,7 @@ import java.lang.constant.Constable;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import java.util.stream.Stream;
 
@@ -163,7 +164,7 @@ public sealed interface Type extends Constable
     public Stream<? extends FieldItem> fields();
 
     /**
-     * Finds a field by name, which might be inherited.
+     * Finds a field by name, which is explicitly defined in this type.
      *
      * @throws NoSuchElementException if the field doesn't exist
      */
@@ -232,7 +233,7 @@ public sealed interface Type extends Constable
     public Stream<? extends CallableItem> methods(String name);
 
     /**
-     * Finds a method by signature, which might be inherited.
+     * Finds a method by signature, which is explicitly defined in this type.
      *
      * @throws NoSuchElementException if the method doesn't exist
      */
@@ -299,18 +300,21 @@ public sealed interface Type extends Constable
     public Stream<? extends ClassTypeItem> innerClasses();
 
     /**
-     * Finds an inner class by name, which might be inherited.
+     * Finds an inner class by name, which is explicitly defined in this type.
      *
      * @throws NoSuchElementException if the inner class doesn't exist
      */
     public ClassTypeItem innerClass(String name);
 
     /**
-     * Tries to finds an accessible inner class by name, which might be inherited.
+     * Tries to finds an accessible inner class by name, which might be inherited. If more than
+     * one is returned, then multiple inherited inner classes were found, and the best match is
+     * ambiguous.
      *
-     * @return null if not found
+     * @param via can pass null to only return publicly available inner classes
+     * @return an empty set if no applicable inner classes could be found
      */
-    public ClassTypeItem findInnerClass(String name);
+    public Set<? extends ClassTypeItem> findInnerClass(String name, Item via);
 
     /**
      * Returns true if this type is an array.

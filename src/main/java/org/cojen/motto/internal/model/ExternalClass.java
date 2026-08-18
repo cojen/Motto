@@ -16,18 +16,25 @@
 
 package org.cojen.motto.internal.model;
 
+import java.lang.classfile.Attributes;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.FieldModel;
 import java.lang.classfile.MethodModel;
 
+import java.lang.classfile.attribute.InnerClassesAttribute;
+import java.lang.classfile.attribute.InnerClassInfo;
+
 import java.lang.classfile.constantpool.ClassEntry;
+import java.lang.classfile.constantpool.Utf8Entry;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -211,9 +218,9 @@ public final class ExternalClass extends BaseClassTypeItem
 
         // FIXME: module stuff too perhaps?
 
-        /* FIXME: inner classes
         InnerClassesAttribute attr = model.findAttribute(Attributes.innerClasses()).orElse(null);
 
+        // Maps short names to full class names.
         Map<String, String> loadableInnerClasses = null;
 
         if (attr != null) {
@@ -232,7 +239,6 @@ public final class ExternalClass extends BaseClassTypeItem
                             if (loadableInnerClasses == null) {
                                 loadableInnerClasses = new HashMap<>();
                             }
-                            // Map short name to full class name.
                             loadableInnerClasses.putIfAbsent
                                 (innerName.stringValue(), innerDesc.displayName());
                         }
@@ -240,7 +246,8 @@ public final class ExternalClass extends BaseClassTypeItem
                 }
             }
         }
-        */
+
+        // FIXME: If any loadableInnerClasses, then load them on demand.
     }
 
     private ExternalClass toExternalClass(ClassEntry entry) {

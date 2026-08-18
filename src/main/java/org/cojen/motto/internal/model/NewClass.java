@@ -341,9 +341,4 @@ public final class NewClass extends BaseClassTypeItem {
     protected void initConstructors() throws InterruptedException {
         waitUntilAvailable();
     }
-
-    @Override // BaseClassTypeItem
-    protected void initInnerClasses() throws InterruptedException {
-        waitUntilAvailable();
-    }
 }

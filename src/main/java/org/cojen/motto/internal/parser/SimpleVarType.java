@@ -17,6 +17,7 @@
 package org.cojen.motto.internal.parser;
 
 import java.util.List;
+import java.util.Set;
 
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
@@ -71,8 +72,8 @@ public sealed interface SimpleVarType extends VarType permits LoadStatement {
                 return clazz;
             }
 
-            // FIXME: Can findInnerClass deadlock?
-            BaseClassTypeItem inner = matchInnerClass(clazz.findInnerClass(firstText));
+            // FIXME: call findInnerClass and act on a set
+            BaseClassTypeItem inner = matchInnerClass(clazz.findInnerClassForImport(firstText));
 
             if (inner != null) {
                 return inner;
@@ -131,8 +132,8 @@ public sealed interface SimpleVarType extends VarType permits LoadStatement {
         List<Token.Identifier> name = typeName();
 
         for (; nameIndex < name.size(); nameIndex++) {
-            // FIXME: Can findInnerClass deadlock?
-            outer = outer.findInnerClass(name.get(nameIndex).text);
+            // FIXME: call findInnerClass and act on a set
+            outer = outer.findInnerClassForImport(name.get(nameIndex).text);
             if (outer == null) {
                 return null;
             }

@@ -25,6 +25,7 @@ import java.lang.constant.DynamicConstantDesc;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 
 import java.util.stream.Stream;
 
@@ -171,7 +172,7 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
-    public default BaseClassTypeItem findInnerClass(String name) {
+    public default Set<BaseClassTypeItem> findInnerClass(String name, Item via) {
         return null;
     }
 

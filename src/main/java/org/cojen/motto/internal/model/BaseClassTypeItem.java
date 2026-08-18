@@ -20,10 +20,13 @@ import java.lang.constant.ClassDesc;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+
+import java.util.concurrent.ConcurrentHashMap;
 
 import java.util.stream.Stream;
 
@@ -62,7 +65,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     private Map<String, BaseFieldItem> mFieldMap;
     private Map<String, Map<BaseCallSignature, BaseCallableItem>> mMethodMap;
     private Map<BaseCallSignature, BaseCallableItem> mConstructorMap;
-    private Map<String, BaseClassTypeItem> mInnerClassesMap;
+    private volatile Map<String, BaseClassTypeItem> mInnerClassesMap;
 
     BaseClassTypeItem(int modifierBits, BasePath packagePath, BasePath namePath) {
         super(modifierBits);
@@ -551,34 +554,90 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public Stream<? extends BaseClassTypeItem> innerClasses() {
-        return innerClassesMap().values().stream();
+        return mInnerClassesMap.values().stream();
     }
 
     @Override
     public BaseClassTypeItem innerClass(String name) {
-        BaseClassTypeItem clazz = innerClassesMap().get(name);
+        BaseClassTypeItem clazz = mInnerClassesMap.get(name);
         if (clazz == null) {
             throw new NoSuchElementException();
         }
         return clazz;
     }
 
-    private Map<String, BaseClassTypeItem> innerClassesMap() {
-        try {
-            initInnerClasses();
-        } catch (InterruptedException e) {
-            return Map.of();
+    @Override
+    public Set<BaseClassTypeItem> findInnerClass(String name, Item via) {
+        return doFindInnerClass(Set.of(), name, via);
+    }
+
+    private Set<BaseClassTypeItem> doFindInnerClass
+        (Set<BaseClassTypeItem> set, String name, Item via)
+    {
+        BaseClassTypeItem inner = mInnerClassesMap.get(name);
+
+        if (inner != null && inner.isAccessibleVia(via)) {
+            return addToSet(set, inner);
         }
 
-        return mInnerClassesMap;
+        BaseClassTypeItem superType = superType();
+
+        if (superType != null) {
+            set = superType.doFindInnerClass(set, name, via);
+        }
+
+        for (BaseClassTypeItem iface : interfaces()) {
+            set = iface.doFindInnerClass(set, name, via);
+        }
+
+        return set;
     }
 
-    @Override
-    public BaseClassTypeItem findInnerClass(String name) {
-        return innerClassesMap().get(name);
+    private static <E> Set<E> addToSet(Set<E> set, E element) {
+        if (set.isEmpty()) {
+            set = Set.of(element);
+        } else {
+            if (set.size() == 1) {
+                set = new LinkedHashSet<>(set);
+            }
+            set.add(element);
+        }
+        return set;
     }
 
-    // FIXME: tryAddInnerClass
+    /**
+     * Attempt to add an inner class, which initially doesn't need to have any members. The
+     * package of the inner class must match the package of this outer class, and the name path
+     * of the inner class must match that of the outer class, plus the simple inner class name.
+     *
+     * @return false if the inner class already exists
+     * @throws IllegalArgumentException the package or name paths don't match
+     */
+    public final boolean tryAddInnerClass(BaseClassTypeItem inner) {
+        if (!isValidInnerClass(inner)) {
+            throw new IllegalArgumentException();
+        }
+
+        Map<String, BaseClassTypeItem> map = mInnerClassesMap;
+
+        if (map.isEmpty()) {
+            mInnerClassesMap = map = new ConcurrentHashMap<>();
+        }
+
+        return map.putIfAbsent(inner.namePath().getLast(), inner) == null;
+    }
+
+    private boolean isValidInnerClass(BaseClassTypeItem inner) {
+        return inner.packagePath().equals(packagePath())
+            && inner.namePath().trimLastNonCanonical().equals(namePath());
+    }
+
+    /**
+     * @return null if not found
+     */
+    public BaseClassTypeItem findInnerClassForImport(String name) {
+        return mInnerClassesMap.get(name);
+    }
 
     @Override
     public final boolean isArray() {
@@ -768,20 +827,13 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     /**
-     * Override to initialize the inner classes or wait until they're ready. Implementation is
-     * required to check if initInnerClasses has already been called.
-     */
-    protected void initInnerClasses() throws InterruptedException {
-    }
-
-    /**
      * @param map original map, possibly empty
      * @param via can pass null to only return publicly available methods
      * @param base when non-null, it represents the specific type being called (the base type
      * will remain the same while the super type(s) are examined)
      * @return the actual map
      */
-    private Map<BaseCallSignature, BaseCallableItem> findCallable
+    private static Map<BaseCallSignature, BaseCallableItem> findCallable
         (Map<BaseCallSignature, BaseCallableItem> map,
          BaseCallSignature sig, boolean staticCall, Item via,
          BaseClassTypeItem base, Map<BaseCallSignature, BaseCallableItem> available)

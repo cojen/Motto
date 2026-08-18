@@ -222,7 +222,7 @@ public final class CompilationEnv {
             }
 
             for (int ix = classIndex + 1; ix < lastIndex; ix++) {
-                clazz = clazz.findInnerClass(fullPath.get(ix));
+                clazz = clazz.findInnerClassForImport(fullPath.get(ix));
                 if (clazz == null) {
                     continue permute;
                 }
@@ -232,7 +232,7 @@ public final class CompilationEnv {
                 }
             }
 
-            BaseClassTypeItem inner = clazz.findInnerClass(name);
+            BaseClassTypeItem inner = clazz.findInnerClassForImport(name);
 
             if (inner != null) {
                 if (!isAccessible(inner)) {
