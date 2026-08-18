@@ -38,6 +38,10 @@ public final class TupleVarType implements VarType {
     private final List<VarType> mFieldTypes;
     private final Token mClose;
 
+    /**
+     * @param open usually T_LPAREN or T_LBRACE; see TupleStatement.asVarType for the exception
+     * @param close usually T_RPAREN or T_RBRACE; see TupleStatement.asVarType for the exception
+     */
     TupleVarType(Token open, List<VarType> fieldTypes, Token close) {
         mOpen = open;
         mFieldTypes = fieldTypes;

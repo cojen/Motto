@@ -62,14 +62,13 @@ public final class TupleStatement extends EnclosedStatementList implements State
     }
 
     private VarType asVarType(Parser p, boolean canUnwrap) {
-        List<Statement> items = this.items;
         int size = items.size();
 
         if (size == 0) {
             return new TupleVarType(open, List.of(), close);
         }
 
-        VarType first = items.getFirst().asVarType(p);
+        VarType first = asVarType(p, 0);
 
         if (canUnwrap && size == 1 && !(first instanceof NamedVarType)) {
             // Unwrap tuple types which consist of a single unnamed element.
@@ -80,9 +79,22 @@ public final class TupleStatement extends EnclosedStatementList implements State
         fieldTypes.add(first); 
 
         for (int i=1; i<size; i++) {
-            fieldTypes.add(items.get(i).asVarType(p));
+            fieldTypes.add(asVarType(p, i));
         }
 
         return new TupleVarType(open, fieldTypes, close);
+    }
+
+    private VarType asVarType(Parser p, int index) {
+        VarType type = items.get(index).asVarType(p);
+
+        if (isUnevaluated()) {
+            // Convert type to a lambda. Need to define an empty tuple, but no parens were
+            // provided. Use the type itself to indicate the start/end tokens.
+            var noInput = new TupleVarType(type.start(), List.of(), type.end());
+            type = new LambdaVarType(noInput, type);
+        }
+
+        return type;
     }
 }
