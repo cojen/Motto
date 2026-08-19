@@ -22,6 +22,8 @@ import org.cojen.motto.model.Type;
 
 import org.cojen.maker.Maker;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 import static org.cojen.motto.internal.model.Modifiers.*;
 
 /**
@@ -104,9 +106,13 @@ public abstract sealed class BaseItem implements Item
         }
 
         if (thisType instanceof BaseClassTypeItem thisClass &&
-            viaType instanceof ClassTypeItem viaClass)
+            viaType instanceof BaseClassTypeItem viaClass)
         {
-            // FIXME: check if in the same source file
+            CompilationEnv thisEnv = thisClass.env();
+            if (thisEnv != null && thisEnv == viaClass.env()) {
+                // In the same source file.
+                return true;
+            }
 
             if ((modifierBits & (INTERNAL | PROTECTED)) != 0 &&
                 thisClass.packagePath().equals(viaClass.packagePath()))
