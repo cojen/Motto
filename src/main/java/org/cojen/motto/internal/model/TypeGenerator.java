@@ -16,8 +16,11 @@
 
 package org.cojen.motto.internal.model;
 
-// FIXME: Use the classfile API to avoid the runtime dependency.
+import java.lang.management.ManagementFactory;
+
+// TODO: Use the classfile API to avoid the runtime dependency.
 import org.cojen.maker.ClassMaker;
+import org.cojen.maker.FieldMaker;
 import org.cojen.maker.MethodMaker;
 
 // Generated classes are in the "motto" package. If this changes, update GENERATED_PREFIX.
@@ -101,13 +104,27 @@ public final class TypeGenerator {
 
         ClassMaker cm = ClassMaker.beginExternal(className).public_().final_().synthetic();
 
+        boolean doValueClass = areValueClassesSupported();
+
+        if (doValueClass) {
+            cm.valueClass();
+        }
+
         // Tuples cannot be reliably serialized because the class might not have been loaded
         // yet by the time it's read from an ObjectInputStream.
         //cm.implement(Serializable.class);
 
         for (int i=0; i<num; i++) {
-            cm.addField(type.fieldType(i).asClassDesc(), type.mangledFieldName(i))
-                .private_().final_();
+            DecodedType dtype = type.fieldType(i);
+            FieldMaker fm = cm.addField(dtype.asClassDesc(), type.mangledFieldName(i));
+            fm.private_().final_();
+
+            if (doValueClass) {
+                org.cojen.maker.Type mtype = fm.type();
+                if (dtype instanceof DecodedType.TupleT || mtype.isValueClass()) {
+                    cm.addLoadableType(mtype);
+                }
+            }
         }
 
         // FIXME: Define a toString method which doesn't emit the long class name. The string
@@ -115,7 +132,6 @@ public final class TypeGenerator {
 
         // FIXME: If all elements are comparable, then the tuple should be comparable too.
 
-        // FIXME: Should be a value record (JEP 401).
         MethodMaker ctor = cm.asRecord();
 
         if (num == 0) {
@@ -152,5 +168,10 @@ public final class TypeGenerator {
         mm.public_().abstract_();
 
         return cm.finishBytes();
+    }
+
+    static boolean areValueClassesSupported() {
+        return Runtime.version().feature() >= 28 &&
+            ManagementFactory.getRuntimeMXBean().getInputArguments().contains("--enable-preview");
     }
 }
