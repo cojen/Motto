@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.SequencedCollection;
 
 import org.cojen.motto.internal.model.BaseClassTypeItem;
 import org.cojen.motto.internal.model.BasePath;
@@ -88,6 +89,10 @@ public final class CompilationEnv {
 
     public void error(Element element, String message) {
         error(new CompileError(element, message));
+    }
+
+    public void error(SequencedCollection<? extends Element> elements, String message) {
+        error(new CompileError(elements, message));
     }
 
     public synchronized void error(CompileError error) {

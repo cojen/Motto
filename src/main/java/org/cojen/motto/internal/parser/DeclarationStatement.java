@@ -18,6 +18,14 @@ package org.cojen.motto.internal.parser;
 
 import java.util.List;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
+import org.cojen.motto.internal.model.BaseFieldItem;
+import org.cojen.motto.internal.model.BaseType;
+import org.cojen.motto.internal.model.NewClass;
+
+import static org.cojen.motto.internal.model.Modifiers.*;
+
 /**
  * Example: `int a` or `int a = 0`
  *
@@ -28,6 +36,12 @@ public final class DeclarationStatement implements Statement, NamedVarType {
     public final VarType type;
     public final Token.Identifier name;
     public final Statement source;
+
+    private int mModifierBits;
+
+    // These are assigned when addToClass is called.
+    private NewClass mClass;
+    private BaseFieldItem mItem;
 
     /**
      * @param modifiers required; might be empty
@@ -42,6 +56,7 @@ public final class DeclarationStatement implements Statement, NamedVarType {
         this.type = type;
         this.name = name;
         this.source = source;
+        mModifierBits = -1; // unresolved
     }
 
     @Override
@@ -86,5 +101,47 @@ public final class DeclarationStatement implements Statement, NamedVarType {
     @Override // NamedVarType
     public Token.Identifier name() {
         return name;
+    }
+
+    @Override
+    public void prepareClass(CompilationEnv env, NewClass clazz) {
+        // Assume the caller knows that this declaration is a field and not a local variable.
+        clazz.prepareFieldForImport(modifierBits(env), name.text);
+    }
+
+    @Override
+    public BaseFieldItem addToClass(CompilationEnv env, NewClass clazz) {
+        if (mClass != null) {
+            return mItem;
+        }
+
+        mClass = clazz;
+
+        BaseType type = this.type.tryResolve(env, clazz);
+
+        if (type == null) {
+            // An error should have been reported.
+            return null;
+        }
+
+        int modifierBits = modifierBits(env);
+
+        if ((mItem = clazz.tryAddField(modifierBits, type, name.text)) == null) {
+            env.error(this, "duplicate declaration");
+        }
+
+        return mItem;
+    }
+
+    private int modifierBits(CompilationEnv env) {
+        int modifierBits = mModifierBits;
+
+        if (modifierBits == -1) {
+            mModifierBits = modifierBits = Element.resolveModifiers
+                (env, PUBLIC | PROTECTED | INTERNAL | STATIC | FINAL | VOLATILE | TRANSIENT,
+                 modifiers);
+        }
+
+        return modifierBits;
     }
 }

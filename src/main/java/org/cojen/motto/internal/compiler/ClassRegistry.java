@@ -24,9 +24,6 @@ import java.io.InterruptedIOException;
 import java.io.InputStream;
 import java.io.IOException;
 
-import java.lang.classfile.ClassFile;
-import java.lang.classfile.ClassModel;
-
 import java.lang.module.ModuleReader;
 import java.lang.module.ModuleReference;
 import java.lang.module.ResolvedModule;
@@ -265,7 +262,9 @@ public abstract sealed class ClassRegistry
     public final BaseClassTypeItem findClass(ErrorListener el, BasePath fullName)
         throws IOException
     {
-        return findClass(el, fullName.trimLast(), fullName.getLast());
+        return findClass(this, el, null, fullName.toString(),
+                         fullName.trimLastNonCanonical(),
+                         fullName.sliceNonCanonical(fullName.size() - 1, 1));
     }
 
     /**
@@ -280,8 +279,8 @@ public abstract sealed class ClassRegistry
                                              BasePath packagePath, String className)
         throws IOException
     {
-        BasePath namePath = BasePath.from(className);
-        return findClass(this, el, null, className, packagePath, namePath);
+        return findClass(this, el, null, packagePath.append(className).toString(),
+                         packagePath, BasePath.from(className));
     }
 
     /**
@@ -289,29 +288,29 @@ public abstract sealed class ClassRegistry
      * module path, and any registered NewClass instances which are currently being compiled.
      *
      * @param outer required
-     * @param className loadable inner class name, not including the package name (typically
+     * @param fullClassName loadable inner class name, not including the package name (typically
      * has '$' characters)
      * @param name simple inner class name
      * @return null if not found
      */
     public final BaseClassTypeItem findClass(ErrorListener el, BaseClassTypeItem outer,
-                                             String className, String name)
+                                             String fullClassName, String name)
         throws IOException
     {
-        BasePath namePath = outer.namePath().append(name);
-        return findClass(this, el, outer, className, outer.packagePath(), namePath);
+        return findClass(this, el, outer, fullClassName, outer.packagePath(),
+                         outer.namePath().append(name));
     }
 
     /**
      * @param root first instance in the call stack
      * @param outer is null for outer classes
-     * @param className loadable class name (typically has '$' characters for inner classes)
+     * @param fullClassName loadable class name (typically has '$' characters for inner classes)
      * @param packagePath required
      * @param namePath required (first element is the outer class name)
      * @return null if not found
      */
     abstract BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                         BaseClassTypeItem outer, String className,
+                                         BaseClassTypeItem outer, String fullClassName,
                                          BasePath packagePath, BasePath namePath)
         throws IOException;
 
@@ -336,9 +335,7 @@ public abstract sealed class ClassRegistry
      * @param className can be an outer or inner class name (no dots)
      * @return null if not found
      */
-    byte[] loadClassBytes(BasePath packagePath, String className) throws IOException {
-        return null;
-    }
+    abstract byte[] loadClassBytes(BasePath packagePath, String className) throws IOException;
 
     @Override // ByFunction<String, byte[]>
     public final byte[] apply(BasePath packagePath, String className) {
@@ -355,37 +352,15 @@ public abstract sealed class ClassRegistry
         return b.toString();
     }
 
-    /**
-     * @param origin optional object describing where the class came from
-     * @param outer is null for outer classes
-     * @param className loadable class name (typically has '$' characters for inner classes)
-     * @param packagePath required
-     * @param namePath required (first element is the outer class name)
-     * @return null if an import error was reported
-     */
-    private BaseClassTypeItem tryMakeClass(ErrorListener el, Object origin,
-                                           BaseClassTypeItem outer, String className,
-                                           BasePath packagePath, BasePath namePath,
-                                           InputStream in)
+    private static String fileName(String fullClassName) {
+        return fullClassName.replace('.', '/') + ".class";
+    }
+
+    private BaseClassTypeItem registerNewClass(BaseClassTypeItem outer,
+                                               BasePath packagePath, BasePath namePath)
     {
-        if (in == null) {
-            return null;
-        }
-
-        ClassModel model;
-
-        try {
-            model = ClassFile.of().parse(in.readAllBytes());
-        } catch (Exception e) {
-            importError(el, packagePath, namePath, e.toString());
-            return null;
-        }
-
-        packagePath = packagePath.canonical();
-        namePath = namePath.canonical();
-
+        // FIXME: Do something with the outer param.
         var clazz = new ExternalClass(packagePath, namePath, this);
-
         return register(packagePath, namePath, clazz);
     }
 
@@ -469,11 +444,11 @@ public abstract sealed class ClassRegistry
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer, String className,
+                                    BaseClassTypeItem outer, String fullClassName,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
-            return source().findClass(root, el, outer, className, packagePath, namePath);
+            return source().findClass(root, el, outer, fullClassName, packagePath, namePath);
         }
 
         @Override
@@ -483,6 +458,11 @@ public abstract sealed class ClassRegistry
             } catch (InterruptedIOException e) {
                 return null;
             }
+        }
+
+        @Override
+        byte[] loadClassBytes(BasePath packagePath, String className) throws IOException {
+            return source().loadClassBytes(packagePath, className);
         }
 
         @Override
@@ -521,7 +501,7 @@ public abstract sealed class ClassRegistry
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer, String className,
+                                    BaseClassTypeItem outer, String fullClassName,
                                     BasePath packagePath, BasePath namePath)
         {
             return null;
@@ -529,6 +509,11 @@ public abstract sealed class ClassRegistry
 
         @Override
         ClassRegistry forExternal() {
+            return null;
+        }
+
+        @Override
+        byte[] loadClassBytes(BasePath packagePath, String className) {
             return null;
         }
 
@@ -551,7 +536,7 @@ public abstract sealed class ClassRegistry
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer, String className,
+                                    BaseClassTypeItem outer, String fullClassName,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
@@ -560,6 +545,11 @@ public abstract sealed class ClassRegistry
 
         @Override
         ClassRegistry forExternal() {
+            return null;
+        }
+
+        @Override
+        byte[] loadClassBytes(BasePath packagePath, String className) {
             return null;
         }
 
@@ -611,16 +601,16 @@ public abstract sealed class ClassRegistry
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer, String className,
+                                    BaseClassTypeItem outer, String fullClassName,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
             BaseClassTypeItem item = byClass(packagePath).get(namePath);
 
             if (item == null) {
-                // If found, the method should have called tryMakeClass, which in turn will
+                // If found, the method should have called registerNewClass, which in turn will
                 // call the register method of this class to cache the item.
-                item = mSource.findClass(root, el, outer, className, packagePath, namePath);
+                item = mSource.findClass(root, el, outer, fullClassName, packagePath, namePath);
             }
 
             return item;
@@ -747,13 +737,13 @@ public abstract sealed class ClassRegistry
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer, String className,
+                                    BaseClassTypeItem outer, String fullClassName,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
             for (ClassRegistry source : mSources) {
                 BaseClassTypeItem item = source.findClass
-                    (root, el, outer, className, packagePath, namePath);
+                    (root, el, outer, fullClassName, packagePath, namePath);
                 if (item != null) {
                     return item;
                 }
@@ -815,7 +805,7 @@ public abstract sealed class ClassRegistry
         @Override
         @SuppressWarnings("unchecked")
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer, String className,
+                                    BaseClassTypeItem outer, String fullClassName,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
@@ -824,7 +814,7 @@ public abstract sealed class ClassRegistry
             for (int i=0; i<tasks.length; i++) {
                 ClassRegistry source = mSources[i];
                 tasks[i] = mExecutor.submit
-                    (() -> source.findClass(root, el, outer, className, packagePath, namePath));
+                    (() -> source.findClass(root, el, outer, fullClassName, packagePath, namePath));
             }
 
             BaseClassTypeItem result = null;
@@ -903,17 +893,14 @@ public abstract sealed class ClassRegistry
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer, String className,
+                                    BaseClassTypeItem outer, String fullClassName,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
-            File file = new File(expandDir(packagePath), className + ".class");
+            File file = new File(expandDir(packagePath), fullClassName + ".class");
 
             if (file.exists()) {
-                try (var in = new FileInputStream(file)) {
-                    return root.tryMakeClass(el, file, outer, className, packagePath, namePath, in);
-                } catch (FileNotFoundException e) {
-                }
+                return root.registerNewClass(outer, packagePath, namePath);
             }
 
             return null;
@@ -966,18 +953,17 @@ public abstract sealed class ClassRegistry
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer, String className,
+                                    BaseClassTypeItem outer, String fullClassName,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
-            JarEntry entry = mJar.getJarEntry(fileName(packagePath, className));
+            JarEntry entry = mJar.getJarEntry(fileName(fullClassName));
 
             if (entry == null || entry.isDirectory()) {
                 return null;
             }
 
-            return root.tryMakeClass(el, mJar, outer, className, packagePath, namePath,
-                                     mJar.getInputStream(entry));
+            return root.registerNewClass(outer, packagePath, namePath);
         }
 
         @Override
@@ -1021,10 +1007,39 @@ public abstract sealed class ClassRegistry
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer, String className,
+                                    BaseClassTypeItem outer, String fullClassName,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
+            var fsPath = fsPackagePath(packagePath);
+
+            if (!Files.isDirectory(fsPath)) {
+                return null;
+            }
+
+            String fileName = fileName(fullClassName);
+
+            // Search all the modules that this package is defined from.
+            for (java.nio.file.Path p : Files.list(fsPath).toList()) {
+                if (Files.isSymbolicLink(p) && Files.isDirectory(p)) {
+                    java.nio.file.Path fullPath = p.resolve(fileName);
+                    if (Files.exists(fullPath)) {
+                        return root.registerNewClass(outer, packagePath, namePath);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        @Override
+        ClassRegistry forExternal() {
+            // No need to explicitly load classes because the platform ClassLoader does it.
+            return null;
+        }
+
+        @Override
+        byte[] loadClassBytes(BasePath packagePath, String className) throws IOException {
             var fsPath = fsPackagePath(packagePath);
 
             if (!Files.isDirectory(fsPath)) {
@@ -1038,22 +1053,11 @@ public abstract sealed class ClassRegistry
                 if (Files.isSymbolicLink(p) && Files.isDirectory(p)) {
                     java.nio.file.Path fullPath = p.resolve(fileName);
                     if (Files.exists(fullPath)) {
-                        BaseClassTypeItem item = root.tryMakeClass
-                            (el, mFileSystem, outer, className, packagePath, namePath,
-                             Files.newInputStream(fullPath));
-                        if (item != null) {
-                            return item;
-                        }
+                        return Files.readAllBytes(fullPath);
                     }
                 }
             }
 
-            return null;
-        }
-
-        @Override
-        ClassRegistry forExternal() {
-            // No need to explicitly load classes because the platform ClassLoader does it.
             return null;
         }
 
@@ -1083,19 +1087,17 @@ public abstract sealed class ClassRegistry
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer, String className,
+                                    BaseClassTypeItem outer, String fullClassName,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
-            Optional<InputStream> inRef = open(packagePath, className);
+            String fileName = fileName(fullClassName);
 
-            if (inRef.isEmpty()) {
+            if (mReader.find(fileName).isEmpty()) {
                 return null;
             }
 
-            try (InputStream in = inRef.get()) {
-                return root.tryMakeClass(el, mRef, outer, className, packagePath, namePath, in);
-            }
+            return root.registerNewClass(outer, packagePath, namePath);
         }
 
         @Override
@@ -1105,7 +1107,7 @@ public abstract sealed class ClassRegistry
 
         @Override
         byte[] loadClassBytes(BasePath packagePath, String className) throws IOException {
-            Optional<InputStream> inRef = open(packagePath, className);
+            Optional<InputStream> inRef = mReader.open(fileName(packagePath, className));
 
             if (inRef.isEmpty()) {
                 return null;
@@ -1114,18 +1116,6 @@ public abstract sealed class ClassRegistry
             try (InputStream in = inRef.get()) {
                 return in.readAllBytes();
             }
-        }
-
-        private Optional<InputStream> open(BasePath packagePath, String className)
-            throws IOException
-        {
-            String fullName;
-            if (packagePath.isEmpty()) {
-                fullName = className + ".class";
-            } else {
-                fullName = packagePath.toString('/') + '/' + className + ".class";
-            }
-            return mReader.open(fullName);
         }
 
         @Override

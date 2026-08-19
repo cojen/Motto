@@ -42,7 +42,8 @@ public final class BaseCallSignature implements CallSignature {
      * @param outputType required
      * @param name required
      * @param inputType required
-     * @param evaluated true indicates a normal input type, false indicates a code block
+     * @param evaluated when false, the inputType elements have been converted to function
+     * types, except for "this"
      */
     public static BaseCallSignature from(BaseType outputType, String name, BaseTupleType inputType,
                                          boolean evaluated)
@@ -54,7 +55,8 @@ public final class BaseCallSignature implements CallSignature {
      * @param outputType required
      * @param name required
      * @param inputType required
-     * @param evaluated true indicates a normal input type, false indicates a code block
+     * @param evaluated when false, the inputType elements have been converted to function
+     * types, except for "this"
      */
     public static BaseCallSignature from(BaseType outputType, String name, BaseTupleType inputType,
                                          boolean evaluated,
@@ -71,8 +73,9 @@ public final class BaseCallSignature implements CallSignature {
         }
 
         return InternSet.apply
-            (new BaseCallSignature(Objects.requireNonNull(outputType), Objects.requireNonNull(name),
-                                  Objects.requireNonNull(inputType), flags, segments));
+            (new BaseCallSignature(Objects.requireNonNull(outputType),
+                                   Objects.requireNonNull(name),
+                                   Objects.requireNonNull(inputType), flags, segments));
     }
 
     private final BaseType mOutputType;
@@ -152,8 +155,8 @@ public final class BaseCallSignature implements CallSignature {
             }
 
             noFieldNames = new BaseCallSignature(mOutputType.noFieldNames(), mName,
-                                                mInputType.noFieldNames(), mFlags,
-                                                segments);
+                                                 mInputType.noFieldNames(), mFlags,
+                                                 segments);
 
             mNoFieldNames = noFieldNames = InternSet.apply(noFieldNames);
         }
@@ -443,29 +446,16 @@ public final class BaseCallSignature implements CallSignature {
     }
 
     public static final class BaseSegment implements Segment {
-        /**
-         * Returns a segment which accepts any code statement.
-         *
-         * @param repetition -1: once, 0: zero or more, 1: one or more
-         * @param name required (can be empty, except when repetition is >= 0)
-         */
-        public static BaseSegment from(int repetition, String name) {
-            if (name.isEmpty() && repetition >= 0) {
-                throw new IllegalArgumentException();
-            }
-            return InternSet.apply(new BaseSegment(repetition, name, null, false));
-        }
 
         /**
-         * Returns a segment which accepts a tuple or code block.
-         *
          * @param repetition -1: once, 0: zero or more, 1: one or more
          * @param name required (can be empty)
          * @param inputType required
-         * @param evaluated true indicates a normal input type, false indicates a code block
+         * @param evaluated when false, the inputType elements have been converted to function
+         * types
          */
         public static BaseSegment from(int repetition, String name,
-                                      BaseTupleType inputType, boolean evaluated)
+                                       BaseTupleType inputType, boolean evaluated)
         {
             Objects.requireNonNull(name);
             Objects.requireNonNull(inputType);
@@ -478,7 +468,8 @@ public final class BaseCallSignature implements CallSignature {
 
         private volatile BaseSegment mNoFieldNames;
 
-        private BaseSegment(int repetition, String name, BaseTupleType inputType, boolean evaluated)
+        private BaseSegment(int repetition, String name,
+                            BaseTupleType inputType, boolean evaluated)
         {
             this(name, inputType, (repetition & 0b11) | (evaluated ? EVALUATED : 0));
         }

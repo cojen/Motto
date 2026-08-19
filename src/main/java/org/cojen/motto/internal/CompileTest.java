@@ -18,8 +18,10 @@ package org.cojen.motto.internal;
 
 import java.io.File;
 
+import java.util.List;
+import java.util.Map;
+
 import org.cojen.motto.internal.compiler.*;
-import org.cojen.motto.internal.parser.*;
 
 /**
  * 
@@ -30,10 +32,14 @@ import org.cojen.motto.internal.parser.*;
 public class CompileTest {
     public static void main(String[] args) throws Exception {
         File sourceFile = new File(args[0]);
-        var compiler = new Compiler(new ErrorListener.Basic(), null);
-        var env = new CompilationEnv(compiler, sourceFile);
-        var parser = new Parser(env);
 
-        parser.parse();
+        var registry = ClassRegistry.fromClasspath();
+        var compiler = new Compiler(new ErrorListener.Basic(), registry);
+
+        compiler.compile(List.of(sourceFile));
+
+        Map<File, Map<String, byte[]>> results = compiler.waitForCompletion();
+
+        System.out.println(results);
     }
 }

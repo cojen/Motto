@@ -58,6 +58,13 @@ public final class TupleVarType implements VarType {
         return mClose;
     }
 
+    /**
+     * Returns true of the tuple starts with a `(`.
+     */
+    public boolean isEvaluated() {
+        return mOpen.type() == Token.T_LPAREN;
+    }
+
     @Override
     public BaseType tryResolve(CompilationEnv env, BaseItem scope) {
         return tryResolve(env, scope, null);
@@ -69,6 +76,7 @@ public final class TupleVarType implements VarType {
      * match what was given, unless the existing type is unspecified.
      *
      * @param insertThis optional
+     * @return null if cannot resolve and an error was reported
      */
     public BaseTupleType tryResolve(CompilationEnv env, BaseItem scope,
                                     BaseClassTypeItem insertThis)

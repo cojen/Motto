@@ -18,12 +18,24 @@ package org.cojen.motto.internal.parser;
 
 import java.util.List;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
+import org.cojen.motto.internal.model.BaseCallableItem;
+import org.cojen.motto.internal.model.BaseTupleType;
+import org.cojen.motto.internal.model.NewClass;
+
+import static org.cojen.motto.internal.model.Modifiers.*;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
 public final class ConstructorDefinitionStatement extends FunctionDefinitionStatement {
+    // These are assigned when addToClass is called.
+    private NewClass mClass;
+    private BaseCallableItem mItem;
+
     /**
      * @param modifiers required; might be empty
      * @param name required name of constructor
@@ -51,5 +63,39 @@ public final class ConstructorDefinitionStatement extends FunctionDefinitionStat
     @Override
     public Token end() {
         return code.end();
+    }
+
+    @Override
+    public BaseCallableItem addToClass(CompilationEnv env, NewClass clazz) {
+        if (mClass != null) {
+            return mItem;
+        }
+
+        mClass = clazz;
+
+        if (code == null) {
+            // Definition is broken, so skip it. An error should have been reported already.
+            return null;
+        }
+
+        int modifierBits = Element.resolveModifiers
+            (env, PUBLIC | PROTECTED | INTERNAL | SYNCHRONIZED, modifiers);
+
+        BaseTupleType inputType = paramType.tryResolve(env, clazz, clazz);
+
+        if (inputType == null) {
+            // An error should have been reported already.
+            return null;
+        }
+
+        boolean evaluated = paramType.isEvaluated();
+
+        // FIXME: Clauses.
+
+        if ((mItem = clazz.tryAddConstructor(modifierBits, inputType, evaluated)) == null) {
+            env.error(this, "duplicate constructor definition");
+        }
+
+        return mItem;
     }
 }

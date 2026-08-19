@@ -32,6 +32,7 @@ public sealed interface VarType extends Element
      * Tries to resolve the type. If unable, an error is reported and null is returned.
      *
      * @param env used for error reporting and finding classes
+     * @return null if cannot resolve and an error was reported
      */
     public BaseType tryResolve(CompilationEnv env, BaseItem scope);
 }

@@ -160,6 +160,8 @@ public final class ExternalClass extends BaseClassTypeItem
 
         ClassModel model = ClassFile.of().parse(classBytes);
 
+        setModifierBits(Modifiers.from(model) | Modifiers.LOADED);
+
         ExternalClass superclass = toExternalClass(model.superclass().orElse(null));
 
         Set<BaseClassTypeItem> interfaces;
@@ -205,14 +207,15 @@ public final class ExternalClass extends BaseClassTypeItem
             }
 
             if (mname.equals("<init>")) {
-                tryAddConstructor(modifierBits, params);
+                tryAddConstructor(modifierBits, params, true);
             } else {
                 // FIXME: Look for MacroMethod attribute. If found and is valid, update
                 // modifierBits before calling tryAddMethod. If tryAddMethod is successful,
                 // then call macroImpl.
                 BaseType returnType = toType(methodType.returnType());
                 mname = Maker.demangle(mname);
-                tryAddMethod(modifierBits, returnType, mname, params);
+                var sig = BaseCallSignature.from(returnType, mname, params, true);
+                tryAddMethod(modifierBits, sig);
             }
         }
 

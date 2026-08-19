@@ -28,7 +28,8 @@ import static org.cojen.motto.internal.model.Modifiers.*;
  * @author Brian S. O'Neill
  */
 public abstract sealed interface Element
-    permits CompilationUnit, ImportDirective, Statement, StatementList, Token,Clause, VarType
+    permits CompilationUnit, ImportDirective, Statement, StatementList, Token, Clause, VarType,
+            DefinitionSegment
 {
     public Token start();
 

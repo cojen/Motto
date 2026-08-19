@@ -53,14 +53,27 @@ public sealed interface SimpleVarType extends VarType permits LoadStatement {
 
         if (type == null) {
             env.error(this, "cannot resolve type");
-        }        
+        }
 
         return type;
     }
 
     public List<Token.Identifier> typeName();
 
-    private BaseClassTypeItem trySelectClass(CompilationEnv env, BaseItem scope) {
+    /**
+     * Tries to resolve a type. If unable, an error is reported and null is returned.
+     */
+    static BaseClassTypeItem trySelectClass(CompilationEnv env, BaseItem scope,
+                                            List<Token.Identifier> name)
+    {
+        BaseClassTypeItem clazz = new LoadStatement(name).trySelectClass(env, scope);
+        if (clazz == null) {
+            env.error(name, "cannot resolve type");
+        }
+        return clazz;
+    }
+
+    default BaseClassTypeItem trySelectClass(CompilationEnv env, BaseItem scope) {
         List<Token.Identifier> name = typeName();
         Token.Identifier first = name.getFirst();
         String firstText = first.text;
@@ -72,7 +85,7 @@ public sealed interface SimpleVarType extends VarType permits LoadStatement {
                 return clazz;
             }
 
-            // FIXME: call findInnerClass and act on a set
+            // FIXME: Call findInnerClass and act on a set. Use scope for via.
             BaseClassTypeItem inner = matchInnerClass(clazz.findInnerClassForImport(firstText));
 
             if (inner != null) {
@@ -132,7 +145,7 @@ public sealed interface SimpleVarType extends VarType permits LoadStatement {
         List<Token.Identifier> name = typeName();
 
         for (; nameIndex < name.size(); nameIndex++) {
-            // FIXME: call findInnerClass and act on a set
+            // FIXME: Call findInnerClass and act on a set. Use scope for via.
             outer = outer.findInnerClassForImport(name.get(nameIndex).text);
             if (outer == null) {
                 return null;

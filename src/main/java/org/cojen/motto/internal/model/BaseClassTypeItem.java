@@ -415,21 +415,6 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      * @throws IllegalArgumentException if adding an instance method and the first
      * parameter isn't named "this"
      */
-    public final BaseCallableItem tryAddMethod(int modifierBits, BaseType outputType,
-                                               String name, BaseTupleType inputType)
-    {
-        var sig = BaseCallSignature.from(outputType, name, inputType, true);
-
-        return tryAddMethod(modifierBits, sig);
-    }
-
-    /**
-     * Attempt to add a method, which initially doesn't have any code.
-     *
-     * @return null if a conflicting method definition already exists
-     * @throws IllegalArgumentException if adding an instance method and the first
-     * parameter isn't named "this"
-     */
     public final BaseCallableItem tryAddMethod(int modifierBits, BaseCallSignature sig) {
         BaseCallSignature key = sig.noFieldNames();
 
@@ -532,11 +517,15 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      * Attempt to add a constructor, which initially doesn't have any code.
      *
      * @param inputType the first parameter must be named "this", with the correct type
+     * @param evaluated when false, the inputType elements have been converted to function
+     * types, except for "this"
      * @return null if a conflicting constructor definition already exists
      * @throws IllegalArgumentException the first parameter isn't named "this"
      */
-    public final BaseCallableItem tryAddConstructor(int modifierBits, BaseTupleType inputType) {
-        var sig = BaseCallSignature.from(BaseVoidType.THE, "", validateThis(inputType), true);
+    public final BaseCallableItem tryAddConstructor(int modifierBits, BaseTupleType inputType,
+                                                    boolean evaluated)
+    {
+        var sig = BaseCallSignature.from(BaseVoidType.THE, "", validateThis(inputType), evaluated);
 
         var ctor = BaseCallableItem.from(modifierBits, this, sig);
 
@@ -646,9 +635,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public final BaseType noFieldNames() {
-        if (numFields() != 0) {
-            throw new UnsupportedOperationException();
-        }
+        // The field names cannot be removed.
         return this;
     }
 

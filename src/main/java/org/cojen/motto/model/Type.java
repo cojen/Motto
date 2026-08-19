@@ -334,10 +334,8 @@ public sealed interface Type extends Constable
     public ArrayType asArray();
 
     /**
-     * Returns this type without any field names, recursively.
-     *
-     * @throws UnsupportedOperationException if this type has fields and it requires that
-     * fields have names
+     * Returns this type without any field names, recursively. If the type cannot have field
+     * names removed, then they'll remain.
      */
     public Type noFieldNames();
 

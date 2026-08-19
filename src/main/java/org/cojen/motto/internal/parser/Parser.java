@@ -1333,7 +1333,7 @@ public final class Parser implements Closeable {
             }
         }
 
-        return new DefinitionSegment(repetition, name, params);
+        return new DefinitionSegment(repetition, name, params.asTupleVarType(this));
     }
 
     private ConstructorDefinitionStatement tryParseConstructorDefinition

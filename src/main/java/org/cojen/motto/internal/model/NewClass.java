@@ -60,8 +60,8 @@ public final class NewClass extends BaseClassTypeItem {
     /**
      * @param origin optional object describing where the class came from (usually a File)
      */
-    NewClass(CompilationEnv env,
-             int modifierBits, BasePath packagePath, BasePath namePath, Object origin)
+    public NewClass(CompilationEnv env,
+                    int modifierBits, BasePath packagePath, BasePath namePath, Object origin)
     {
         super(modifierBits, packagePath, namePath);
         mEnv = env;

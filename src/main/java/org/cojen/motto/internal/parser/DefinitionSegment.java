@@ -21,19 +21,29 @@ package org.cojen.motto.internal.parser;
  * @see MethodDefinitionStatement
  * @author Brian S. O'Neill
  */
-public final class DefinitionSegment {
+public final class DefinitionSegment implements Element {
     public final int repetition;
     public final Token.Identifier name;
-    public final TupleStatement params;
+    public final TupleVarType paramType;
 
     /**
      * @param repetition -1: once, 0: zero or more, 1: one or more
      * @param name optional
-     * @param params required, unless the definition is broken
+     * @param paramType required
      */
-    DefinitionSegment(int repetition, Token.Identifier name, TupleStatement params) {
+    DefinitionSegment(int repetition, Token.Identifier name, TupleVarType paramType) {
         this.repetition = repetition;
         this.name = name;
-        this.params = params;
+        this.paramType = paramType;
+    }
+
+    @Override
+    public Token start() {
+        return name != null ? name : paramType.start();
+    }
+
+    @Override
+    public Token end() {
+        return paramType.end();
     }
 }

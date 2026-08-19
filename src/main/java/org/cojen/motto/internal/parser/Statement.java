@@ -20,6 +20,9 @@ import java.util.List;
 
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
+import org.cojen.motto.internal.model.BaseItem;
+import org.cojen.motto.internal.model.NewClass;
+
 /**
  * 
  *
@@ -50,9 +53,34 @@ public sealed interface Statement extends Element permits
         return this;
     }
 
-    default VarType asVarType(Parser p) {
+    /**
+     * @param p for reporting errors
+     */
+    public default VarType asVarType(Parser p) {
         p.error(this, "illegal type");
         // Return a bogus type.
         return new TupleVarType(start(), List.of(), end());
+    }
+
+    /**
+     * In order for a new class to move to the prepared state, all members which can be
+     * imported by other classes must be available. Statements which declare or define
+     * importable members must implement this method. Note that the statement doesn't know what
+     * scope it's in, and so it's the caller's responsibility to examine the scope.
+     */
+    public default void prepareClass(CompilationEnv env, NewClass clazz) {
+        // Nothing to do in most cases.
+    }
+
+    /**
+     * Is called by ClassDefinitionStatement.resolveClass to add declarations and definitions
+     * to a NewClass. If this method was already called, calling it again returns the item
+     * which was possibly added earlier. This method is a companion to the prepareClass method.
+     *
+     * @return null if an error was reported or if this statement doesn't add anything to a class
+     */
+    public default BaseItem addToClass(CompilationEnv env, NewClass clazz) {
+        // Nothing to do in most cases.
+        return null;
     }
 }
