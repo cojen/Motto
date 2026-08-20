@@ -303,13 +303,11 @@ public final class Parser implements Closeable {
             }
 
             if (localErrors++ == 0) {
-                if (isDifferentErrorPosition(t)) {
-                    String message = "unexpected token";
-                    if (which != null) {
-                        message = message + " while parsing " + which;
-                    }
-                    error(t, message);
+                String message = "unexpected token";
+                if (which != null) {
+                    message = message + " while parsing " + which;
                 }
+                error(t, message);
             }
         }
     }
@@ -1645,8 +1643,19 @@ public final class Parser implements Closeable {
     private void error(CompileError error) {
         if (isHigherStartPosition(error)) {
             mEnv.error(error);
+            mLastError = error;
         }
-        mLastError = error;
+    }
+
+    /**
+     * @return true if the given error starts higher than the last error, or if the last error
+     * is null
+     */
+    private boolean isHigherStartPosition(CompileError e) {
+        CompileError last = mLastError;
+        return last == null
+            || e.startLine() > last.startLine()
+            || (e.startLine() == last.startLine() && (e.startColumn() > last.startColumn()));
     }
 
     /**
@@ -1671,29 +1680,5 @@ public final class Parser implements Closeable {
         } else {
             errorAfter(token, message);
         }
-    }
-
-    /**
-     * @return true if the token is positioned outside the range of the last error, or if the
-     * last error is null
-     */
-    private boolean isDifferentErrorPosition(Element e) {
-        CompileError last = mLastError;
-        return last == null
-            || e.start().line() < last.startLine()
-            || e.end().line() > last.endLine()         // endLine is inclusive
-            || e.start().column() < last.startColumn()
-            || e.end().column() > last.endColumn();   // endColumn is inclusive
-    }
-
-    /**
-     * @return true if the given error starts higher than the last error, or if the last error
-     * is null
-     */
-    private boolean isHigherStartPosition(CompileError e) {
-        CompileError last = mLastError;
-        return last == null
-            || e.startLine() > last.startLine()
-            || (e.startLine() == last.startLine() && (e.startColumn() > last.startColumn()));
     }
 }
