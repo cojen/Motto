@@ -988,6 +988,8 @@ public final class Parser implements Closeable {
                     }
                 }
 
+                pushToken(t);
+
                 Identifier name = simpleName(qname, "declaration name");
 
                 return new DeclarationStatement(modifiers, vtype, name, source);
