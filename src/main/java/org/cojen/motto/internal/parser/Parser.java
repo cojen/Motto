@@ -590,27 +590,30 @@ public final class Parser implements Closeable {
             switch (tType) {
                 default -> {
                     if (st != null) {
-                        // Check if the statement can be automatically separated.
+                        Token lastToken = st.end();
 
-                        if (sequence == null) {
-                            statements.add(st);
-
-                            Token lastToken = st.end();
-                            if (!(lastToken instanceof Newline)) {
-                                errorAfter(lastToken, sepMessage(','));
+                        if (lastToken instanceof Newline) {
+                            // Statement is automatically separated just like a semicolon.
+                            if (sequence == null) {
+                                sequence = new ArrayList<Statement>(4);
                             }
-                        } else {
                             sequence.add(st);
-                            Token lastToken = sequence.getLast().end();
-                            if (!(lastToken instanceof Newline)) {
-                                String message;
+                        } else {
+                            String message;
+
+                            if (sequence == null) {
+                                statements.add(st);
+                                message = sepMessage(',');
+                            } else {
+                                sequence.add(st);
                                 if (statements.isEmpty()) {
                                     message = sepMessage(';');
                                 } else {
                                     message = "expected a `;` or ',' separator";
                                 }
-                                errorAfter(lastToken, message);
                             }
+
+                            errorAfter(lastToken, message);
                         }
                     }
 
