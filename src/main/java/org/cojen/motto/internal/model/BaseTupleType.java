@@ -359,9 +359,10 @@ public sealed abstract class BaseTupleType extends GeneratedType
 
         for (int i=0; i<fields.length; i++) {
             BaseType fieldType = fieldType(i);
-            fields[i] = i < fieldNames.length
-                ? new TupleFieldItem.Named(this, fieldType, fieldNames[i])
-                : new TupleFieldItem(this, fieldType);
+            String fieldName = i < fieldNames.length ? fieldNames[i] : null;
+            fields[i] = fieldName == null
+                ? new TupleFieldItem(this, fieldType)
+                : new TupleFieldItem.Named(this, fieldType, fieldName);
         }
 
         Map<String, Integer> nameMap = buildNameMap(fields, hasDupsRef);
