@@ -1568,10 +1568,24 @@ public final class Parser implements Closeable {
 
     /**
      * Returns the given statement if it's an unevaluated TupleStatement, or else report an
-     * error and return null.
+     * error and return null. If the tuple has more than one item, an error is reported. If the
+     * first item is a SequenceStatement, it's converted to a TupleStatement.
+     *
+     * @return an optional TupleStatement which doesn't have any top-level SequenceStatements
      */
     private TupleStatement codeScope(Statement st) {
         if (st instanceof TupleStatement tuple && tuple.isUnevaluated()) {
+            List<Statement> items = tuple.items;
+            int size = items.size();
+            if (size == 0) {
+                return tuple;
+            }
+            if (size > 1) {
+                errorAfter(items.getFirst().end(), "code statements must be separated using `;`");
+            }
+            if (items.getFirst() instanceof SequenceStatement seq) {
+                tuple = new TupleStatement(tuple.open, seq.items, tuple.close);
+            }
             return tuple;
         } else {
             error(st, "code scope required");
