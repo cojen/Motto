@@ -599,21 +599,12 @@ public final class Parser implements Closeable {
                             }
                             sequence.add(st);
                         } else {
-                            String message;
-
                             if (sequence == null) {
                                 statements.add(st);
-                                message = sepMessage(',');
                             } else {
                                 sequence.add(st);
-                                if (statements.isEmpty()) {
-                                    message = sepMessage(';');
-                                } else {
-                                    message = "expected a `;` or ',' separator";
-                                }
                             }
-
-                            errorAfter(lastToken, message);
+                            errorAfter(lastToken, "expected a `;` or ',' separator");
                         }
                     }
 
@@ -737,7 +728,7 @@ public final class Parser implements Closeable {
                 case T_SEMI -> {
                     items.add(nextItem);
                     nextItem = null;
-                    error(t, sepMessage(','));
+                    error(t, "expected a `,` separator");
                 }
 
                 case T_RBRACK -> {
@@ -1586,13 +1577,6 @@ public final class Parser implements Closeable {
             error(st, "code scope required");
             return null;
         }
-    }
-
-    /**
-     * @param sepChar expected separator character
-     */
-    private static String sepMessage(char sepChar) {
-        return "expected a `" + sepChar + "` separator";
     }
 
     /**
