@@ -964,31 +964,40 @@ public final class Parser implements Closeable {
 
             if (tType == T_LPAREN || tType == T_LBRACE) {
                 TupleStatement tuple = parseTuple(t);
-                List<Coordinate> coordinates = tryParseCoordinates();
 
-                var vtype = CoordinateLoadStatement.from(tuple, coordinates).asVarType(this);
-
-                qname = tryParseQualifiedIdentifier();
-
-                t = nextToken();
+                VarType vtype;
                 Statement source;
 
-                switch (t.type()) {
-                    case T_LPAREN, T_LBRACE -> {
-                        qname = requireName(qname, t, "method definition name");
-                        return parseMethodDefinition(modifiers, vtype, qname, parseTuple(t));
-                    }
-                    case T_ASSIGN -> {
-                        qname = requireName(qname, t, "declaration name");
-                        source = parseStatement("assignment source");
-                    }
-                    default -> {
-                        qname = requireName(qname, t, "declaration name");
-                        source = null;
-                    }
-                }
+                if (tuple.end() instanceof Newline) {
+                    qname = requireName(null, tuple.end(), true, "declaration name");
+                    vtype = tuple.asVarType(this);
+                    source = null;
+                } else {
+                    List<Coordinate> coordinates = tryParseCoordinates();
 
-                pushToken(t);
+                    vtype = CoordinateLoadStatement.from(tuple, coordinates).asVarType(this);
+
+                    qname = tryParseQualifiedIdentifier();
+
+                    t = nextToken();
+
+                    switch (t.type()) {
+                        case T_LPAREN, T_LBRACE -> {
+                            qname = requireName(qname, t, false, "method definition name");
+                            return parseMethodDefinition(modifiers, vtype, qname, parseTuple(t));
+                        }
+                        case T_ASSIGN -> {
+                            qname = requireName(qname, t, false, "declaration name");
+                            source = parseStatement("assignment source");
+                        }
+                        default -> {
+                            qname = requireName(qname, t, false, "declaration name");
+                            source = null;
+                        }
+                    }
+
+                    pushToken(t);
+                }
 
                 Identifier name = simpleName(qname, "declaration name");
 
@@ -1542,6 +1551,7 @@ public final class Parser implements Closeable {
      * Returns the first item from the qualified name. An error is reported if the qualified
      * name has more than one identifier.
      *
+     * @param qualified required
      * @param which type of name to report in the error
      */
     private Identifier simpleName(List<Identifier> qualified, String which) {
@@ -1557,14 +1567,27 @@ public final class Parser implements Closeable {
     /**
      * Returns the given name if not null, or else reports an error and returns a fake name.
      *
+     * @param name optional
+     * @param t error is reported here
+     * @param after when true, report error after the token
      * @param which type of name which is required
      * @return a non-null name list
      */
-    private List<Identifier> requireName(List<Identifier> name, Token t, String which) {
+    private List<Identifier> requireName(List<Identifier> name,
+                                         Token t, boolean after, String which)
+    {
         if (name != null) {
             return name;
         }
-        error(t, which + " expected");
+
+        String message = which + " expected";
+
+        if (after) {
+            errorAfter(t, message);
+        } else {
+            error(t, message);
+        }
+
         return List.of(new Identifier(t.line(), t.column(), 0, "", false));
     }
 
