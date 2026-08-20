@@ -604,7 +604,7 @@ public final class Parser implements Closeable {
                             } else {
                                 sequence.add(st);
                             }
-                            errorAfter(lastToken, "expected a `;` or ',' separator");
+                            errorAfter(lastToken, "expected a `;` or `,` separator");
                         }
                     }
 
@@ -1618,8 +1618,10 @@ public final class Parser implements Closeable {
     }
 
     private void error(CompileError error) {
+        if (isHigherStartPosition(error)) {
+            mEnv.error(error);
+        }
         mLastError = error;
-        mEnv.error(error);
     }
 
     /**
@@ -1657,5 +1659,16 @@ public final class Parser implements Closeable {
             || e.end().line() > last.endLine()         // endLine is inclusive
             || e.start().column() < last.startColumn()
             || e.end().column() > last.endColumn();   // endColumn is inclusive
+    }
+
+    /**
+     * @return true if the given error starts higher than the last error, or if the last error
+     * is null
+     */
+    private boolean isHigherStartPosition(CompileError e) {
+        CompileError last = mLastError;
+        return last == null
+            || e.startLine() > last.startLine()
+            || (e.startLine() == last.startLine() && (e.startColumn() > last.startColumn()));
     }
 }
