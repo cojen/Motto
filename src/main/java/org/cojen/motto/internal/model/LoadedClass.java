@@ -16,6 +16,15 @@
 
 package org.cojen.motto.internal.model;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+
+import java.util.HashSet;
+import java.util.Set;
+
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -47,6 +56,9 @@ public final class LoadedClass extends BaseClassTypeItem {
 
     private final Class<?> mClass;
 
+    // bit 0: init, bit 1: initFields, bit 2: initMethods, bit 3: initConstructors 
+    private int mInitState;
+
     private LoadedClass(Class<?> clazz) {
         int modifierBits = Modifiers.from(clazz);
         BasePath packagePath = BasePath.parse(clazz.getPackageName(), '.');
@@ -55,9 +67,6 @@ public final class LoadedClass extends BaseClassTypeItem {
         super(modifierBits, packagePath, namePath);
 
         mClass = clazz;
-
-        // FIXME: setSuperTypes, fields, methods, constructors, inner classes. Do on demand
-        // using the inherited init methods.
     }
 
     private static BasePath namePath(Class<?> clazz) {
@@ -84,5 +93,185 @@ public final class LoadedClass extends BaseClassTypeItem {
     @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.from(mClass);
+    }
+
+    @Override // BaseClassTypeItem
+    protected void init() throws InterruptedException {
+        final int mask = 0b0001;
+
+        if ((mInitState & mask) != 0) {
+            return;
+        }
+
+        synchronized (this) {
+            if ((mInitState & mask) != 0) {
+                return;
+            }
+
+            BaseClassTypeItem superType;
+
+            {
+                Class<?> superclass = mClass.getSuperclass();
+                if (superclass == null) {
+                    superType = null;
+                } else {
+                    superType = classFrom(superclass);
+                }
+            }
+
+            Set<BaseClassTypeItem> interfaces;
+
+            {
+                Class<?>[] ifaces = mClass.getInterfaces();
+
+                if (ifaces.length == 0) {
+                    interfaces = Set.of();
+                } else {
+                    interfaces = HashSet.newHashSet(ifaces.length);
+                    for (int i=0; i<ifaces.length; i++) {
+                        interfaces.add(classFrom(ifaces[i]));
+                    }
+                }
+            }
+
+            setSuperTypes(superType, interfaces);
+
+            mInitState |= mask;
+        }
+    }
+
+    @Override // BaseClassTypeItem
+    protected void initFields() throws InterruptedException {
+        final int mask = 0b0010;
+
+        if ((mInitState & mask) != 0) {
+            return;
+        }
+
+        synchronized (this) {
+            if ((mInitState & mask) != 0) {
+                return;
+            }
+
+            Field[] fields = mClass.getDeclaredFields();
+
+            for (Field f : fields) {
+                int modifierBits = Modifiers.from(f);
+
+                if (Modifiers.isPrivate(modifierBits)) {
+                    continue;
+                }
+
+                tryAddField(modifierBits, from(f.getType()), f.getName());
+            }
+
+            mInitState |= mask;
+        }
+    }
+
+    @Override // BaseClassTypeItem
+    protected void initMethods() throws InterruptedException {
+        final int mask = 0b0100;
+
+        if ((mInitState & mask) != 0) {
+            return;
+        }
+
+        synchronized (this) {
+            if ((mInitState & mask) != 0) {
+                return;
+            }
+
+            Method[] methods = mClass.getDeclaredMethods();
+
+            for (Method m : methods) {
+                int modifierBits = Modifiers.from(m);
+
+                if (Modifiers.isPrivate(modifierBits)) {
+                    continue;
+                }
+
+                BaseType outputType = from(m.getReturnType());
+                String name = m.getName();
+                BaseTupleType inputType = inputTypeFor(m);
+
+                // FIXME: Must look for a special annotation.
+                boolean evaluated = true;
+
+                var sig = BaseCallSignature.from(outputType, name, inputType, evaluated);
+
+                tryAddMethod(modifierBits, sig);
+            }
+
+            mInitState |= mask;
+        }
+    }
+
+    @Override // BaseClassTypeItem
+    protected void initConstructors() throws InterruptedException {
+        final int mask = 0b1000;
+
+        if ((mInitState & mask) != 0) {
+            return;
+        }
+
+        synchronized (this) {
+            if ((mInitState & mask) != 0) {
+                return;
+            }
+
+            Constructor[] ctors = mClass.getDeclaredConstructors();
+
+            for (Constructor c : ctors) {
+                int modifierBits = Modifiers.from(c);
+
+                if (Modifiers.isPrivate(modifierBits)) {
+                    continue;
+                }
+
+                BaseTupleType inputType = inputTypeFor(c);
+
+                // FIXME: Must look for a special annotation.
+                boolean evaluated = true;
+
+                tryAddConstructor(modifierBits, inputType, evaluated);
+            }
+
+            mInitState |= mask;
+        }
+    }
+
+    private BaseTupleType inputTypeFor(Executable m) {
+        boolean needsThis = !Modifier.isStatic(m.getModifiers());
+
+        Class<?>[] classes = m.getParameterTypes();
+
+        if (classes.length == 0 && !needsThis) {
+            return BaseTupleType.EMPTY;
+        }
+
+        BaseType[] types;
+        int offset;
+
+        if (needsThis) {
+            types = new BaseType[1 + classes.length];
+            types[0] = from(m.getDeclaringClass());
+            offset = 1;
+        } else {
+            types = new BaseType[classes.length];
+            offset = 0;
+        }
+
+        for (int i=0; i<classes.length; i++) {
+            types[offset + i] = from(classes[i]);
+        }
+
+        BaseTupleType inputType = BaseTupleType.from(types);
+
+        if (needsThis) {
+            inputType = inputType.withNames("this");
+        }
+
+        return inputType;
     }
 }
