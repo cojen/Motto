@@ -94,4 +94,8 @@ public class Modifiers {
 
         return modifiers;
     }
+
+    static boolean isPrivate(int modifiers) {
+        return (modifiers & (PUBLIC | INTERNAL | PROTECTED)) == 0;
+    }
 }
