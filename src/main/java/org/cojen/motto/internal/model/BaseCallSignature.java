@@ -333,7 +333,11 @@ public final class BaseCallSignature implements CallSignature {
      * is ignored. Actual repetition should be specified using duplicate segments.
      */
     boolean canBindTo(BaseCallSignature other) {
-        if (!mName.equals(other.mName) || isInputEvaluated() != other.isInputEvaluated() ||
+        // Note: The isInputEvaluated option isn't checked because the input types should
+        // already be represented properly. If evaluated is false, then all inputs should be
+        // function types, except for "this".
+
+        if (!mName.equals(other.mName) ||
             other.mOutputType.canConvertTo(mOutputType) == Integer.MAX_VALUE ||
             mInputType.canConvertTo(other.mInputType) == Integer.MAX_VALUE)
         {

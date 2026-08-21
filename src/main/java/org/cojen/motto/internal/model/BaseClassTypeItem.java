@@ -373,8 +373,9 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     private Map<BaseCallSignature, BaseCallableItem> findMethod
         (String name, BaseTupleType inputType, boolean staticCall, Item via)
     {
-        // The output type and evaluated option are ignored.
-        BaseCallSignature sig = BaseCallSignature.from(BaseVoidType.THE, name, inputType, true);
+        // Note: The evaluated option is ignored. See BaseCallSignature.canBindTo.
+        BaseCallSignature sig = BaseCallSignature.from
+            (BaseUnspecifiedType.THE, name, inputType, true);
 
         Map<BaseCallSignature, BaseCallableItem> map =
             doFindMethod(Map.of(), sig, staticCall, via, null);
@@ -509,6 +510,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     public Map<BaseCallSignature, BaseCallableItem> findConstructor
         (BaseTupleType inputType, Item via)
     {
+        // Note: The evaluated option is ignored. See BaseCallSignature.canBindTo.
         BaseCallSignature sig = BaseCallSignature.from(BaseVoidType.THE, "", inputType, true);
         return findCallable(Map.of(), sig, false, via, null, constructorMap());
     }
