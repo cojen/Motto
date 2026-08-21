@@ -16,10 +16,9 @@
 
 package org.cojen.motto.internal;
 
-import java.io.File;
+import java.io.*;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.cojen.motto.internal.compiler.*;
 
@@ -38,8 +37,44 @@ public class CompileTest {
 
         compiler.compile(List.of(sourceFile));
 
-        Map<File, Map<String, byte[]>> results = compiler.waitForCompletion();
+        Map<File, Map<String, byte[]>> completed = compiler.waitForCompletion();
 
-        System.out.println(results);
+        if (compiler.numErrors() != 0) {
+            compiler.close();
+            return;
+        }
+
+        compiler.close();
+
+        writeTemp(completed.values());
+    }
+
+    static void writeTemp(Collection<Map<String, byte[]>> classes) {
+        for (Map<String, byte[]> map : classes) {
+            writeTemp(map);
+        }
+    }
+
+    static void writeTemp(Map<String, byte[]> classes) {
+        for (Map.Entry<String, byte[]> e : classes.entrySet()) {
+            writeTemp(e.getKey(), e.getValue());
+        }
+    }
+
+    static void writeTemp(String className, byte[] classBytes) {
+        File file = new File("CompileTest/" + className + ".class");
+        try {
+            File tempDir = new File(System.getProperty("java.io.tmpdir"));
+            file = new File(tempDir, file.getPath());
+            file.getParentFile().mkdirs();
+
+            System.out.println("CompileTest writing to " + file);
+
+            try (var out = new FileOutputStream(file)) {
+                out.write(classBytes);
+            }
+        } catch (Exception e) {
+            e.printStackTrace(System.out);
+        }
     }
 }

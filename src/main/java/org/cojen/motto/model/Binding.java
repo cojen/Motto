@@ -28,16 +28,14 @@ public sealed interface Binding permits BaseBinding {
      * Returns a binding whose type is void, and anything copied into it is dropped.
      */
     public static Binding void_() {
-        // FIXME
-        throw null;
+        return BaseBinding.Void.THE;
     }
 
     /**
      * Returns a constant binding whose type is null, and it can be copied into any reference.
      */
     public static Binding null_() {
-        // FIXME
-        throw null;
+        return BaseBinding.Null.THE;
     }
 
     public Type type();

@@ -26,7 +26,7 @@ public final class YieldStatement implements Statement {
     public final Statement source;
 
     /**
-     * @param source can be null when yield void
+     * @param source can be null when yielding void
      */
     YieldStatement(Token keyword, Statement source) {
         this.keyword = keyword;

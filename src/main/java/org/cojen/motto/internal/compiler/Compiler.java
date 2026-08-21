@@ -368,7 +368,15 @@ public final class Compiler implements ErrorListener, Closeable {
      * @param clazz must be ready for code generation and have reported no errors
      */
     private void generateCode(NewClass clazz) {
-        // FIXME: generateCode
+        Map<String, byte[]> classes = clazz.finish();
+
+        CompilationEnv env = clazz.env();
+
+        if (env.numErrors() != 0) {
+            return;
+        }
+
+        mCompleted.put(env.sourceFile(), classes);
     }
 
     private final class CompileTask implements Runnable {

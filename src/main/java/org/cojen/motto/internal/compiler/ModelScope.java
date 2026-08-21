@@ -16,6 +16,7 @@
 
 package org.cojen.motto.internal.compiler;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.cojen.motto.internal.model.BaseBinding;
@@ -23,11 +24,16 @@ import org.cojen.motto.internal.model.BaseBlock;
 import org.cojen.motto.internal.model.BaseCallableItem;
 import org.cojen.motto.internal.model.BaseFieldItem;
 import org.cojen.motto.internal.model.BaseItem;
+import org.cojen.motto.internal.model.BaseType;
+import org.cojen.motto.internal.model.BaseVoidType;
 import org.cojen.motto.internal.model.NewClass;
 
-import org.cojen.motto.internal.parser.Element;
+import org.cojen.motto.internal.parser.ConstructorDefinitionStatement;
 import org.cojen.motto.internal.parser.DeclarationStatement;
+import org.cojen.motto.internal.parser.Element;
 import org.cojen.motto.internal.parser.LabeledStatement;
+import org.cojen.motto.internal.parser.MethodDefinitionStatement;
+import org.cojen.motto.internal.parser.Statement;
 import org.cojen.motto.internal.parser.Token;
 
 /**
@@ -46,6 +52,9 @@ final class ModelScope {
     private Map<String, BaseBinding.Local> mLocals;
 
     private Map<String, LabelTarget> mLabels;
+
+    private BaseBlock mReturnBlock;
+    private BaseBinding mReturnVar;
 
     private static final class LabelTarget {
         LabeledStatement statement;
@@ -72,17 +81,27 @@ final class ModelScope {
         mItem = item;
         mFirstBlock = mActiveBlock = new BaseBlock();
         mLocals = Map.of();
-        mLocals = Map.of();
+        mLabels = Map.of();
+    }
+
+    ModelScope parent() {
+        return mParent;
+    }
+
+    BaseItem item() {
+        return mItem;
+    }
+
+    private CompilationEnv env() {
+        return mModGen.env();
     }
 
     /**
      * @return the name of the field or variable, or else null if an error was reported
      */
     String addDeclaration(DeclarationStatement ds) {
-        CompilationEnv env = mModGen.env();
-
         if (mItem instanceof NewClass clazz) {
-            BaseFieldItem field = ds.addToClass(env, clazz);
+            BaseFieldItem field = ds.addToClass(env(), clazz);
             // If null, an error should have been reported already.
             return field == null ? null : field.name();
         }
@@ -117,6 +136,157 @@ final class ModelScope {
         return field;
         */
         throw null;
+    }
+
+    BaseCallableItem addConstructor(ConstructorDefinitionStatement st) {
+        if (mItem instanceof NewClass clazz) {
+            return st.addToClass(env(), clazz);
+        }
+
+        env().error(st, "local constructor not supported");
+        return null;
+    }
+
+    BaseCallableItem addMethod(MethodDefinitionStatement st) {
+        if (mItem instanceof NewClass clazz) {
+            return st.addToClass(env(), clazz);
+        }
+
+        // FIXME: local method requires a special checks and transforms
+        env().error(st, "local method not supported");
+        return null;
+    }
+
+    private void dupError(CompilationEnv env, Token.Identifier name, String prefix) {
+        env.error(name, prefix + " is declared in a parent scope");
+    }
+
+    /**
+     * @return false if label is a duplicate
+     */
+    boolean addLabel(LabeledStatement st) {
+        Map<String, LabelTarget> labels = mLabels;
+        if (labels == null) {
+            mLabels = labels = new LinkedHashMap<>();
+        }
+        var block = new BaseBlock();
+        block.sourcePosition(st.start().position());
+        return labels.putIfAbsent(st.label.text, new LabelTarget(st, block)) == null;
+    }
+
+    /**
+     * @return false if the label wasn't found
+     */
+    boolean labelVisited(LabeledStatement st) {
+        Map<String, LabelTarget> labels = mLabels;
+        LabelTarget target;
+
+        if (labels == null || (target = labels.get(st.label.text)) == null) {
+            return false;
+        }
+
+        BaseBlock block = target.block;
+
+        if (!mActiveBlock.isTerminated()) {
+            target.reached();
+            activeBlock(st).jump(block);
+        }
+
+        mActiveBlock = block;
+
+        return true;
+    }
+
+    /**
+     * Note: Calling this method has the side effect of indicating that the label (if found)
+     * has been reached.
+     *
+     * @return null if the label isn't found
+     */
+    BaseBlock findBlockForJump(String label) {
+        ModelScope scope = this;
+
+        while (true) {
+            Map<String, LabelTarget> labels = scope.mLabels;
+            if (labels != null) {
+                LabelTarget target = labels.get(label);
+                if (target != null) {
+                    target.reached();
+                    return target.block;
+                }
+            }
+            if ((scope = scope.mParent) == null) {
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Returns a block to jump to when returning from a callable.
+     *
+     * @param st for error reporting
+     */
+    BaseBlock returnBlock(Statement st) {
+        BaseBlock retBlock = mReturnBlock;
+        if (retBlock == null) {
+            initReturn(st);
+            retBlock = mReturnBlock;
+        }
+        return retBlock;
+    }
+
+    /**
+     * Returns a variable to use with the return block.
+     *
+     * @param st for error reporting
+     */
+    BaseBinding returnVar(Statement st) {
+        BaseBinding retVar = mReturnVar;
+        if (retVar == null) {
+            initReturn(st);
+            retVar = mReturnVar;
+        }
+        return retVar;
+    }
+
+    private void initReturn(Statement st) {
+        ModelScope scope = this;
+        BaseCallableItem callable;
+
+        while (true) {
+            if (scope.mItem instanceof BaseCallableItem c) {
+                callable = c;
+                break;
+            }
+
+            ModelScope parent = scope.mParent;
+
+            if (parent == null) {
+                env().error(st, "not in a returnable scope");
+                mReturnBlock = new BaseBlock();
+                mReturnVar = BaseBinding.Void.THE;
+                return;
+            }
+
+            scope = parent;
+        }
+
+        BaseBlock retBlock = scope.mReturnBlock;
+        BaseBinding retVar = scope.mReturnVar;
+
+        if (retBlock == null) {
+            scope.mReturnBlock = retBlock = new BaseBlock();
+
+            BaseType outputType = callable.signature().outputType();
+            scope.mReturnVar = retVar = retBlock.var(outputType);
+
+            if (outputType != BaseVoidType.THE) {
+                retBlock.yield(retVar);
+            }
+        }
+
+        mReturnBlock = retBlock;
+        mReturnVar = retVar;
     }
 
     /**
@@ -163,7 +333,7 @@ final class ModelScope {
      *
      * @param element provides the source code position
      */
-    private BaseBlock activeBlock(Element element) {
+    BaseBlock activeBlock(Element element) {
         return activeBlock(element.start());
     }
 
@@ -172,7 +342,7 @@ final class ModelScope {
      *
      * @param start provides the source code position
      */
-    private BaseBlock activeBlock(Token start) {
+    BaseBlock activeBlock(Token start) {
         return activeBlock(start.position());
     }
 
@@ -182,10 +352,14 @@ final class ModelScope {
      * @param position source code position to be associated with newly appended actions
      * @throws NullPointerException if actions cannot be added to the current scope
      */
-    private BaseBlock activeBlock(int position) {
+    BaseBlock activeBlock(int position) {
         BaseBlock block = mActiveBlock;
         block.sourcePosition(position);
         return block;
+    }
+
+    BaseBinding activeBlockResult() {
+        return mActiveBlock.result();
     }
 
     /**

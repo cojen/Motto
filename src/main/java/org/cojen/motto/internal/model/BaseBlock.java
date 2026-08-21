@@ -244,7 +244,7 @@ public final class BaseBlock implements Block {
     }
 
     public void copy(BaseBinding target, BaseBinding source) {
-        if (target != source) {
+        if (target != source && target != BaseBinding.Void.THE) {
             addAction(new BaseCopyAction(mPosition, target, source));
         }
     }
