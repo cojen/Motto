@@ -355,8 +355,7 @@ public final class Compiler implements ErrorListener, Closeable {
             return;
         }
 
-        // FIXME: generate the model
-        //cds.accept(new ModelGenerator(env), null);
+        cds.accept(new ModelGenerator(env), null);
 
         if (env.numErrors() != 0) {
             return;

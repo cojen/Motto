@@ -16,17 +16,14 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.BaseBranchAction;
+import org.cojen.motto.internal.model.BaseTerminalAction;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface BranchAction extends TerminalAction permits BaseBranchAction {
-    public Binding condition();
-
-    public Block whenTrue();
-
-    public Block whenFalse();
+public sealed interface TerminalAction extends Action
+    permits BranchAction, JumpAction, ThrowAction, BaseTerminalAction
+{
 }

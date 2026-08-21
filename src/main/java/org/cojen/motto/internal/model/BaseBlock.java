@@ -29,6 +29,7 @@ import org.cojen.motto.model.Binding;
 import org.cojen.motto.model.Block;
 import org.cojen.motto.model.CallableItem;
 import org.cojen.motto.model.SegmentArgument;
+import org.cojen.motto.model.TerminalAction;
 import org.cojen.motto.model.TerminatedBlockException;
 import org.cojen.motto.model.Type;
 import org.cojen.motto.model.TupleType;
@@ -667,6 +668,20 @@ public final class BaseBlock implements Block {
      */
     public void sourcePosition(int line, int column) {
         sourcePosition(BaseAction.encodePosition(line, column));
+    }
+
+    /**
+     * Adds all the actions from the given block to this one. The other block should be
+     * discarded.
+     *
+     * @throws TerminatedBlockException if this block is terminated
+     */
+    public void addAll(BaseBlock other) {
+        BaseAction first = other.mFirstAction;
+        if (first != null) {
+            addAction(first);
+            mLastAction = other.mLastAction;
+        }
     }
 
     void addAction(BaseAction action) {

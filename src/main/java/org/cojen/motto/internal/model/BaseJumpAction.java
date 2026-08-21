@@ -26,7 +26,7 @@ import org.cojen.motto.model.JumpAction;
  *
  * @author Brian S. O'Neill
  */
-public final class BaseJumpAction extends TerminalAction implements JumpAction {
+public final class BaseJumpAction extends BaseTerminalAction implements JumpAction {
     private BaseBlock mDestination;
 
     BaseJumpAction(int position, BaseBlock destination) {

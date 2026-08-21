@@ -23,6 +23,6 @@ import org.cojen.motto.internal.model.BaseThrowAction;
  *
  * @author Brian S. O'Neill
  */
-public sealed interface ThrowAction extends Action permits BaseThrowAction {
+public sealed interface ThrowAction extends TerminalAction permits BaseThrowAction {
     public Binding exception();
 }

@@ -23,6 +23,6 @@ import org.cojen.motto.internal.model.BaseJumpAction;
  *
  * @author Brian S. O'Neill
  */
-public sealed interface JumpAction extends Action permits BaseJumpAction {
+public sealed interface JumpAction extends TerminalAction permits BaseJumpAction {
     public Block destination();
 }

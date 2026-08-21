@@ -26,7 +26,7 @@ import org.cojen.motto.model.BranchAction;
  *
  * @author Brian S. O'Neill
  */
-public final class BaseBranchAction extends TerminalAction implements BranchAction {
+public final class BaseBranchAction extends BaseTerminalAction implements BranchAction {
     private final BaseBinding mCondition;
     private BaseBlock mWhenTrue;
     private BaseBlock mWhenFalse;

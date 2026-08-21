@@ -25,7 +25,7 @@ import org.cojen.motto.model.ThrowAction;
  *
  * @author Brian S. O'Neill
  */
-public final class BaseThrowAction extends TerminalAction implements ThrowAction {
+public final class BaseThrowAction extends BaseTerminalAction implements ThrowAction {
     private final BaseBinding mException;
 
     BaseThrowAction(int position, BaseBinding exception) {

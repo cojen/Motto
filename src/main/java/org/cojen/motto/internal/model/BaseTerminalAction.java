@@ -16,15 +16,17 @@
 
 package org.cojen.motto.internal.model;
 
+import org.cojen.motto.model.TerminalAction;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-abstract sealed class TerminalAction extends BaseAction
+public abstract sealed class BaseTerminalAction extends BaseAction implements TerminalAction
     permits BaseBranchAction, BaseJumpAction, BaseThrowAction
 {
-    TerminalAction(int position) {
+    BaseTerminalAction(int position) {
         super(position);
     }
 }
