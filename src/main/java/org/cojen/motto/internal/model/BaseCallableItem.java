@@ -59,7 +59,12 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
     }
 
     @Override
-    public BaseClassTypeItem enclosingClass() {
+    public BaseClassTypeItem nearestType() {
+        return mEnclosingClass;
+    }
+
+    @Override
+    public BaseClassTypeItem nearestClass() {
         return mEnclosingClass;
     }
 

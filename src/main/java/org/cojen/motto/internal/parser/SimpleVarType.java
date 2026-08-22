@@ -78,7 +78,7 @@ public sealed interface SimpleVarType extends VarType permits LoadStatement {
         Token.Identifier first = name.getFirst();
         String firstText = first.text;
 
-        BaseClassTypeItem clazz = scope.enclosingClass();
+        BaseClassTypeItem clazz = scope.nearestClass();
 
         while (clazz != null) {
             if (clazz.namePath().getLast().equals(firstText)) { 

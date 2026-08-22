@@ -245,7 +245,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             throw null;
         }
 
-        BaseClassTypeItem objType = callable.enclosingClass();
+        BaseClassTypeItem objType = callable.nearestClass();
 
         if (objType.packagePath().equals(BasePath.MOTTO_RUNTIME)) {
             BasePath namePath = objType.namePath();
@@ -324,7 +324,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             params[i] = forLoad(action.input(i));
         }
 
-        var classVar = mMethodMaker.var(action.callable().enclosingClass().asMakerType());
+        var classVar = mMethodMaker.var(action.callable().nearestClass().asMakerType());
 
         forStore(action.output()).set(mMethodMaker.new_(classVar, params));
 
@@ -658,7 +658,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
         if (fieldItem.isPseudo() && "class".equals(fieldName)) {
             // Class literal.
-            BaseObjectType enclosingType = fieldItem.enclosingClass();
+            BaseObjectType enclosingType = fieldItem.nearestClass();
             return mMethodMaker.var(Class.class).set(enclosingType.asMakerType());
         }
 
@@ -666,7 +666,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
         if (instanceBinding == null) {
             // Static field.
-            BaseObjectType enclosingType = fieldItem.enclosingClass();
+            BaseObjectType enclosingType = fieldItem.nearestClass();
             return mMethodMaker.var(enclosingType.asMakerType()).field(fieldName);
         }
 

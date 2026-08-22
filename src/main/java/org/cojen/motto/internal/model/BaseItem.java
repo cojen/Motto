@@ -55,7 +55,10 @@ public abstract sealed class BaseItem implements Item
     public abstract BaseType enclosingType();
 
     @Override
-    public abstract BaseClassTypeItem enclosingClass();
+    public abstract BaseType nearestType();
+
+    @Override
+    public abstract BaseClassTypeItem nearestClass();
 
     @Override
     public final boolean isStatic() {
@@ -98,8 +101,8 @@ public abstract sealed class BaseItem implements Item
             return false;
         }
 
-        BaseType thisType = enclosingType();
-        Type viaType = via.enclosingType();
+        BaseType thisType = nearestType();
+        Type viaType = via.nearestType();
 
         if (thisType.equals(viaType)) {
             return true;

@@ -41,7 +41,12 @@ public sealed class TupleFieldItem implements FieldItem {
     }
 
     @Override
-    public final BaseClassTypeItem enclosingClass() {
+    public final BaseTupleType nearestType() {
+        return mTuple;
+    }
+
+    @Override
+    public final BaseClassTypeItem nearestClass() {
         return null;
     }
 

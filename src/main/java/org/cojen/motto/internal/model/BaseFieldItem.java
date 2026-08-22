@@ -48,7 +48,12 @@ public final class BaseFieldItem extends BaseItem implements FieldItem {
     }
 
     @Override
-    public BaseClassTypeItem enclosingClass() {
+    public BaseClassTypeItem nearestType() {
+        return mEnclosingClass;
+    }
+
+    @Override
+    public BaseClassTypeItem nearestClass() {
         return mEnclosingClass;
     }
 
