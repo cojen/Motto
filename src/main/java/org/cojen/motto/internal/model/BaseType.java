@@ -27,9 +27,13 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 
+import java.util.function.Predicate;
+
 import java.util.stream.Stream;
 
+import org.cojen.motto.model.CallableItem;
 import org.cojen.motto.model.CallSignature;
+import org.cojen.motto.model.ClassTypeItem;
 import org.cojen.motto.model.FieldItem;
 import org.cojen.motto.model.Item;
 import org.cojen.motto.model.TupleType;
@@ -88,6 +92,11 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
+    public default Set<BaseFieldItem> findField(String name, Predicate<FieldItem> via) {
+        return Set.of();
+    }
+
+    @Override
     public default int numMethods() {
         return 0;
     }
@@ -108,27 +117,14 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
-    public default Map<BaseCallSignature, BaseCallableItem> findMethod
-        (String name, TupleType inputType, Item via)
+    public default Map<BaseCallSignature, Set<CallableItem>> findMethod
+        (String name, TupleType inputType, Predicate<CallableItem> filter)
     {
-        return findMethod(name, (BaseTupleType) inputType, via);
+        return findMethod(name, (BaseTupleType) inputType, filter);
     }
 
-    public default Map<BaseCallSignature, BaseCallableItem> findMethod
-        (String name, BaseTupleType inputType, Item via)
-    {
-        return Map.of();
-    }
-
-    @Override
-    public default Map<BaseCallSignature, BaseCallableItem> findStaticMethod
-        (String name, TupleType inputType, Item via)
-    {
-        return findStaticMethod(name, (BaseTupleType) inputType, via);
-    }
-
-    public default Map<BaseCallSignature, BaseCallableItem> findStaticMethod
-        (String name, BaseTupleType inputType, Item via)
+    public default Map<BaseCallSignature, Set<CallableItem>> findMethod
+        (String name, BaseTupleType inputType, Predicate<CallableItem> filter)
     {
         return Map.of();
     }
@@ -150,13 +146,13 @@ public sealed interface BaseType extends Type, EncodableType
 
     @Override
     public default Map<BaseCallSignature, BaseCallableItem> findConstructor
-        (TupleType inputType, Item via)
+        (TupleType inputType, Predicate<CallableItem> filter)
     {
-        return findConstructor((BaseTupleType) inputType, via);
+        return findConstructor((BaseTupleType) inputType, filter);
     }
 
     public default Map<BaseCallSignature, BaseCallableItem> findConstructor
-        (BaseTupleType inputType, Item via)
+        (BaseTupleType inputType, Predicate<CallableItem> filter)
     {
         return Map.of();
     }
@@ -172,8 +168,10 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
-    public default Set<BaseClassTypeItem> findInnerClass(String name, Item via) {
-        return null;
+    public default Set<BaseClassTypeItem> findInnerClass(String name,
+                                                         Predicate<ClassTypeItem> filter)
+    {
+        return Set.of();
     }
 
     @Override

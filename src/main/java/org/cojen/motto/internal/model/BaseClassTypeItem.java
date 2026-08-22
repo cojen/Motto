@@ -28,6 +28,8 @@ import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import java.util.function.Predicate;
+
 import java.util.stream.Stream;
 
 import org.cojen.maker.ClassMaker;
@@ -36,8 +38,10 @@ import org.cojen.maker.MethodMaker;
 
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
+import org.cojen.motto.model.CallableItem;
 import org.cojen.motto.model.CallSignature;
 import org.cojen.motto.model.ClassTypeItem;
+import org.cojen.motto.model.FieldItem;
 import org.cojen.motto.model.Item;
 import org.cojen.motto.model.ObjectType;
 import org.cojen.motto.model.PrimitiveType;
@@ -287,6 +291,32 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         }
     }
 
+    @Override
+    public Set<BaseFieldItem> findField(String name, Predicate<FieldItem> filter) {
+        return doFindField(Set.of(), name, filter);
+    }
+
+    private Set<BaseFieldItem> doFindField(Set<BaseFieldItem> set, String name,
+                                           Predicate<FieldItem> filter)
+    {
+        BaseFieldItem field = fieldMap().get(name);
+        if (field != null && (filter == null || filter.test(field))) {
+            set = addItemToSet(set, field);
+        }
+
+        BaseClassTypeItem superType = superType();
+
+        if (superType != null) {
+            set = superType.doFindField(set, name, filter);
+        }
+
+        for (BaseClassTypeItem iface : interfaces()) {
+            set = iface.doFindField(set, name, filter);
+        }
+
+        return set;
+    }
+
     /**
      * Returns the modifiers for the given field name, or else returns -1 if not found.
      */
@@ -362,28 +392,14 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public final Map<BaseCallSignature, BaseCallableItem> findMethod
-        (String name, BaseTupleType inputType, Item via)
-    {
-        return findMethod(name, inputType, false, via);
-    }
-
-    @Override
-    public final Map<BaseCallSignature, BaseCallableItem> findStaticMethod
-        (String name, BaseTupleType inputType, Item via)
-    {
-        return findMethod(name, inputType, true, via);
-    }
-
-    private Map<BaseCallSignature, BaseCallableItem> findMethod
-        (String name, BaseTupleType inputType, boolean staticCall, Item via)
+    public final Map<BaseCallSignature, Set<CallableItem>> findMethod
+        (String name, BaseTupleType inputType, Predicate<CallableItem> filter)
     {
         // Note: The evaluated option is ignored. See BaseCallSignature.canBindTo.
         BaseCallSignature sig = BaseCallSignature.from
             (BaseUnspecifiedType.THE, name, inputType, true);
 
-        Map<BaseCallSignature, BaseCallableItem> map =
-            doFindMethod(Map.of(), sig, staticCall, via, null);
+        Map<BaseCallSignature, Set<CallableItem>> map = doFindMethod(Map.of(), sig, filter, null);
 
         return reduceCallables(map, sig);
     }
@@ -391,11 +407,11 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     /**
      * @param base should be null for the first call (it becomes "this" for recursive calls)
      */
-    private Map<BaseCallSignature, BaseCallableItem> doFindMethod
-        (Map<BaseCallSignature, BaseCallableItem> map,
-         BaseCallSignature sig, boolean staticCall, Item via, BaseClassTypeItem base)
+    private Map<BaseCallSignature, Set<CallableItem>> doFindMethod
+        (Map<BaseCallSignature, Set<CallableItem>> map,
+         BaseCallSignature sig, Predicate<CallableItem> filter, BaseClassTypeItem base)
     {
-        map = findCallable(map, sig, staticCall, via, base, methodMap().get(sig.name()));
+        map = findCallable(map, sig, filter, base, methodMap().get(sig.name()));
 
         if (base == null) {
             base = this;
@@ -404,11 +420,11 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         BaseClassTypeItem superType = superType();
 
         if (superType != null) {
-            map = superType.doFindMethod(map, sig, staticCall, via, base);
+            map = superType.doFindMethod(map, sig, filter, base);
         }
 
         for (BaseClassTypeItem iface : interfaces()) {
-            map = iface.doFindMethod(map, sig, staticCall, via, base);
+            map = iface.doFindMethod(map, sig, filter, base);
         }
 
         return map;
@@ -513,11 +529,31 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public Map<BaseCallSignature, BaseCallableItem> findConstructor
-        (BaseTupleType inputType, Item via)
+        (BaseTupleType inputType, Predicate<CallableItem> filter)
     {
         // Note: The evaluated option is ignored. See BaseCallSignature.canBindTo.
         BaseCallSignature sig = BaseCallSignature.from(BaseVoidType.THE, "", inputType, true);
-        return findCallable(Map.of(), sig, false, via, null, constructorMap());
+
+        Map<BaseCallSignature, Set<CallableItem>> mapOfSets =
+            findCallable(Map.of(), sig, filter, null, constructorMap());
+
+        int size = mapOfSets.size();
+
+        if (size == 0) {
+            return Map.of();
+        }
+
+        Map<BaseCallSignature, BaseCallableItem> map = LinkedHashMap.newLinkedHashMap(size);
+
+        for (Map.Entry<BaseCallSignature, Set<CallableItem>> e : mapOfSets.entrySet()) {
+            Set<CallableItem> set = e.getValue();
+            if (set.size() != 1) {
+                throw new AssertionError();
+            }
+            map.put(e.getKey(), (BaseCallableItem) set.iterator().next());
+        }
+
+        return map;
     }
 
     /**
@@ -563,41 +599,29 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public Set<BaseClassTypeItem> findInnerClass(String name, Item via) {
-        return doFindInnerClass(Set.of(), name, via);
+    public Set<BaseClassTypeItem> findInnerClass(String name, Predicate<ClassTypeItem> filter) {
+        return doFindInnerClass(Set.of(), name, filter);
     }
 
     private Set<BaseClassTypeItem> doFindInnerClass
-        (Set<BaseClassTypeItem> set, String name, Item via)
+        (Set<BaseClassTypeItem> set, String name, Predicate<ClassTypeItem> filter)
     {
         BaseClassTypeItem inner = mInnerClassesMap.get(name);
 
-        if (inner != null && inner.isAccessibleVia(via)) {
-            return addToSet(set, inner);
+        if (inner != null && (filter == null || filter.test(inner))) {
+            return addItemToSet(set, inner);
         }
 
         BaseClassTypeItem superType = superType();
 
         if (superType != null) {
-            set = superType.doFindInnerClass(set, name, via);
+            set = superType.doFindInnerClass(set, name, filter);
         }
 
         for (BaseClassTypeItem iface : interfaces()) {
-            set = iface.doFindInnerClass(set, name, via);
+            set = iface.doFindInnerClass(set, name, filter);
         }
 
-        return set;
-    }
-
-    private static <E> Set<E> addToSet(Set<E> set, E element) {
-        if (set.isEmpty()) {
-            set = Set.of(element);
-        } else {
-            if (set.size() == 1) {
-                set = new LinkedHashSet<>(set);
-            }
-            set.add(element);
-        }
         return set;
     }
 
@@ -827,9 +851,9 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      * will remain the same while the super type(s) are examined)
      * @return the actual map
      */
-    private static Map<BaseCallSignature, BaseCallableItem> findCallable
-        (Map<BaseCallSignature, BaseCallableItem> map,
-         BaseCallSignature sig, boolean staticCall, Item via,
+    private static Map<BaseCallSignature, Set<CallableItem>> findCallable
+        (Map<BaseCallSignature, Set<CallableItem>> map,
+         BaseCallSignature sig, Predicate<CallableItem> filter,
          BaseClassTypeItem base, Map<BaseCallSignature, BaseCallableItem> available)
     {
         if (available == null) {
@@ -839,17 +863,15 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         for (Map.Entry<BaseCallSignature, BaseCallableItem> e : available.entrySet()) {
             BaseCallableItem item = e.getValue();
 
-            if (item.isStatic() != staticCall) {
+            if (filter != null && !filter.test(item)) {
                 continue;
             }
 
-            if (!item.isAccessibleVia(via)) {
-                continue;
-            }
+            // Note that the key signature shouldn't have field names, and so it's preferred
+            // over item.signature(). The types should be the same.
+            BaseCallSignature key = e.getKey();
 
-            BaseCallSignature availableSig = e.getValue().signature();
-
-            if (!sig.canBindTo(availableSig)) {
+            if (!sig.canBindTo(key)) {
                 continue;
             }
 
@@ -874,38 +896,35 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
                         continue;
                     }
                 }
-
-                if (!staticCall) {
-                    // All instance methods must have an initial "this" parameter. Force it to
-                    // look like the instance type, to match the others.
-                    availableSig = availableSig.withFirstInputType(base);
-                }
             }
 
             if (map.isEmpty()) {
-                map = Map.of(e.getKey(), item);
+                map = Map.of(key, Set.of(item));
             } else {
                 if (map.size() == 1) {
                     map = new LinkedHashMap<>(map);
                 }
-                map.putIfAbsent(availableSig, item);
+                map.put(key, addItemToSet(map.get(key), item));
             }
         }
 
         return map;
     }
 
-    private static Map<BaseCallSignature, BaseCallableItem> reduceCallables
-        (Map<BaseCallSignature, BaseCallableItem> map, BaseCallSignature sig)
+    private static Map<BaseCallSignature, Set<CallableItem>> reduceCallables
+        (Map<BaseCallSignature, Set<CallableItem>> map, BaseCallSignature sig)
     {
         if (map.size() > 1) {
-            Iterator<Map.Entry<BaseCallSignature, BaseCallableItem>> it = map.entrySet().iterator();
-            Map.Entry<BaseCallSignature, BaseCallableItem> best = it.next();
-            var bestMap = new LinkedHashMap<BaseCallSignature, BaseCallableItem>(1);
+            Iterator<Map.Entry<BaseCallSignature, Set<CallableItem>>> it =
+                map.entrySet().iterator();
+
+            Map.Entry<BaseCallSignature, Set<CallableItem>> best = it.next();
+
+            var bestMap = new LinkedHashMap<BaseCallSignature, Set<CallableItem>>(1);
             bestMap.put(best.getKey(), best.getValue());
 
             while (it.hasNext()) {
-                Map.Entry<BaseCallSignature, BaseCallableItem> candidate = it.next();
+                Map.Entry<BaseCallSignature, Set<CallableItem>> candidate = it.next();
                 int cmp = sig.bindCompare(best.getKey(), candidate.getKey());
                 if (cmp >= 0) {
                     if (cmp > 0) {
@@ -922,20 +941,84 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         }
 
         if (map.size() > 1) {
-            // If any non-bridge methods, remove the bridge methods.
+            // If any non-bridge methods, remove the bridge methods. Non-bridge methods are a
+            // closer match, and so they're preferred.
+
             int nonBridges = 0, bridges = 0;
-            for (BaseCallableItem callable : map.values()) {
-                if (callable.isBridge()) {
-                    bridges++;
-                } else {
-                    nonBridges++;
+
+            for (Set<CallableItem> set : map.values()) {
+                for (CallableItem callable : set) {
+                    if (((BaseCallableItem) callable).isBridge()) {
+                        bridges++;
+                    } else {
+                        nonBridges++;
+                    }
                 }
             }
+
             if (nonBridges > 0 && bridges > 0) {
-                map.values().removeIf(BaseItem::isBridge);
+                Iterator<Map.Entry<BaseCallSignature, Set<CallableItem>>> it =
+                    map.entrySet().iterator();
+
+                while (it.hasNext()) {
+                    Map.Entry<BaseCallSignature, Set<CallableItem>> e = it.next();
+
+                    Set<CallableItem> set = e.getValue();
+
+                    if (set.size() == 1) {
+                        if (((BaseCallableItem) set.iterator().next()).isBridge()) {
+                            it.remove();
+                        }
+                    } else {
+                        boolean anyRemoved = false;
+
+                        {
+                            Iterator<CallableItem> setIt = set.iterator();
+                            while (setIt.hasNext()) {
+                                if (((BaseCallableItem) setIt.next()).isBridge()) {
+                                    setIt.remove();
+                                    anyRemoved = true;
+                                }
+                            }
+                        }
+
+                        if (anyRemoved) {
+                            int size = set.size();
+                            if (size <= 0) {
+                                it.remove();
+                            } else if (size == 1) {
+                                // Replace with a singleton set.
+                                e.setValue(Set.of(set.iterator().next()));
+                            }
+                        }
+                    }
+                }
             }
         }
 
         return map;
+    }
+
+    /**
+     * If the set is empty, always adds the item and returns a new set. If an item is already
+     * in the set, and it's defined in a class (not an interface), no new items are added.
+     * Multiple items can exist in the set only if they're all defined in interfaces. The
+     * caller must ensure that all class items are added first.
+     */
+    private static <I extends Item> Set<I> addItemToSet(Set<I> set, I item) {
+        if (set == null || set.isEmpty()) {
+            return Set.of(item);
+        }
+
+        if (set.size() == 1) {
+            if (!set.iterator().next().enclosingType().isInterface()) {
+                return set;
+            }
+            set = new LinkedHashSet<>(set);
+        }
+
+        set.add(item);
+
+        return set;
     }
 }

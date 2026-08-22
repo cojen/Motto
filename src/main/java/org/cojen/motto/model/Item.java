@@ -53,7 +53,7 @@ public sealed interface Item permits BaseItem, ClassTypeItem, FieldItem, Callabl
     /**
      * Returns true if this item is accessible via the other item.
      *
-     * @param via can pass null to check if the item is publicly available
+     * @param via can pass null to check if this item is publicly available
      */
     public boolean isAccessibleVia(Item via);
 }

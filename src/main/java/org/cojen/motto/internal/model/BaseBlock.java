@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import java.util.function.Consumer;
 
@@ -584,15 +585,10 @@ public final class BaseBlock implements Block {
         var mathType = BaseType.from(Math.class);
         var inputType = BaseTupleType.from(in1.type(), in1.type());
 
-        Map<BaseCallSignature, BaseCallableItem> methods =
-            mathType.findStaticMethod(op, inputType, null);
+        Map<BaseCallSignature, Set<CallableItem>> methods =
+            mathType.findMethod(op, inputType, m -> m.isStatic() && m.isAccessibleVia(null));
 
-        if (methods.size() != 1) {
-            // FIXME: use a better exception
-            throw new IllegalStateException("unsupported types for operation");
-        }
-
-        BaseCallableItem callable = methods.values().iterator().next();
+        CallableItem callable = oneCallable(methods);
 
         // FIXME: constant folding
 
@@ -607,19 +603,30 @@ public final class BaseBlock implements Block {
         var mathType = BaseType.from(Math.class);
         var inputType = BaseTupleType.from(in.type());
 
-        Map<BaseCallSignature, BaseCallableItem> methods =
-            mathType.findStaticMethod(op, inputType, null);
+        Map<BaseCallSignature, Set<CallableItem>> methods =
+            mathType.findMethod(op, inputType, m -> m.isStatic() && m.isAccessibleVia(null));
 
+        CallableItem callable = oneCallable(methods);
+
+        // FIXME: constant folding
+
+        return callDirect(target, callable, in);
+    }
+
+    private static CallableItem oneCallable(Map<BaseCallSignature, Set<CallableItem>> methods) {
         if (methods.size() != 1) {
             // FIXME: use a better exception
             throw new IllegalStateException("unsupported type for operation");
         }
 
-        BaseCallableItem callable = methods.values().iterator().next();
+        Set<CallableItem> set = methods.values().iterator().next();
 
-        // FIXME: constant folding
+        if (set.size() != 1) {
+            // FIXME: not expected; use a better exception
+            throw new IllegalStateException("unsupported type for operation");
+        }
 
-        return callDirect(target, callable, in);
+        return set.iterator().next();
     }
 
     private BaseBinding toBinding(Object object) {

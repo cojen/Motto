@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import java.util.function.Predicate;
+
 import java.util.stream.Stream;
 
 import org.cojen.motto.internal.model.BaseBooleanType;
@@ -215,7 +217,25 @@ public sealed interface Type extends Constable
      */
     public int fieldIndex(String name);
 
-    // FIXME: Need a findField which checks inherited fields.
+    /**
+     * Tries to find an accessible field by name, which might be inherited. If more than one
+     * is returned, then the field reference is ambiguous.
+     *
+     * @param via can pass null to only find a publicly available field
+     * @return a set of accessible fields which were found
+     */
+    public default Set<? extends FieldItem> findField(String name, Item via) {
+        return findField(name, f -> f.isAccessibleVia(via));
+    }
+
+    /**
+     * Tries to find a field by name, which might be inherited. If more than one is returned,
+     * then the field reference is ambiguous.
+     *
+     * @param filter optional filter which returns true for allowed items
+     * @return a set of fields which were found
+     */
+    public Set<? extends FieldItem> findField(String name, Predicate<FieldItem> filter);
 
     /**
      * Returns the number of methods defined explicitly in this type.
@@ -240,29 +260,35 @@ public sealed interface Type extends Constable
     public CallableItem method(CallSignature sig);
 
     /**
-     * Tries to find an accessible instance method to bind to, which might be inherited. If
-     * more than one is returned, then the binding is ambiguous. The output and inputs of a
-     * found method might need to be converted.
+     * Tries to find an accessible method to bind to, which might be inherited. If more than
+     * one is returned, then the binding is ambiguous. The output and inputs of a found method
+     * might need to be converted.
      *
-     * <p>The first parameter is assumed to be this type, named "this". If not, then it's
-     * automatically prepended.
+     * <p>For instance methods, the first parameter is assumed to be this type, named "this",
+     * which is automatically prepended if necessary.
      *
-     * @param via can pass null to only return publicly available methods
-     * @return an empty map if no applicable methods could be found
+     * @param via can pass null to only find a publicly available method
+     * @return a map of accessible methods which were found
      */
-    public Map<? extends CallSignature, ? extends CallableItem> findMethod
-        (String name, TupleType inputType, Item via);
+    public default Map<? extends CallSignature, Set<CallableItem>> findMethod
+        (String name, TupleType inputType, Item via)
+    {
+        return findMethod(name, inputType, m -> m.isAccessibleVia(via));
+    }
 
     /**
-     * Tries to find an accessible static method to bind to, which might be inherited. If more
-     * than one is returned, then the binding is ambiguous. The output and inputs of a found
-     * method might need to be converted.
+     * Tries to find a method to bind to, which might be inherited. If more than one is
+     * returned, then the binding is ambiguous. The output and inputs of a found method might
+     * need to be converted.
      *
-     * @param via can pass null to only return publicly available methods
-     * @return an empty map if no applicable methods could be found
+     * <p>For instance methods, the first parameter is assumed to be this type, named "this",
+     * which is automatically prepended if necessary.
+     *
+     * @param filter optional filter which returns true for allowed items
+     * @return a map of methods which were found
      */
-    public Map<? extends CallSignature, ? extends CallableItem> findStaticMethod
-        (String name, TupleType inputType, Item via);
+    public Map<? extends CallSignature, Set<CallableItem>> findMethod
+        (String name, TupleType inputType, Predicate<CallableItem> filter);
 
     /**
      * Returns the number of constructors defined explicitly in this type.
@@ -285,14 +311,30 @@ public sealed interface Type extends Constable
      * Tries to find an accessible constructor to bind to. If more than one is returned, then
      * the binding is ambiguous. The inputs of a found constructor might need to be converted.
      *
-     * <p>The first parameter is assumed to be this type, named "this". If not, then it's
-     * automatically prepended.
+     * <p>The first parameter of each constructor is assumed to be this type, named "this",
+     * which is automatically prepended if necessary.
      *
-     * @param via can pass null to only return publicly available constructors
-     * @return an empty map if no applicable constructors could be found
+     * @param via can pass null to only find a publicly available constructor
+     * @return a map of accessible constructors which were found
+     */
+    public default Map<? extends CallSignature, ? extends CallableItem> findConstructor
+        (TupleType inputType, Item via)
+    {
+        return findConstructor(inputType, c -> c.isAccessibleVia(via));
+    }
+
+    /**
+     * Tries to find a constructor to bind to. If more than one is returned, then the binding
+     * is ambiguous. The inputs of a found constructor might need to be converted.
+     *
+     * <p>The first parameter of each constructor is assumed to be this type, named "this",
+     * which is automatically prepended if necessary.
+     *
+     * @param filter optional filter which returns true for allowed items
+     * @return a map of constructors which were found
      */
     public Map<? extends CallSignature, ? extends CallableItem> findConstructor
-        (TupleType inputType, Item via);
+        (TupleType inputType, Predicate<CallableItem> filter);
 
     /**
      * Returns all the inner classes defined explicitly in this type.
@@ -311,10 +353,23 @@ public sealed interface Type extends Constable
      * one is returned, then multiple inherited inner classes were found, and the best match is
      * ambiguous.
      *
-     * @param via can pass null to only return publicly available inner classes
-     * @return an empty set if no applicable inner classes could be found
+     * @param via can pass null to only find a publicly available inner class
+     * @return a set of accessible inner classes which were found
      */
-    public Set<? extends ClassTypeItem> findInnerClass(String name, Item via);
+    public default Set<? extends ClassTypeItem> findInnerClass(String name, Item via) {
+        return findInnerClass(name, c -> c.isAccessibleVia(via));
+    }
+
+    /**
+     * Tries to finds an inner class by name, which might be inherited. If more than one is
+     * returned, then multiple inherited inner classes were found, and the best match is
+     * ambiguous.
+     *
+     * @param filter optional filter which returns true for allowed items
+     * @return a set of inner classes which were found
+     */
+    public Set<? extends ClassTypeItem> findInnerClass(String name,
+                                                       Predicate<ClassTypeItem> filter);
 
     /**
      * Returns true if this type is an array.
