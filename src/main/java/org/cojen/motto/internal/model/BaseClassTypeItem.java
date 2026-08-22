@@ -90,8 +90,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public final BaseClassTypeItem enclosingType() {
-        // FIXME: return the outer class
-        throw null;
+        return outerType();
     }
 
     @Override
