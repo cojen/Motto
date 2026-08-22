@@ -92,7 +92,12 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
-    public default Set<BaseFieldItem> findField(String name, Predicate<FieldItem> via) {
+    public default Set<BaseFieldItem> findField(String name, Item via) {
+        return findField(name, f -> f.isAccessibleVia(via));
+    }
+
+    @Override
+    public default Set<BaseFieldItem> findField(String name, Predicate<FieldItem> filter) {
         return Set.of();
     }
 
@@ -118,9 +123,22 @@ public sealed interface BaseType extends Type, EncodableType
 
     @Override
     public default Map<BaseCallSignature, Set<CallableItem>> findMethod
+        (String name, TupleType inputType, Item via)
+    {
+        return findMethod(name, (BaseTupleType) inputType, via);
+    }
+
+    @Override
+    public default Map<BaseCallSignature, Set<CallableItem>> findMethod
         (String name, TupleType inputType, Predicate<CallableItem> filter)
     {
         return findMethod(name, (BaseTupleType) inputType, filter);
+    }
+
+    public default Map<BaseCallSignature, Set<CallableItem>> findMethod
+        (String name, BaseTupleType inputType, Item via)
+    {
+        return findMethod(name, inputType, m -> m.isAccessibleVia(via));
     }
 
     public default Map<BaseCallSignature, Set<CallableItem>> findMethod
@@ -146,9 +164,22 @@ public sealed interface BaseType extends Type, EncodableType
 
     @Override
     public default Map<BaseCallSignature, BaseCallableItem> findConstructor
+        (TupleType inputType, Item via)
+    {
+        return findConstructor((BaseTupleType) inputType, via);
+    }
+
+    @Override
+    public default Map<BaseCallSignature, BaseCallableItem> findConstructor
         (TupleType inputType, Predicate<CallableItem> filter)
     {
         return findConstructor((BaseTupleType) inputType, filter);
+    }
+
+    public default Map<BaseCallSignature, BaseCallableItem> findConstructor
+        (BaseTupleType inputType, Item via)
+    {
+        return findConstructor(inputType, c -> c.isAccessibleVia(via));
     }
 
     public default Map<BaseCallSignature, BaseCallableItem> findConstructor
