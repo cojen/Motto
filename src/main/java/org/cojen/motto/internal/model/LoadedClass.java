@@ -27,6 +27,8 @@ import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.cojen.maker.Maker;
+
 /**
  * Access to a class which was loaded into the JVM as a Class object. Classes are strongly
  * referenced by an internal cache, and so they cannot be unloaded.
@@ -64,7 +66,7 @@ public final class LoadedClass extends BaseClassTypeItem {
         BasePath packagePath = BasePath.parse(clazz.getPackageName(), '.');
         BasePath namePath = namePath(clazz);
 
-        super(modifierBits, packagePath, namePath);
+        super(modifierBits, packagePath.demangle(), namePath.demangle());
 
         mClass = clazz;
     }
@@ -162,7 +164,7 @@ public final class LoadedClass extends BaseClassTypeItem {
                     continue;
                 }
 
-                tryAddField(modifierBits, from(f.getType()), f.getName());
+                tryAddField(modifierBits, from(f.getType()), Maker.demangle(f.getName()));
             }
 
             mInitState |= mask;
@@ -192,7 +194,7 @@ public final class LoadedClass extends BaseClassTypeItem {
                 }
 
                 BaseType outputType = from(m.getReturnType());
-                String name = m.getName();
+                String name = Maker.demangle(m.getName());
                 BaseTupleType inputType = inputTypeFor(m);
 
                 // FIXME: Must look for a special annotation.
