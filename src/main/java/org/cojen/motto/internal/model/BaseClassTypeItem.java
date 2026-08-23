@@ -18,6 +18,7 @@ package org.cojen.motto.internal.model;
 
 import java.lang.constant.ClassDesc;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -293,11 +294,12 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public Set<BaseFieldItem> findField(String name, Predicate<FieldItem> filter) {
-        return doFindField(Set.of(), name, filter);
+        return doFindField(Set.of(), name, filter, new HashSet<>());
     }
 
     private Set<BaseFieldItem> doFindField(Set<BaseFieldItem> set, String name,
-                                           Predicate<FieldItem> filter)
+                                           Predicate<FieldItem> filter,
+                                           Set<BaseClassTypeItem> seen)
     {
         BaseFieldItem field = fieldMap().get(name);
         if (field != null && (filter == null || filter.test(field))) {
@@ -306,12 +308,14 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
         BaseClassTypeItem superType = superType();
 
-        if (superType != null) {
-            set = superType.doFindField(set, name, filter);
+        if (superType != null && seen.add(superType)) {
+            set = superType.doFindField(set, name, filter, seen);
         }
 
         for (BaseClassTypeItem iface : interfaces()) {
-            set = iface.doFindField(set, name, filter);
+            if (seen.add(iface)) {
+                set = iface.doFindField(set, name, filter, seen);
+            }
         }
 
         return set;
@@ -399,7 +403,22 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         BaseCallSignature sig = BaseCallSignature.from
             (BaseUnspecifiedType.THE, name, inputType, true);
 
-        Map<BaseCallSignature, Set<CallableItem>> map = doFindMethod(Map.of(), sig, filter, null);
+        return findMethod(sig, filter);
+    }
+
+    @Override
+    public Map<BaseCallSignature, Set<CallableItem>> findMethod
+        (CallSignature sig, Predicate<CallableItem> filter)
+    {
+        return findMethod((BaseCallSignature) sig, filter);
+    }
+
+    @Override
+    public Map<BaseCallSignature, Set<CallableItem>> findMethod
+        (BaseCallSignature sig, Predicate<CallableItem> filter)
+    {
+        Map<BaseCallSignature, Set<CallableItem>> map =
+            doFindMethod(Map.of(), sig, filter, null, new HashSet<>());
 
         return reduceCallables(map, sig);
     }
@@ -409,7 +428,8 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      */
     private Map<BaseCallSignature, Set<CallableItem>> doFindMethod
         (Map<BaseCallSignature, Set<CallableItem>> map,
-         BaseCallSignature sig, Predicate<CallableItem> filter, BaseClassTypeItem base)
+         BaseCallSignature sig, Predicate<CallableItem> filter, BaseClassTypeItem base,
+         Set<BaseClassTypeItem> seen)
     {
         map = findCallable(map, sig, filter, base, methodMap().get(sig.name()));
 
@@ -419,12 +439,14 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
         BaseClassTypeItem superType = superType();
 
-        if (superType != null) {
-            map = superType.doFindMethod(map, sig, filter, base);
+        if (superType != null && seen.add(superType)) {
+            map = superType.doFindMethod(map, sig, filter, base, seen);
         }
 
         for (BaseClassTypeItem iface : interfaces()) {
-            map = iface.doFindMethod(map, sig, filter, base);
+            if (seen.add(iface)) {
+                map = iface.doFindMethod(map, sig, filter, base, seen);
+            }
         }
 
         return map;
@@ -600,11 +622,12 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public Set<BaseClassTypeItem> findInnerClass(String name, Predicate<ClassTypeItem> filter) {
-        return doFindInnerClass(Set.of(), name, filter);
+        return doFindInnerClass(Set.of(), name, filter, new HashSet<>());
     }
 
     private Set<BaseClassTypeItem> doFindInnerClass
-        (Set<BaseClassTypeItem> set, String name, Predicate<ClassTypeItem> filter)
+        (Set<BaseClassTypeItem> set, String name, Predicate<ClassTypeItem> filter,
+         Set<BaseClassTypeItem> seen)
     {
         BaseClassTypeItem inner = mInnerClassesMap.get(name);
 
@@ -614,12 +637,14 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
         BaseClassTypeItem superType = superType();
 
-        if (superType != null) {
-            set = superType.doFindInnerClass(set, name, filter);
+        if (superType != null && seen.add(superType)) {
+            set = superType.doFindInnerClass(set, name, filter, seen);
         }
 
         for (BaseClassTypeItem iface : interfaces()) {
-            set = iface.doFindInnerClass(set, name, filter);
+            if (seen.add(iface)) {
+                set = iface.doFindInnerClass(set, name, filter, seen);
+            }
         }
 
         return set;

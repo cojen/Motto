@@ -147,6 +147,22 @@ public sealed interface BaseType extends Type, EncodableType
         return Map.of();
     }
 
+    public default Map<BaseCallSignature, Set<CallableItem>> findMethod
+        (CallSignature sig, Predicate<CallableItem> filter)
+    {
+        return findMethod((BaseCallSignature) sig, filter);
+    }
+
+    /**
+     * Note: If the call has any segments, the repetition value should be -1, although the
+     * value is ignored. Actual repetition should be specified using duplicate segments.
+     */
+    public default Map<BaseCallSignature, Set<CallableItem>> findMethod
+        (BaseCallSignature sig, Predicate<CallableItem> filter)
+    {
+        return Map.of();
+    }
+
     @Override
     public default int numConstructors() {
         return 0;

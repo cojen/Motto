@@ -60,7 +60,7 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     public Binding var(Type type);
 
     /**
-     * Return a new named or anonymous local variable binding which is visible to all actions
+     * Return a named or new anonymous local variable binding which is visible to all actions
      * within the code body.
      *
      * @param name can pass null to create an anonymous variable

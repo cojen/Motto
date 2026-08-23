@@ -291,6 +291,20 @@ public sealed interface Type extends Constable
         (String name, TupleType inputType, Predicate<CallableItem> filter);
 
     /**
+     * Tries to find a method to bind to, which might be inherited. If more than one is
+     * returned, then the binding is ambiguous. The output and inputs of a found method might
+     * need to be converted.
+     *
+     * <p>For instance methods, the first parameter is assumed to be this type, named "this",
+     * which is automatically prepended if necessary.
+     *
+     * @param filter optional filter which returns true for allowed items
+     * @return a map of methods which were found
+     */
+    public Map<? extends CallSignature, Set<CallableItem>> findMethod
+        (CallSignature signature, Predicate<CallableItem> filter);
+
+    /**
      * Returns the number of constructors defined explicitly in this type.
      */
     public int numConstructors();

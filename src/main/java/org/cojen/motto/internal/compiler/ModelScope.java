@@ -329,6 +329,40 @@ final class ModelScope {
     }
 
     /**
+     * Find or create a named local variable.
+     */
+    public BaseBinding.Named localVariable(BaseType type, String name) {
+        // FIXME
+        throw null;
+    }
+
+    /**
+     * Tries to find a find a named local variable or parameter.
+     */
+    public BaseBinding.Local tryFindLocalVariable(String name) {
+        ModelScope scope = this;
+
+        while (true) {
+            BaseBinding.Local local = scope.mLocals.get(name);
+
+            if (local != null) {
+                return local;
+            }
+
+            if (scope.mItem instanceof BaseCallableItem || ((scope = scope.mParent) == null)) {
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Return a new anonymous local variable binding.
+     */
+    public BaseBinding.Anonymous newVariable(BaseType type) {
+        return new BaseBinding.Anonymous(type);
+    }
+
+    /**
      * Returns the block for adding new actions to.
      *
      * @param element provides the source code position

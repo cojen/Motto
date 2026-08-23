@@ -17,12 +17,28 @@
 package org.cojen.motto.internal.compiler;
 
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Set;
 
+import org.cojen.motto.model.CallableItem;
+
+import org.cojen.motto.internal.model.BaseArrayType;
 import org.cojen.motto.internal.model.BaseBinding;
 import org.cojen.motto.internal.model.BaseBlock;
+import org.cojen.motto.internal.model.BaseBooleanType;
+import org.cojen.motto.internal.model.BaseCallSignature;
 import org.cojen.motto.internal.model.BaseCallableItem;
+import org.cojen.motto.internal.model.BaseClassTypeItem;
+import org.cojen.motto.internal.model.BaseFieldItem;
 import org.cojen.motto.internal.model.BaseItem;
+import org.cojen.motto.internal.model.BaseNullType;
+import org.cojen.motto.internal.model.BaseObjectType;
+import org.cojen.motto.internal.model.BasePath;
+import org.cojen.motto.internal.model.BaseSegmentArgument;
+import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
+import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
 
 import org.cojen.motto.internal.parser.AsStatement;
@@ -47,6 +63,7 @@ import org.cojen.motto.internal.parser.NewArrayStatement;
 import org.cojen.motto.internal.parser.NewClassDefinitionStatement;
 import org.cojen.motto.internal.parser.NewStatement;
 import org.cojen.motto.internal.parser.ParseVisitor;
+import org.cojen.motto.internal.parser.PathStatement;
 import org.cojen.motto.internal.parser.PostfixStatement;
 import org.cojen.motto.internal.parser.PrefixStatement;
 import org.cojen.motto.internal.parser.ReturnStatement;
@@ -114,6 +131,475 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         return false;
     }
 
+    private static String typeString(BaseType type) {
+        // FIXME: typeString
+        return String.valueOf(type);
+        //return ToStringVisitor.toString(type);
+    }
+
+    private BaseBinding tryMatchKeywordBinding(LoadStatement st) {
+        if (st.path.size() == 1) {
+            BaseBinding binding;
+
+            switch (st.path.getFirst().text) {
+                case "null" -> {
+                    binding = BaseBinding.Null.THE;
+                }
+                case "false" -> {
+                    binding = BaseBinding.Constant.from(BaseBooleanType.THE, false);
+                }
+                case "true" -> {
+                    binding = BaseBinding.Constant.from(BaseBooleanType.THE, true);
+                }
+                default -> {
+                    return null;
+                }
+            }
+
+            return binding;
+        }
+
+        return null;
+    }
+
+    /**
+     * Examines the first path element to determine if it matches a local variable.
+     */
+    private BaseBinding.Local tryFindLocalVariable(ListIterator<Token.Identifier> pathIt) {
+        String name = pathIt.next().text;
+
+        for (ModelScope scope = mScope; scope != null; scope = scope.parent()) {
+            BaseItem item = scope.item();
+
+            if (item instanceof BaseClassTypeItem) {
+                break;
+            }
+
+            BaseBinding.Local local = scope.tryFindLocalVariable(name);
+
+            if (local != null) {
+                return local;
+            }
+
+            // Check if declared but not yet used.
+
+            /* FIXME
+            BaseFieldItem field = item.findField(name);
+
+            if (field != null) {
+                return scope.localVariable(field.type(), name);
+            }
+            */
+        }
+
+        // Back up.
+        pathIt.previous();
+
+        return null;
+    }
+
+    private BaseBinding.Parameter tryAccessThis() {
+        for (ModelScope scope = mScope; scope != null; scope = scope.parent()) {
+            BaseItem item = scope.item();
+
+            if (item instanceof BaseClassTypeItem) {
+                break;
+            }
+
+            if (item instanceof BaseCallableItem callable) {
+                if (callable.isStatic()) {
+                    break;
+                }
+                BaseType thisType = callable.signature().inputType().fieldType(0);
+                return BaseBinding.Parameter.from(thisType, "this", 0);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Examines the path to determine if it starts as a static path. If so, a ClassTypeItem is
+     * returned, and the path iterator is positioned at the next element to follow, which is
+     * typically a static member. If the iterator has no next elements, then the path has
+     * completely specified a class and nothing else. The caller must handle this specially.
+     *
+     * <p>When null is returned, the iterator state isn't defined. It should be discarded.
+     *
+     * @param pathIt must have at least one element
+     */
+    private BaseClassTypeItem tryResolveClass(PathStatement st,
+                                              ListIterator<Token.Identifier> pathIt)
+    {
+        Token.Identifier nameToken = pathIt.next();
+        BaseItem item = mScope.item();
+        String name = nameToken.text;
+
+        BaseClassTypeItem clazz = findClassForStaticField(item, name);
+
+        if (clazz != null) {
+            // Back up to the first member.
+            pathIt.previous();
+            return clazz;
+        }
+
+        clazz = findLocalClass(item, name);
+
+        if (clazz == null) {
+            clazz = mEnv.matchClassItem(BasePath.from(st.path));
+            if (clazz != null) {
+                int pathPos = clazz.fullPathSize();
+                while (--pathPos > 0) {
+                    // Jump past the class name elements.
+                    pathIt.next();
+                }
+            } else {
+                clazz = mEnv.findImportedClass(nameToken);
+                if (clazz == null) {
+                    clazz = mEnv.findImportedClassByMember(nameToken);
+                    if (clazz != null) {
+                        // Back up to the first member.
+                        pathIt.previous();
+                    }
+                    return clazz;
+                }
+            }
+        }
+
+        // Try to find a static inner class.
+
+        while (pathIt.hasNext()) {
+            nameToken = pathIt.next();
+
+            Set<BaseClassTypeItem> set = clazz.findInnerClass
+                (nameToken.text, c -> c.isStatic() && c.isAccessibleVia(mScope.item()));
+
+            if (set.isEmpty()) {
+                // Back up.
+                pathIt.previous();
+                break;
+            }
+
+            if (set.size() != 1) {
+                // FIXME: list them all
+                error(nameToken, "inner class is ambiguous");
+                return null;
+            }
+
+            clazz = set.iterator().next();
+        }
+
+        return clazz;
+    }
+
+    /**
+     * Looks for accessible static fields in the given item, then inherited static fields,
+     * and then any enclosing outer classes.
+     */
+    private BaseClassTypeItem findClassForStaticField(BaseItem item, String name) {
+        BaseClassTypeItem clazz = item.nearestClass();
+
+        while (clazz != null) {
+            // The findField method also returns inherited fields.
+            Set<BaseFieldItem> set = clazz.findField
+                (name, f -> f.isStatic() && f.isAccessibleVia(mScope.item()));
+
+            if (!set.isEmpty()) {
+                return clazz;
+            }
+
+            clazz = clazz.outerType();
+        }
+
+        return null;
+    }
+
+    /**
+     * Checks if the given name matches a local class, searching outer classes if necessary.
+     */
+    private BaseClassTypeItem findLocalClass(BaseItem item, String name) {
+        BaseClassTypeItem clazz = item.nearestClass();
+
+        while (clazz != null) {
+            if (clazz.namePath().getLast().equals(name)) {
+                return clazz;
+            }
+            clazz = clazz.outerType();
+        }
+
+        return null;
+    }
+
+    /**
+     * @return null if not found, and an error was reported
+     */
+    private BaseFieldItem findStaticField(BaseClassTypeItem clazz, Token.Identifier nameToken) {
+        Set<BaseFieldItem> set = clazz.findField
+            (nameToken.text, f -> f.isStatic() && f.isAccessibleVia(mScope.item()));
+
+        if (set.isEmpty()) {
+            error(nameToken, "static field not found");
+            return null;
+        }
+
+        if (set.size() != 1) {
+            // FIXME: list them all
+            error(nameToken, "static field is ambiguous");
+            return null;
+        }
+
+        return set.iterator().next();
+    }
+
+    /**
+     * Follows an instance path, adding actions along the way.
+     *
+     * @param st if given a MethodCallStatement, the last item  isn't followed
+     * @param autoThis true if tryAccessThis was used (only affects error reporting)
+     * @return null if an error was reported.
+     */
+    private BaseBinding followInstancePath(Statement st, BaseBinding instanceBinding,
+                                           boolean autoThis, ListIterator<Token.Identifier> pathIt)
+    {
+        if (!pathIt.hasNext()) {
+            return instanceBinding;
+        }
+
+        while (true) {
+            Token.Identifier nameToken = pathIt.next();
+            String name = nameToken.text;
+            boolean last = !pathIt.hasNext();
+
+            if (last && st instanceof MethodCallStatement) {
+                // Back up.
+                pathIt.previous();
+                return instanceBinding;
+            }
+
+            BaseType instanceType = instanceBinding.type();
+
+            if (!(instanceType instanceof BaseObjectType objType)) {
+                error(nameToken, "not an object type: " + typeString(instanceType));
+                return null;
+            }
+
+            switch (objType) {
+                case BaseNullType t -> {
+                    instanceBinding = BaseBinding.Null.THE;
+                }
+
+                case BaseTupleType t -> {
+                    int index = t.fieldIndex(name);
+
+                    if (index < 0) {
+                        error(nameToken, "tuple field not found");
+                        return null;
+                    }
+
+                    instanceBinding = BaseBinding.Tuple.from(instanceBinding, index);
+                }
+
+                case BaseArrayType t -> {
+                    // FIXME: Support a pseudo final length field.
+                    error(nameToken, "array field not found");
+                    return null;
+                }
+
+                case BaseClassTypeItem t -> {
+                    Set<BaseFieldItem> fieldSet = t.findField(name, mScope.item());
+
+                    if (fieldSet.isEmpty()) {
+                        if (st instanceof LoadStatement load) {
+                            BaseBinding keyword = tryMatchKeywordBinding(load);
+                            if (keyword != null) {
+                                return keyword;
+                            }
+                        }
+
+                        String message;
+                        if (autoThis) {
+                            message = "cannot find symbol";
+                        } else {
+                            message = "instance field not found";
+                        }
+
+                        error(nameToken, message);
+                        return null;
+                    }
+
+                    if (fieldSet.size() != 1) {
+                        // FIXME: list them all
+                        error(nameToken, "symbol is ambiguous");
+                        return null;
+                    }
+
+                    BaseFieldItem fieldItem = fieldSet.iterator().next();
+
+                    instanceBinding = BaseBinding.Instance.from(instanceBinding, fieldItem);
+                }
+            }
+
+            if (last) {
+                return instanceBinding;
+            }
+        }
+    }
+
+    /**
+     * @param item pass non-null to make a static call
+     * @param instance pass non-null to make an instance call
+     * @param direct pass true to always make a direct method call, not a virtual method call
+     * @return null if no method was found or if an error was reported
+     * @throws IllegalArgumentException if both a member and an instance were provided
+     */
+    private BaseBinding tryMakeMethodCall(MethodCallStatement st, BaseBinding target,
+                                          BaseItem item, BaseBinding instance,
+                                          Token.Identifier nameToken,
+                                          BaseType[] inputTypes, BaseBinding[] inputBindings,
+                                          boolean direct)
+    {
+        final boolean staticCall = item != null;
+        final BaseTupleType inputType;
+
+        if (staticCall) {
+            if (instance != null) {
+                throw new IllegalArgumentException();
+            }
+            inputType = BaseTupleType.from(inputTypes);
+        } else {
+            if (!(instance.type() instanceof BaseClassTypeItem instanceType)) {
+                // FIXME: If a non-void primitive type, try boxing. Also check if a tuple.
+                error(st, "not invoking an object instance");
+                return null;
+            }
+
+            item = instanceType;
+
+            // Prepend the "this" parameter.
+            inputType = BaseTupleType.from(instanceType, inputTypes);
+        }
+
+        Map<BaseCallSignature, Set<CallableItem>> methods;
+
+        BaseCallSignature.BaseSegment[] segSignatures = null;
+        BaseSegmentArgument[] segArguments = null;
+
+        findMethods: {
+            List<Statement> segments = st.segments;
+
+            if (!segments.isEmpty()) {
+                /* FIXME
+                segSignatures = new BaseCallSignature.BaseSegment[segments.size()];
+                segArguments = new BaseSegmentArgument[segSignatures.length];
+
+                for (int i=0; i<segSignatures.length; i++) {
+                    CallSegment seg = st.segments.get(i);
+
+                    if (!(seg.statement instanceof TupleStatement tuple)) {
+                        // This likely indicates a compiler bug.
+                        error(seg.statement, "segment parameters must be a tuple");
+                        return null;
+                    }
+
+                    String name = seg.name == null ? "" : seg.name.text;
+                    boolean evaluated = tuple.first.type() == Token.T_LPAREN;
+
+                    List<Statement> items = tuple.items;
+                    var segBindings = new BaseBinding[items.size()];
+                    var segInputTypes = new BaseType[segBindings.length];
+
+                    boolean hasError = false;
+
+                    for (int j=0; j<segBindings.length; j++) {
+                        BaseBinding segInput = items.get(j).accept(this, null);
+                        if (segInput == null) {
+                            hasError = true;
+                        } else {
+                            segBindings[j] = segInput;
+                            segInputTypes[j] = segInput.type();
+                        }
+                    }
+
+                    if (hasError) {
+                        // Error state.
+                        return null;
+                    }
+
+                    BaseTupleType segInputType = BaseTupleType.from(segInputTypes);
+
+                    // Can pass -1 for repetition value; it's ignored by findMethod.
+                    segSignatures[i] = BaseCallSignature
+                        .BaseSegment.from(-1, name, segInputType, evaluated);
+
+                    segArguments[i] = new BaseSegmentArgument(name, segBindings);
+                }
+                */
+                throw null;
+            }
+
+            String name = nameToken.text;
+            boolean evaluated = st.params.open.type() == Token.T_LPAREN;
+
+            var sig = BaseCallSignature.from
+                (BaseUnspecifiedType.THE, name, inputType, evaluated, segSignatures);
+
+            BaseType type = item.nearestType();
+
+            do {
+                methods = type.findMethod
+                    (sig, m -> m.isStatic() == staticCall && m.isAccessibleVia(mScope.item()));
+
+                if (!methods.isEmpty()) {
+                    break findMethods;
+                }
+
+                if (type instanceof BaseClassTypeItem clazz) {
+                    type = clazz.outerType();
+                } else {
+                    break;
+                }
+            } while (type != null);
+
+            return null;
+        }
+
+        if (methods.size() > 1) {
+            // FIXME: list them all
+            error(nameToken, "method call is ambiguous");
+            return null;
+        }
+
+        Set<CallableItem> set = methods.values().iterator().next();
+
+        if (set.size() > 1) {
+            // FIXME: list them all
+            error(nameToken, "method call is ambiguous");
+            return null;
+        }
+
+        var callable = (BaseCallableItem) set.iterator().next();
+
+        if (!staticCall) {
+            // Need a binding for the instance.
+            var newBindings = new BaseBinding[1 + inputBindings.length];
+            newBindings[0] = instance;
+            System.arraycopy(inputBindings, 0, newBindings, 1, inputBindings.length);
+            inputBindings = newBindings;
+        }
+
+        // FIXME: Convert the parameters if necessary (note: "this" param might have been
+        // prepended). Also check if any arguments which are T_NULL_ALLOWED are mapped to
+        // parameters which are T_NULL_DISALLOWED.
+
+        BaseBlock block = mScope.activeBlock(st);
+
+        if (direct | staticCall | callable.isPrivate() | segArguments != null) {
+            return block.callDirect(target, callable, (Object[]) inputBindings, segArguments);
+        } else {
+            return block.callVirtual(target, callable, (Object[]) inputBindings);
+        }
+    }
+
     // Visit methods: Null is returned if an error was reported. Void is returned if the
     // statement returns void, and a non-void target binding is returned otherwise. If a null
     // target binding is passed in, then the visit method must provide a target binding on its
@@ -124,6 +610,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
      */
     private BaseBinding visitCode(TupleStatement code, BaseCallableItem item) {
         var newScope = new ModelScope(this, mScope, item);
+
+        // FIXME: add the parameters
 
         List<Statement> items = code.items;
 
@@ -287,8 +775,13 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        BaseBinding binding = st.source.accept(this, null);
+
+        if (binding != null) {
+            binding = followInstancePath(st, binding, false, List.of(st.name).listIterator());
+        }
+
+        return binding;
     }
 
     @Override
@@ -424,8 +917,51 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        boolean autoThis = false;
+        ListIterator<Token.Identifier> pathIt = st.path.listIterator();
+
+        BaseBinding instanceBinding = tryFindLocalVariable(pathIt);
+
+        tryStatic: if (instanceBinding == null) {
+            BaseClassTypeItem clazz = tryResolveClass(st, pathIt);
+
+            if (clazz == null) {
+                BaseBinding thisBinding = tryAccessThis();
+
+                if (thisBinding != null) {
+                    instanceBinding = thisBinding;
+                    autoThis = true;
+                    pathIt = st.path.listIterator();
+                    break tryStatic;
+                }
+
+                BaseBinding keyword = tryMatchKeywordBinding(st);
+
+                if (keyword != null) {
+                    return keyword;
+                }
+
+                error(st.path, "cannot find symbol");
+                return null;
+            }
+
+            if (!pathIt.hasNext()) {
+                error(st.path, "no field is specified");
+                return null;
+            }
+
+            Token.Identifier nameToken = pathIt.next();
+            BaseFieldItem fieldItem = findStaticField(clazz, nameToken);
+
+            if (fieldItem == null) {
+                // Error state.
+                return null;
+            }
+
+            instanceBinding = BaseBinding.Static.from(fieldItem);
+        }
+
+        return followInstancePath(st, instanceBinding, autoThis, pathIt);
     }
 
     @Override
@@ -434,8 +970,159 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        BaseBinding sourceBinding = null;
+
+        if (st.source != null) {
+            sourceBinding = st.source.accept(this, null);
+            if (sourceBinding == null) {
+                // Error state.
+                return null;
+            }
+        }
+
+        List<Statement> items = st.params.items;
+
+        var inputTypes = new BaseType[items.size()];
+        var inputBindings = new BaseBinding[inputTypes.length];
+
+        int i = 0;
+        for (Statement paramItem : items) {
+            BaseBinding param = paramItem.accept(this, null);
+            if (param == null) {
+                // Error state.
+                return null;
+            }
+            inputTypes[i] = param.type();
+            inputBindings[i] = param;
+            i++;
+        }
+
+        if (i != inputTypes.length) {
+            throw new AssertionError();
+        }
+
+        boolean autoThis = false;
+        BaseBinding instance;
+        Token.Identifier nameToken;
+
+        tryStatic: {
+            if (st.path.size() == 1) {
+                nameToken = st.path.getLast();
+
+                if (sourceBinding != null) {
+                    instance = sourceBinding;
+                    break tryStatic;
+                }
+
+                int numErrors = mEnv.numErrors();
+
+                BaseBinding result = tryMakeMethodCall
+                    (st, target, mScope.item(), null, nameToken, inputTypes, inputBindings, false);
+
+                if (result != null || numErrors != mEnv.numErrors()) {
+                    return result;
+                }
+
+                BaseClassTypeItem classItem = mEnv.findImportedClassByMember(nameToken);
+
+                if (classItem != null) {
+                    numErrors = mEnv.numErrors();
+
+                    result = tryMakeMethodCall
+                        (st, target, classItem, null, nameToken, inputTypes, inputBindings, false);
+
+                    if (result != null || numErrors != mEnv.numErrors()) {
+                        return result;
+                    }
+                }
+
+                BaseBinding thisBinding = tryAccessThis();
+
+                if (thisBinding != null) {
+                    autoThis = true;
+                    instance = thisBinding;
+                    break tryStatic;
+                }
+
+                // FIXME: If a matching instance method exists, report a better error?
+                error(st.path, "cannot find symbol");
+                return null;
+            }
+
+            if (sourceBinding != null) {
+                throw new AssertionError();
+            }
+
+            ListIterator<Token.Identifier> pathIt = st.path.listIterator();
+
+            BaseBinding localBinding = tryFindLocalVariable(pathIt);
+
+            if (localBinding != null) {
+                instance = localBinding;
+            } else {
+                BaseClassTypeItem classItem = tryResolveClass(st, pathIt);
+
+                if (classItem == null) {
+                    error(st.path, "cannot find symbol");
+                    return null;
+                }
+
+                if (!pathIt.hasNext()) {
+                    error(st.path, "no method is specified");
+                    return null;
+                }
+
+                nameToken = pathIt.next();
+
+                if (!pathIt.hasNext()) {
+                    int numErrors = mEnv.numErrors();
+
+                    BaseBinding result = tryMakeMethodCall
+                        (st, target, classItem, null, nameToken, inputTypes, inputBindings, false);
+
+                    if (result == null && numErrors == mEnv.numErrors()) {
+                        error(nameToken, "cannot find static method");
+                    }
+
+                    return result;
+                }
+
+                BaseFieldItem fieldItem = findStaticField(classItem, nameToken);
+
+                if (fieldItem == null) {
+                    // Error state.
+                    return null;
+                }
+
+                BaseBinding fieldBinding = BaseBinding.Static.from(fieldItem);
+
+                instance = followInstancePath(st, fieldBinding, false, pathIt);
+
+                if (instance == null) {
+                    // Error state.
+                    return null;
+                }
+            }
+
+            nameToken = pathIt.next();
+        }
+
+        int numErrors = mEnv.numErrors();
+
+        BaseBinding result = tryMakeMethodCall
+            (st, target, null, instance, nameToken, inputTypes, inputBindings, false);
+
+        if (result == null && numErrors == mEnv.numErrors()) {
+            String message;
+            if (autoThis) {
+                message = "cannot find symbol";
+            } else {
+                message = "cannot find instance method";
+            }
+            error(nameToken, message);
+        }
+
+        return result;
     }
 
     @Override

@@ -317,12 +317,16 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     public static sealed class Named extends Local {
+        public static Named from(BaseType type, String name) {
+            return InternSet.apply(new Named(type, name));
+        }
+
         final String mName;
 
         /**
          * @param name required
          */
-        public Named(BaseType type, String name) {
+        private Named(BaseType type, String name) {
             super(type);
             mName = Objects.requireNonNull(name);
         }
@@ -336,9 +340,30 @@ public abstract sealed class BaseBinding implements Binding {
         public final String name() {
             return mName;
         }
+
+        @Override
+        public int hashCode() {
+            return type().hashCode() * 31 + Objects.hashCode(name());
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj == this || obj instanceof Named other
+                && other.getClass() == Named.class
+                && Objects.equals(name(), other.name())
+                && type().equals(other.type());
+        }
     }
 
     public static final class Parameter extends Named {
+        /**
+         * @param name optional
+         * @throws IllegalArgumentException if index is negative
+         */
+        public static Parameter from(BaseType type, String name, int index) {
+            return InternSet.apply(new Parameter(type, name, index));
+        }
+
         private final int mIndex;
 
         /**
@@ -356,6 +381,19 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public int index() {
             return mIndex;
+        }
+
+        @Override
+        public int hashCode() {
+            return super.hashCode() * 31 + mIndex + 1;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj == this || obj instanceof Parameter other
+                && Objects.equals(name(), other.name())
+                && type().equals(other.type())
+                && index() == other.index();
         }
     }
 

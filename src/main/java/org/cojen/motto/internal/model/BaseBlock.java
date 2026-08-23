@@ -192,7 +192,7 @@ public final class BaseBlock implements Block {
     }
 
     public BaseBinding.Local var(BaseType type, String name) {
-        return name == null ? var(type) : new BaseBinding.Named(type, name);
+        return name == null ? var(type) : BaseBinding.Named.from(type, name);
     }
 
     public void declare(Binding binding) {
