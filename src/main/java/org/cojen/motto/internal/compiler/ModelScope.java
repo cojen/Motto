@@ -167,7 +167,7 @@ final class ModelScope {
      */
     boolean addLabel(LabeledStatement st) {
         Map<String, LabelTarget> labels = mLabels;
-        if (labels == null) {
+        if (labels.isEmpty()) {
             mLabels = labels = new LinkedHashMap<>();
         }
         var block = new BaseBlock();
@@ -179,10 +179,9 @@ final class ModelScope {
      * @return false if the label wasn't found
      */
     boolean labelVisited(LabeledStatement st) {
-        Map<String, LabelTarget> labels = mLabels;
-        LabelTarget target;
+        LabelTarget target = mLabels.get(st.label.text);
 
-        if (labels == null || (target = labels.get(st.label.text)) == null) {
+        if (target == null) {
             return false;
         }
 
@@ -208,13 +207,10 @@ final class ModelScope {
         ModelScope scope = this;
 
         while (true) {
-            Map<String, LabelTarget> labels = scope.mLabels;
-            if (labels != null) {
-                LabelTarget target = labels.get(label);
-                if (target != null) {
-                    target.reached();
-                    return target.block;
-                }
+            LabelTarget target = scope.mLabels.get(label);
+            if (target != null) {
+                target.reached();
+                return target.block;
             }
             if ((scope = scope.mParent) == null) {
                 return null;
@@ -314,14 +310,11 @@ final class ModelScope {
      */
     LabeledStatement checkLabelReachability() {
         if (mReachabilityCheckFailures == 0) {
-            Map<String, LabelTarget> labels = mLabels;
-            if (labels != null) {
-                for (LabelTarget target : mLabels.values()) {
-                    LabeledStatement st = target.statement;
-                    if (st != null) {
-                        mReachabilityCheckFailures++;
-                        return st;
-                    }
+            for (LabelTarget target : mLabels.values()) {
+                LabeledStatement st = target.statement;
+                if (st != null) {
+                    mReachabilityCheckFailures++;
+                    return st;
                 }
             }
         }

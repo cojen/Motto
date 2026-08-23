@@ -873,8 +873,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        if (!mScope.labelVisited(st)) {
+            // This likely indicates a compiler bug.
+            error(st.label, "label not declared");
+        }
+
+        return st.source.accept(this, null);
     }
 
     @Override
