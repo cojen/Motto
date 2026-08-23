@@ -16,6 +16,8 @@
 
 package org.cojen.motto.internal.model;
 
+import java.io.IOException;
+
 import java.lang.classfile.Attributes;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
@@ -38,8 +40,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import java.util.function.BiFunction;
-
 import java.util.stream.Stream;
 
 import org.cojen.maker.ClassMaker;
@@ -58,17 +58,15 @@ import org.cojen.motto.model.CallSignature;
 public final class ExternalClass extends BaseClassTypeItem
     implements org.cojen.maker.Type.Provider
 {
-    private final BiFunction<BasePath, String, byte[]> mLoader;
+    private final ClassFinder mFinder;
 
     /**
-     * @param loader loads the class bytes by package name and class name; can return null if
+     * @param finder loads the class bytes by package name and class name; can return null if
      * not found
      */
-    public ExternalClass(BasePath packagePath, BasePath namePath,
-                         BiFunction<BasePath, String, byte[]> loader)
-    {
-        super(0, packagePath, namePath);
-        mLoader = Objects.requireNonNull(loader);
+    public ExternalClass(BasePath packagePath, BasePath namePath, ClassFinder finder) {
+        super(0, packagePath.demangle(), namePath.demangle());
+        mFinder = Objects.requireNonNull(finder);
     }
 
     /**
@@ -76,7 +74,13 @@ public final class ExternalClass extends BaseClassTypeItem
      */
     public void load() throws NoClassDefFoundError {
         if ((super.modifierBits() & Modifiers.LOADED) == 0) {
-            doLoad();
+            try {
+                doLoad();
+            } catch (IOException e) {
+                var ex = new NoClassDefFoundError(displayName());
+                ex.initCause(e);
+                throw ex;
+            }
         }
     }
 
@@ -148,11 +152,11 @@ public final class ExternalClass extends BaseClassTypeItem
         });
     }
 
-    private void doLoad() throws NoClassDefFoundError {
+    private void doLoad() throws NoClassDefFoundError, IOException {
         // Set LOADED early in case the load fails, so as not to try loading again.
         setModifierBits(super.modifierBits() | Modifiers.LOADED);
 
-        byte[] classBytes = mLoader.apply(packagePath(), mangledName());
+        byte[] classBytes = mFinder.loadClassBytes(packagePath(), mangledName());
 
         if (classBytes == null) {
             throw new NoClassDefFoundError(displayName());
@@ -162,7 +166,7 @@ public final class ExternalClass extends BaseClassTypeItem
 
         setModifierBits(Modifiers.from(model) | Modifiers.LOADED);
 
-        ExternalClass superclass = toExternalClass(model.superclass().orElse(null));
+        BaseClassTypeItem superclass = toClassTypeItem(model.superclass().orElse(null));
 
         Set<BaseClassTypeItem> interfaces;
 
@@ -171,11 +175,11 @@ public final class ExternalClass extends BaseClassTypeItem
             if (ifaces == null || ifaces.isEmpty()) {
                 interfaces = Set.of();
             } else if (ifaces.size() == 1) {
-                interfaces = Set.of(toExternalClass(ifaces.getFirst()));
+                interfaces = Set.of(toClassTypeItem(ifaces.getFirst()));
             } else {
                 interfaces = HashSet.newHashSet(ifaces.size());
                 for (ClassEntry iface : ifaces) {
-                    interfaces.add(toExternalClass(iface));
+                    interfaces.add(toClassTypeItem(iface));
                 }
             }
         }
@@ -253,35 +257,26 @@ public final class ExternalClass extends BaseClassTypeItem
         // FIXME: If any loadableInnerClasses, then load them on demand.
     }
 
-    private ExternalClass toExternalClass(ClassEntry entry) {
-        return entry == null ? null : toExternalClass(entry.asSymbol());
+    private BaseClassTypeItem toClassTypeItem(ClassEntry entry) throws IOException {
+        return entry == null ? null : toClassTypeItem(entry.asSymbol());
     }
 
-    private ExternalClass toExternalClass(ClassDesc desc) {
-        // FIXME: demangle packageName
-        BasePath packagePath = BasePath.parse(desc.packageName(), '.');
-
-        // The name path must be split by '$' characters, even if it doesn't match a proper
-        // inner class name. This is because name mangling always escapes '$' characters. The
-        // fullMangledName method adds back the '$' characters as separators.
-        // FIXME: demangle displayName
-        BasePath namePath = BasePath.parse(desc.displayName(), '$');
-
-        return new ExternalClass(packagePath, namePath, mLoader);
+    private BaseClassTypeItem toClassTypeItem(ClassDesc desc) throws IOException {
+        return mFinder.findClass(BasePath.parse(desc.packageName(), '.'), desc.displayName());
     }
 
-    private BaseType toType(ClassDesc desc) {
+    private BaseType toType(ClassDesc desc) throws IOException {
         if (desc.isPrimitive()) {
             return BasePrimitiveType.trySelectByDescriptor(desc.descriptorString());
         }
         ClassDesc elementType = desc.componentType();
-        return elementType == null ? toExternalClass(desc) : toType(elementType).asArray();
+        return elementType == null ? toClassTypeItem(desc) : toType(elementType).asArray();
     }
 
     /**
      * Returns a TupleType which doesn't have any named elements.
      */
-    private BaseTupleType toTupleType(List<ClassDesc> descs) {
+    private BaseTupleType toTupleType(List<ClassDesc> descs) throws IOException {
         var elementTypes = new BaseType[descs.size()];
         int i = 0;
         for (ClassDesc desc : descs) {
@@ -293,7 +288,9 @@ public final class ExternalClass extends BaseClassTypeItem
     /**
      * Returns a TupleType in which the first element is named, but the rest aren't.
      */
-    private BaseTupleType toTupleType(BaseType first, String firstName, List<ClassDesc> descs) {
+    private BaseTupleType toTupleType(BaseType first, String firstName, List<ClassDesc> descs)
+        throws IOException
+    {
         var elementTypes = new BaseType[1 + descs.size()];
         elementTypes[0] = first;
         int i = 1;

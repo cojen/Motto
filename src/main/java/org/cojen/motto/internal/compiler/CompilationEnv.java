@@ -346,24 +346,6 @@ public final class CompilationEnv {
     }
 
     /**
-     * Tries to find an inner class by its package and class name. Searches the class path,
-     * module path, and any registered NewClass instances which are currently being compiled.
-     *
-     * <p>If the class isn't accessible from the package associated with this CompilationEnv,
-     * null is returned.
-     *
-     * @param outer required
-     * @param className loadable inner class name, not including the package name (typically
-     * has '$' characters)
-     * @param name simple inner class name
-     * @return null if not found or not accessible
-     */
-    public BaseClassTypeItem findClass(BaseClassTypeItem outer, String className, String name) {
-        BaseClassTypeItem clazz = mCompiler.findClass(outer, className, name);
-        return clazz == null ? null : (isAccessible(clazz) ? clazz : null);
-    }
-
-    /**
      * Follows the given path until a BaseClassTypeItem is found by its fully qualified name.
      * Call fullPathSize() to obtain the number of path elements consumed, which might not be
      * the full path size which was given. If the class isn't accessible from the package

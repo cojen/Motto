@@ -182,6 +182,8 @@ public abstract sealed class BasePath extends AbstractList<String> implements Pa
         return this;
     }
 
+    public abstract BasePath demangle();
+
     /**
      * Append the path elements with '.' separators.
      */
@@ -276,6 +278,11 @@ public abstract sealed class BasePath extends AbstractList<String> implements Pa
         }
 
         @Override
+        public BasePath demangle() {
+            return this;
+        }
+
+        @Override
         protected boolean doEquals(int size, Path other) {
             return other instanceof Empty || super.doEquals(size, other);
         }
@@ -329,6 +336,12 @@ public abstract sealed class BasePath extends AbstractList<String> implements Pa
         }
 
         @Override
+        public BasePath demangle() {
+            String element = Maker.demangle(mElement);
+            return element.equals(mElement) ? this : from(element);
+        }
+
+        @Override
         protected boolean doEquals(int size, Path other) {
             return other instanceof Single s
                 ? Objects.equals(mElement, s.mElement)
@@ -378,6 +391,24 @@ public abstract sealed class BasePath extends AbstractList<String> implements Pa
             } else {
                 return size == 0 ? Empty.THE : new Single(mElements[start]);
             }
+        }
+
+        @Override
+        public BasePath demangle() {
+            String[] elements = mElements;
+
+            for (int i=0; i<elements.length; i++) {
+                String element = elements[i];
+                String demangled = Maker.demangle(element);
+                if (!demangled.equals(element)) {
+                    if (elements == mElements) {
+                        elements = mElements.clone();
+                    }
+                    elements[i] = demangled;
+                }
+            }
+
+            return elements == mElements ? this : InternSet.apply(new Multi(elements));
         }
 
         @Override
@@ -439,6 +470,24 @@ public abstract sealed class BasePath extends AbstractList<String> implements Pa
         public Multi canonical() {
             return InternSet.apply
                 (new Multi(Arrays.copyOfRange(mElements, mStart, mStart + mLength)));
+        }
+
+        @Override
+        public BasePath demangle() {
+            String[] elements = null;
+
+            for (int i=mStart; i<mLength; i++) {
+                String element = mElements[i];
+                String demangled = Maker.demangle(element);
+                if (!demangled.equals(element)) {
+                    if (elements == null) {
+                        elements = Arrays.copyOfRange(mElements, mStart, mStart + mLength);
+                    }
+                    elements[i - mStart] = demangled;
+                }
+            }
+
+            return elements == null ? this : InternSet.apply(new Multi(elements));
         }
 
         @Override
