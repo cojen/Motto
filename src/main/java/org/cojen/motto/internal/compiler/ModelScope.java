@@ -24,6 +24,7 @@ import org.cojen.motto.internal.model.BaseBlock;
 import org.cojen.motto.internal.model.BaseCallableItem;
 import org.cojen.motto.internal.model.BaseFieldItem;
 import org.cojen.motto.internal.model.BaseItem;
+import org.cojen.motto.internal.model.BaseScopeItem;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseVoidType;
 import org.cojen.motto.internal.model.NewClass;
@@ -73,13 +74,13 @@ final class ModelScope {
     private int mReachabilityCheckFailures;
 
     /**
-     * @param item expected to be a NewClass or a BaseCallableItem; if null, then the parent
-     * item is selected
+     * @param item expected to be a NewClass or a BaseCallableItem; if null, then a plain
+     * scoped item is generated which is enclosed by the parent item
      */
     ModelScope(ModelGenerator modGen, ModelScope parent, BaseItem item) {
         mModGen = modGen;
         mParent = parent;
-        mItem = item != null ? item : parent.mItem;
+        mItem = item != null ? item : new BaseScopeItem(parent.mItem);
         mFirstBlock = mActiveBlock = new BaseBlock();
         mLocals = Map.of();
         mLabels = Map.of();
