@@ -43,6 +43,7 @@ import org.cojen.motto.internal.model.BaseVoidType;
 
 import org.cojen.motto.internal.parser.AsStatement;
 import org.cojen.motto.internal.parser.ClassDefinitionStatement;
+import org.cojen.motto.internal.parser.CodeScopeStatement;
 import org.cojen.motto.internal.parser.ConstructorDefinitionStatement;
 import org.cojen.motto.internal.parser.CoordinateLoadStatement;
 import org.cojen.motto.internal.parser.DeclarationStatement;
@@ -600,16 +601,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         }
     }
 
-    // Visit methods: Null is returned if an error was reported. Void is returned if the
-    // statement returns void, and a non-void target binding is returned otherwise. If a null
-    // target binding is passed in, then the visit method must provide a target binding on its
-    // own if necessary. Otherwise, it should use the target binding already provided.
-
     /**
-     * Note: Caller must call exitScope.
+     * @param callable can pass null if code isn't directly referenced by a callable
      */
-    private BaseBinding visitCode(TupleStatement code, BaseCallableItem item) {
-        var newScope = new ModelScope(this, mScope, item);
+    private void visitCode(CodeScopeStatement code, BaseCallableItem callable) {
+        var newScope = new ModelScope(this, mScope, callable);
 
         // FIXME: add the parameters
 
@@ -633,8 +629,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             }
         }
 
-        /* FIXME: always true
-        if (item instanceof BaseCallableItem callable) {
+        /* FIXME:
+        if (callable != null) {
             // Need to allocate local variable indexes for the output and inputs.
 
             BaseCallSignature signature;
@@ -659,36 +655,34 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         }
         */
 
-        enterScope(newScope);
-
-        BaseBinding lastBinding = BaseBinding.Void.THE;
         int size = items.size();
 
-        if (size > 0) {
-            if (size == 1) {
-                // FIXME: auto yield action?
-                lastBinding = items.getFirst().accept(this, null);
-            } else {
-                for (Statement st : items) {
-                    BaseBinding binding = st.accept(this, null);
+        enterScope(newScope);
+
+        try {
+            for (Statement st : items) {
+                st.accept(this, null);
+            }
+
+            LabeledStatement ls = mScope.checkLabelReachability();
+
+            if (ls != null) {
+                error(ls, "unreachable");
+            } else if (callable != null && mScope.isReachable()) {
+                // The scope must end with a return statement.
+                if (callable.isMacro() || callable.signature().outputType() != BaseVoidType.THE) {
+                    error(code.end(), "missing return statement");
                 }
-                lastBinding = mScope.activeBlockResult();
             }
+        } finally {
+            exitScope();
         }
-
-        LabeledStatement ls = mScope.checkLabelReachability();
-
-        if (ls != null) {
-            error(ls, "unreachable");
-        } else if (mScope.isReachable()) {
-            // The scope must end with a return statement.
-            if (item.isMacro() || item.signature().outputType() != BaseVoidType.THE) {
-                error(code.end(), "missing return statement");
-            }
-        }
-
-        return lastBinding;
     }
+
+    // Visit methods: Null is returned if an error was reported. Void is returned if the
+    // statement returns void, and a non-void target binding is returned otherwise. If a null
+    // target binding is passed in, then the visit method must provide a target binding on its
+    // own if necessary. Otherwise, it should use the target binding already provided.
 
     @Override
     public BaseBinding visit(AsStatement st, BaseBinding target) {
@@ -729,6 +723,17 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         }
 
         exitScope();
+
+        return BaseBinding.Void.THE;
+    }
+
+    @Override
+    public BaseBinding visit(CodeScopeStatement st, BaseBinding target) {
+        if (checkUnreachable(st)) {
+            return null;
+        }
+
+        visitCode(st, null);
 
         return BaseBinding.Void.THE;
     }
@@ -1139,7 +1144,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                 // FIXME: must be abstract or be in an interface
             } else {
                 visitCode(st.code, method);
-                exitScope();
             }
         }
 

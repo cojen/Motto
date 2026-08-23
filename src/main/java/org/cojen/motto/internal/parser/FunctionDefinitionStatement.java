@@ -37,7 +37,7 @@ public abstract sealed class FunctionDefinitionStatement extends DefinitionState
      * @param returnType can be null for void
      */
     FunctionDefinitionStatement(List<Token.Identifier> modifiers, Token.Identifier name,
-                                List<Clause> clauses, TupleStatement code,
+                                List<Clause> clauses, CodeScopeStatement code,
                                 VarType returnType, TupleVarType paramType)
     {
         super(modifiers, name, clauses, code);

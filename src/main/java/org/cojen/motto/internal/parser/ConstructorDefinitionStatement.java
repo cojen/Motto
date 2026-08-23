@@ -44,7 +44,7 @@ public final class ConstructorDefinitionStatement extends FunctionDefinitionStat
      * @param code required, unless the definition is broken
      */
     ConstructorDefinitionStatement(List<Token.Identifier> modifiers, Token.Identifier name,
-                                   List<Clause> clauses, TupleStatement code,
+                                   List<Clause> clauses, CodeScopeStatement code,
                                    TupleVarType paramType)
     {
         super(modifiers, name, clauses, code, null, paramType);

@@ -1229,7 +1229,7 @@ public final class Parser implements Closeable {
 
         try {
             Identifier sname = simpleName(cname, "class name");
-            TupleStatement code = codeScope(parseStatement("class definition", ID_BASIC));
+            CodeScopeStatement code = codeScope(parseStatement("class definition", ID_BASIC));
             return new ClassDefinitionStatement(modifiers, ctype, sname, clauses, code);
         } finally {
             popDefinitionContext();
@@ -1260,7 +1260,7 @@ public final class Parser implements Closeable {
 
         List<Clause> clauses = parseClauses();
 
-        TupleStatement code;
+        CodeScopeStatement code;
 
         if (params.end() instanceof Newline nl) {
             errorAfter(nl, "an explicit `;` terminator is required when no code is provided");
@@ -1367,7 +1367,7 @@ public final class Parser implements Closeable {
         pushDefinitionContext(qname, DefinitionContext.T_CONSTRUCTOR);
 
         try {
-            TupleStatement code = codeScope(parseStatement("constructor definition", ID_BASIC));
+            CodeScopeStatement code = codeScope(parseStatement("constructor definition", ID_BASIC));
             return new ConstructorDefinitionStatement(modifiers, sname, clauses, code, paramType);
         } finally {
             popDefinitionContext();
@@ -1590,29 +1590,90 @@ public final class Parser implements Closeable {
     }
 
     /**
-     * Returns the given statement if it's an unevaluated TupleStatement, or else report an
-     * error and return null. If the tuple has more than one item, an error is reported. If the
-     * first item is a SequenceStatement, it's converted to a TupleStatement.
+     * Convertes the goven statement to a CodeScopeStatement, if it's an unevaluated
+     * TupleStatement, or else report an error and return null.
      *
-     * @return an optional TupleStatement which doesn't have any top-level SequenceStatements
+     * @return an optional CodeScopeStatement which doesn't have any top-level SequenceStatements
      */
-    private TupleStatement codeScope(Statement st) {
+    private CodeScopeStatement codeScope(Statement st) {
         if (st instanceof TupleStatement tuple && tuple.isUnevaluated()) {
-            List<Statement> items = tuple.items;
-            int size = items.size();
-            if (size == 0) {
-                return tuple;
-            }
-            if (size > 1) {
-                errorAfter(items.getFirst().end(), "code statements must be separated using `;`");
-            }
-            if (items.getFirst() instanceof SequenceStatement seq) {
-                tuple = new TupleStatement(tuple.open, seq.items, tuple.close);
-            }
-            return tuple;
+            return toCodeScope(tuple);
         } else {
             error(st, "code scope required");
             return null;
+        }
+    }
+
+    /**
+     * Converts a tuple of one item (or a SequenceStatement for more) into a
+     * CodeScopeStatement. All directly referenced unevaluated tuples are also converted to
+     * CodeScopeStatements, recursively.
+     *
+     * @param tuple must be unevaluated
+     * @return a CodeScopeStatement which doesn't have any top-level SequenceStatements
+     */
+    private CodeScopeStatement toCodeScope(TupleStatement tuple) {
+        List<Statement> items = tuple.items;
+        int size = items.size();
+
+        if (size == 0) {
+            return new CodeScopeStatement(tuple.open, items, tuple.close);
+        }
+
+        Statement item = items.getFirst();
+
+        if (size > 1) {
+            // Note: When separated using `;`, multiple items are in a SequenceStatement.
+            errorAfter(item.end(), "code statements must be separated using `;`");
+        }
+
+        item = codeScopeItem(item);
+
+        if (item instanceof SequenceStatement seq) {
+            items = seq.items;
+        } else {
+            items = List.of(item);
+        }
+
+        return new CodeScopeStatement(tuple.open, items, tuple.close);
+    }
+
+    /**
+     * Given a statement within a code scope, convert it into a CodeScopeStatement if possible.
+     */
+    private Statement codeScopeItem(Statement st) {
+        switch (st) {
+            case SequenceStatement seq -> {
+                List<Statement> items = seq.items;
+                int size = items.size();
+
+                for (int i=0; i<size; i++) {
+                    Statement item = items.get(i);
+                    Statement newItem = codeScopeItem(item);
+                    if (item != newItem) {
+                        if (items == seq.items) {
+                            items = new ArrayList<>(seq.items);
+                        }
+                        items.set(i, newItem);
+                    }
+                }
+
+                return items == seq.items ? seq : new SequenceStatement(items);
+            }
+
+            case TupleStatement tuple -> {
+                return tuple.isUnevaluated() ? toCodeScope(tuple) : tuple;
+            }
+
+            case LabeledStatement labeled -> {
+                Statement newSource = codeScopeItem(labeled.source);
+                return newSource == labeled.source ? labeled
+                    : new LabeledStatement(labeled.label, newSource);
+            }
+
+            default -> {
+                return st;
+            }
         }
     }
 

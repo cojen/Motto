@@ -26,6 +26,8 @@ public interface ParseVisitor<R, P> {
 
     public R visit(ClassDefinitionStatement st, P param);
 
+    public R visit(CodeScopeStatement st, P param);
+
     public R visit(ConstructorDefinitionStatement st, P param);
 
     public R visit(CoordinateLoadStatement st, P param);

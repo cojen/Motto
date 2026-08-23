@@ -73,12 +73,13 @@ final class ModelScope {
     private int mReachabilityCheckFailures;
 
     /**
-     * @param item expected to be a NewClass or a BaseCallableItem
+     * @param item expected to be a NewClass or a BaseCallableItem; if null, then the parent
+     * item is selected
      */
     ModelScope(ModelGenerator modGen, ModelScope parent, BaseItem item) {
         mModGen = modGen;
         mParent = parent;
-        mItem = item;
+        mItem = item != null ? item : parent.mItem;
         mFirstBlock = mActiveBlock = new BaseBlock();
         mLocals = Map.of();
         mLabels = Map.of();

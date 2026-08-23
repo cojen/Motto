@@ -24,7 +24,7 @@ import java.util.List;
  * @author Brian S. O'Neill
  */
 public abstract sealed class EnclosedStatementList extends StatementList
-    permits Coordinate, TupleStatement
+    permits CodeScopeStatement, Coordinate, TupleStatement
 {
     public final Token open;
     public final Token close;

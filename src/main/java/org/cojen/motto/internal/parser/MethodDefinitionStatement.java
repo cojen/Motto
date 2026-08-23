@@ -54,7 +54,7 @@ public final class MethodDefinitionStatement extends FunctionDefinitionStatement
      * @param segments required; can be empty
      */
     MethodDefinitionStatement(List<Token.Identifier> modifiers, Token.Identifier name,
-                              List<Clause> clauses, TupleStatement code, VarType returnType,
+                              List<Clause> clauses, CodeScopeStatement code, VarType returnType,
                               TupleVarType paramType, List<DefinitionSegment> segments)
     {
         super(modifiers, name, clauses, code, returnType, paramType);

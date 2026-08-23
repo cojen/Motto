@@ -48,7 +48,7 @@ public final class ClassDefinitionStatement extends DefinitionStatement {
      * @param code required; can pass null if the definition is broken
      */
     ClassDefinitionStatement(List<Token.Identifier> modifiers, Token.Identifier type,
-                             Token.Identifier name, List<Clause> clauses, TupleStatement code)
+                             Token.Identifier name, List<Clause> clauses, CodeScopeStatement code)
     {
         super(modifiers, name, clauses, code);
         this.type = type;

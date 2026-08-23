@@ -29,11 +29,11 @@ import org.cojen.motto.internal.model.NewClass;
  * @author Brian S. O'Neill
  */
 public sealed interface Statement extends Element permits
-    AsStatement, CoordinateLoadStatement, DeclarationStatement, DefinitionStatement,
-    EmptyStatement, FieldLoadStatement, InfixStatement, IsStatement, JumpStatement,
-    LabeledStatement, LambdaStatement, LiteralStatement, NewArrayStatement, NewStatement,
-    PathStatement, PostfixStatement, PrefixStatement, ReturnStatement, SequenceStatement,
-    StoreStatement, ThrowStatement, TupleStatement, YieldStatement
+    AsStatement, CodeScopeStatement, CoordinateLoadStatement, DeclarationStatement,
+    DefinitionStatement, EmptyStatement, FieldLoadStatement, InfixStatement, IsStatement,
+    JumpStatement, LabeledStatement, LambdaStatement, LiteralStatement, NewArrayStatement,
+    NewStatement, PathStatement, PostfixStatement, PrefixStatement, ReturnStatement,
+    SequenceStatement, StoreStatement, ThrowStatement, TupleStatement, YieldStatement
 {
     public <R, P> R accept(ParseVisitor<R, P> v, P param);
 

@@ -29,7 +29,7 @@ public abstract sealed class DefinitionStatement implements Statement
     public final List<Token.Identifier> modifiers;
     public final Token.Identifier name;
     public final List<Clause> clauses;
-    public final TupleStatement code;
+    public final CodeScopeStatement code;
 
     /**
      * @param modifiers required; might be empty
@@ -38,7 +38,7 @@ public abstract sealed class DefinitionStatement implements Statement
      * @param code optional
      */
     DefinitionStatement(List<Token.Identifier> modifiers, Token.Identifier name,
-                        List<Clause> clauses, TupleStatement code)
+                        List<Clause> clauses, CodeScopeStatement code)
     {
         this.modifiers = modifiers;
         this.name = name;
