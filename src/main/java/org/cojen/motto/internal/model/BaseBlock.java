@@ -406,20 +406,43 @@ public final class BaseBlock implements Block {
 
     @Override
     public BaseBinding arrayNew(Binding target, ArrayType type, Object... dims) {
-        // FIXME
-        throw null;
+        return arrayNew((BaseBinding) target, (BaseArrayType) type, dims);
+    }
+
+    public BaseBinding arrayNew(BaseBinding target, BaseArrayType type, Object... dims) {
+        // FIXME: verify target and dimension types
+
+        if (target == null) {
+            target = var(type);
+        }
+
+        addAction(new BaseArrayAction.New(mPosition, type, target, toBindings(dims)));
+
+        return target;
     }
 
     @Override
     public BaseBinding arrayGet(Binding target, Binding array, Object index) {
-        // FIXME
-        throw null;
+        return arrayGet((BaseBinding) target, (BaseBinding) array, index);
+    }
+
+    public BaseBinding arrayGet(BaseBinding target, BaseBinding array, Object index) {
+        if (target == null) {
+            target = var(array.type().arrayElementType());
+        }
+
+        addAction(new BaseArrayAction.Get(mPosition, array, target, toBinding(index)));
+
+        return target;
     }
 
     @Override
     public void arraySet(Binding array, Object index, Object value) {
-        // FIXME
-        throw null;
+        arraySet((BaseBinding) array, index, value);
+    }
+
+    public void arraySet(BaseBinding array, Object index, Object value) {
+        addAction(new BaseArrayAction.Set(mPosition, array, toBinding(index), toBinding(value)));
     }
 
     @Override
