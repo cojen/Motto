@@ -863,8 +863,37 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        String label = st.target.text;
+
+        switch (st.keyword.text) {
+            default -> {
+                /* FIXME: Support break and continue statements.
+
+                   The label search goes starts with the current scope and goes outward until
+                   it finds a matching label or method name.
+
+                   Break branches to a special block managed by ModelScope, which becomes the
+                   active block when the scope is finished.
+
+                   Continue branches to a special block managed by ModelScope, which is added
+                   to the end when the scope is finished.
+
+                 */
+
+                error(st.keyword, "unsupported branch type");
+            }
+
+            case "goto" -> {
+                BaseBlock block = mScope.findBlockForJump(label);
+                if (block == null) {
+                    error(st.target, "label not found");
+                } else {
+                    mScope.activeBlock(st).jump(block);
+                }
+            }
+        }
+
+        return BaseBinding.Void.THE;
     }
 
     @Override

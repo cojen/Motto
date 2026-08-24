@@ -842,12 +842,12 @@ public final class Parser implements Closeable {
                     return new ThrowStatement(first, parseStatement("throw statement"));
                 }
 
-                case "break", "continue" -> {
-                    return new JumpStatement(first, tryParseLabel(first));
-                }
-
-                case "goto" -> {
-                    return new JumpStatement(first, tryParseLabel(first));
+                case "break", "continue", "goto" -> {
+                    // Note that a label is required for "break" and "continue". Loop
+                    // statements are defined by macros, and so they don't get special
+                    // treatment. The label can refer to an actual label or the name of the
+                    // nearest enclosing method call.
+                    return new JumpStatement(first, parseLabel(first));
                 }
 
                 case "new" -> {
@@ -1134,7 +1134,7 @@ public final class Parser implements Closeable {
     /**
      * @param required when non-null, an error is reported if no statement could be parsed
      */
-    private Identifier tryParseLabel(Token required) throws IOException, Abort {
+    private Identifier parseLabel(Token required) throws IOException, Abort {
         Statement st = tryParseStatement(ID_FULL);
 
         if (st instanceof LoadStatement ls) {
