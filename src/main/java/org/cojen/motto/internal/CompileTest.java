@@ -30,12 +30,15 @@ import org.cojen.motto.internal.compiler.*;
 // FIXME: testing
 public class CompileTest {
     public static void main(String[] args) throws Exception {
-        File sourceFile = new File(args[0]);
+        var files = new ArrayList<File>();
+        for (String arg : args) {
+            files.add(new File(arg));
+        }
 
         var registry = ClassRegistry.fromClasspath();
         var compiler = new Compiler(new ErrorListener.Basic(), registry);
 
-        compiler.compile(List.of(sourceFile));
+        compiler.compile(files);
 
         Map<File, Map<String, byte[]>> completed = compiler.waitForCompletion();
 
@@ -47,6 +50,18 @@ public class CompileTest {
         compiler.close();
 
         writeTemp(completed.values());
+
+        System.out.println("---");
+
+        var loader = new CompiledClassLoader(ClassLoader.getSystemClassLoader());
+        loader.register(completed.values());
+
+        Map<String, byte[]> classes = completed.get(files.getFirst());
+        String mainClassName = classes.keySet().iterator().next();
+
+        Class<?> clazz = loader.loadClass(mainClassName);
+
+        clazz.getMethod("main", String[].class).invoke(null, (Object) new String[0]);
     }
 
     static void writeTemp(Collection<Map<String, byte[]>> classes) {
