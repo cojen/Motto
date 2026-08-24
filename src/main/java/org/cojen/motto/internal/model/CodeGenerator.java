@@ -202,8 +202,11 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
     @Override
     public BaseAction visit(BaseArrayAction.Get action) {
-        // FIXME
-        throw null;
+        Variable result = variableFor(action.array()).aget(forLoad(action.index()));
+
+        forStore(action.output()).set(result);
+
+        return action.next;
     }
 
     @Override

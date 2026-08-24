@@ -16,6 +16,8 @@
 
 package org.cojen.motto.internal.compiler;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -31,6 +33,7 @@ import org.cojen.motto.internal.model.BaseCallSignature;
 import org.cojen.motto.internal.model.BaseCallableItem;
 import org.cojen.motto.internal.model.BaseClassTypeItem;
 import org.cojen.motto.internal.model.BaseFieldItem;
+import org.cojen.motto.internal.model.BaseIntType;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseNullType;
 import org.cojen.motto.internal.model.BaseObjectType;
@@ -45,6 +48,7 @@ import org.cojen.motto.internal.parser.AsStatement;
 import org.cojen.motto.internal.parser.ClassDefinitionStatement;
 import org.cojen.motto.internal.parser.CodeScopeStatement;
 import org.cojen.motto.internal.parser.ConstructorDefinitionStatement;
+import org.cojen.motto.internal.parser.Coordinate;
 import org.cojen.motto.internal.parser.CoordinateLoadStatement;
 import org.cojen.motto.internal.parser.DeclarationStatement;
 import org.cojen.motto.internal.parser.Element;
@@ -669,6 +673,60 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         }
     }
 
+    /**
+     * @param forNew when true, the coordinates are for allocating a new array
+     * @return null if an error was reported, or else the bindings; if forNew, then the number
+     * of bindings returned might be fewer than the number of coordinates
+     */
+    private List<BaseBinding> visitCoordinates(List<Coordinate> coordinates, boolean forNew) {
+        var bindings = new ArrayList<BaseBinding>(coordinates.size());
+        boolean noMore = false;
+
+        for (Coordinate c : coordinates) {
+            List<Statement> items = c.items;
+
+            if (items.size() != 1) {
+                error(c, "only one " + (forNew ? "size" : "index") + "is supported");
+                return null;
+            }
+
+            Statement coordinate = items.getFirst();
+
+            if (coordinate == null) {
+                if (forNew) {
+                    if (bindings.isEmpty()) {
+                        error(c, "array size is missing");
+                        return null;
+                    }
+                    noMore = true;
+                } else {
+                    error(c, "array index is missing");
+                    return null;
+                }
+            } else if (noMore) {
+                error(c, "no more sizes can be specified");
+                return null;
+            } else {
+                BaseBinding binding = coordinate.accept(this, null);
+
+                if (binding == null) {
+                    // Error state.
+                    return null;
+                }
+
+                // FIXME: Support widening conversion.
+                if (!(binding.type() instanceof BaseIntType)) {
+                    error(coordinate, "not an int type");
+                    return null;
+                }
+
+                bindings.add(binding);
+            }
+        }
+
+        return bindings;
+    }
+
     // Visit methods: Null is returned if an error was reported. Void is returned if the
     // statement returns void, and a non-void target binding is returned otherwise. If a null
     // target binding is passed in, then the visit method must provide a target binding on its
@@ -739,8 +797,37 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        BaseBinding binding = st.source.accept(this, null);
+
+        if (binding == null) {
+            // Error state.
+            return null;
+        }
+
+        List<BaseBinding> coordinateBindings = visitCoordinates(st.coordinates, false);
+
+        if (coordinateBindings == null) {
+            // Error state.
+            return null;
+        }
+
+        Iterator<BaseBinding> it = coordinateBindings.iterator();
+
+        for (Coordinate c : st.coordinates) {
+            BaseType elementType = binding.type().arrayElementType();
+
+            if (elementType == null) {
+                error(st.source, "not an array type");
+                return null;
+            }
+
+            BaseBinding indexBinding = it.next();
+            BaseBinding getTarget = it.hasNext() ? null : target;
+
+            binding = mScope.activeBlock(st).arrayGet(getTarget, binding, indexBinding);
+        }
+
+        return binding;
     }
 
     @Override

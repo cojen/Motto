@@ -61,7 +61,7 @@ public class CompileTest {
 
         Class<?> clazz = loader.loadClass(mainClassName);
 
-        clazz.getMethod("main", String[].class).invoke(null, (Object) new String[0]);
+        clazz.getMethod("main", String[].class).invoke(null, (Object) new String[] {"test"});
     }
 
     static void writeTemp(Collection<Map<String, byte[]>> classes) {
