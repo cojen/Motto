@@ -464,24 +464,18 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                                           boolean direct)
     {
         final boolean staticCall = item != null;
-        final BaseTupleType inputType;
 
         if (staticCall) {
             if (instance != null) {
                 throw new IllegalArgumentException();
             }
-            inputType = BaseTupleType.from(inputTypes);
         } else {
             if (!(instance.type() instanceof BaseClassTypeItem instanceType)) {
                 // FIXME: If a non-void primitive type, try boxing. Also check if a tuple.
                 error(st, "not invoking an object instance");
                 return null;
             }
-
             item = instanceType;
-
-            // Prepend the "this" parameter.
-            inputType = BaseTupleType.from(instanceType, inputTypes);
         }
 
         Map<BaseCallSignature, Set<CallableItem>> methods;
@@ -543,6 +537,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             }
 
             String name = nameToken.text;
+            BaseTupleType inputType = BaseTupleType.from(inputTypes);
             boolean evaluated = st.params.open.type() == Token.T_LPAREN;
 
             var sig = BaseCallSignature.from

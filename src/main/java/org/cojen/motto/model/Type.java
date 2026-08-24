@@ -422,9 +422,15 @@ public sealed interface Type extends Constable
     /**
      * Returns a primitive type for a wrapper class type.
      *
-     * @throws UnsupportedOperationException if this type isn't a primitive wrapper
+     * @return null if this type isn't a primitive wrapper
      */
     public PrimitiveType unbox();
+
+    /**
+     * Returns true if this type is equivalent to other other type, although the objects might
+     * not be equal. The result is symmetric.
+     */
+    public boolean isEquivalentTo(Type other);
 
     /**
      * Returns true if values of the other type can be assigned to values of this type,

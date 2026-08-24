@@ -85,6 +85,13 @@ public final class BaseFunctionType extends GeneratedType
         return noFieldNames;
     }
 
+    @Override
+    public final boolean isEquivalentTo(Type other) {
+        return other instanceof FunctionType otherFunction
+            && outputType().isEquivalentTo(otherFunction.outputType())
+            && inputType().isEquivalentTo(otherFunction.inputType());
+    }
+
     /* FIXME: Function type compatibility is more nuanced.
     @Override
     public boolean isAssignableFrom(Type other) {

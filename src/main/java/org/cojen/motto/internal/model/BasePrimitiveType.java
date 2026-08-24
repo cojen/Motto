@@ -60,6 +60,12 @@ public abstract sealed class BasePrimitiveType implements BaseType, PrimitiveTyp
     public abstract BaseClassTypeItem box();
 
     @Override
+    public final boolean isEquivalentTo(Type other) {
+        // BasePrimitiveType classes should all be singletons.
+        return this == other;
+    }
+
+    @Override
     public final boolean isAccessibleVia(Item via) {
         return true;
     }

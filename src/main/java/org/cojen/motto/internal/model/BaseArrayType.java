@@ -84,10 +84,16 @@ public final class BaseArrayType implements BaseObjectType, ArrayType, Encodable
     }
 
     @Override
+    public boolean isEquivalentTo(Type other) {
+        return other instanceof ArrayType otherArray
+            && arrayElementType().isEquivalentTo(otherArray.arrayElementType());
+    }
+
+    @Override
     public boolean isAssignableFrom(Type other) {
         return BaseObjectType.super.isAssignableFrom(other)
             // This is stricter than Java, to help prevent ArrayStoreException.
-            || arrayElementType().equals(other.arrayElementType());
+            || (other.isArray() && arrayElementType().isEquivalentTo(other.arrayElementType()));
     }
 
     @Override

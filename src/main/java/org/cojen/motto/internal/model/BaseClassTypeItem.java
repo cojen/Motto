@@ -719,6 +719,13 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
+    public final boolean isEquivalentTo(Type other) {
+        return other instanceof ClassTypeItem otherClass
+            && packagePath().equals(otherClass.packagePath())
+            && namePath().equals(otherClass.namePath());
+    }
+
+    @Override
     public final int canConvertTo(Type to) {
         int code = BaseObjectType.super.canConvertTo(to);
 
@@ -892,8 +899,8 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
                 continue;
             }
 
-            // Note that the key signature shouldn't have field names, and so it's preferred
-            // over item.signature(). The types should be the same.
+            // Note: The key doesn't have the implicit "this" parameter for instance methods,
+            // unlike the item itself.
             BaseCallSignature key = e.getKey();
 
             if (!sig.canBindTo(key)) {

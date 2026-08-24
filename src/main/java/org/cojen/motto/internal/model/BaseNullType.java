@@ -62,6 +62,12 @@ public final class BaseNullType implements BaseObjectType, NullType {
     }
 
     @Override
+    public final boolean isEquivalentTo(Type other) {
+        // BaseNullType is a singleton.
+        return this == other;
+    }
+
+    @Override
     public boolean isAccessibleVia(Item via) {
         return true;
     }

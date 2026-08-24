@@ -249,12 +249,12 @@ public sealed interface BaseType extends Type, EncodableType
 
     @Override
     public default BasePrimitiveType unbox() {
-        throw new UnsupportedOperationException();
+        return null;
     }
 
     @Override
     public default boolean isAssignableFrom(Type other) {
-        return other.equals(this)
+        return other.isEquivalentTo(this)
             || ((other instanceof BaseType ot) && ot.canConvertTo(this) != Integer.MAX_VALUE)
             || (other instanceof TupleType tt
                 && tt.numFields() == 1 && isAssignableFrom(tt.field(0).type()));
@@ -279,7 +279,7 @@ public sealed interface BaseType extends Type, EncodableType
      * @return conversion code, which is max value if disallowed
      */
     public default int canConvertTo(Type to) {
-        if (equals(to) || to == Type.unspecified()) {
+        if (isEquivalentTo(to) || to == Type.unspecified()) {
             return 0;
         }
         if (to instanceof TupleType tt && tt.numFields() == 1) {
@@ -306,9 +306,9 @@ public sealed interface BaseType extends Type, EncodableType
             return 0;
         }
 
-        if (this.equals(aParam)) {
-            return this.equals(bParam) ? 0 : -1;
-        } else if (this.equals(bParam)) {
+        if (this.isEquivalentTo(aParam)) {
+            return this.isEquivalentTo(bParam) ? 0 : -1;
+        } else if (this.isEquivalentTo(bParam)) {
             return 1;
         }
 

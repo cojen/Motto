@@ -67,6 +67,12 @@ public final class BaseUnspecifiedType implements BaseType, UnspecifiedType {
     }
 
     @Override
+    public final boolean isEquivalentTo(Type other) {
+        // BaseUnspecifiedType is a singleton.
+        return this == other;
+    }
+
+    @Override
     public boolean isAssignableFrom(Type other) {
         return true;
     }

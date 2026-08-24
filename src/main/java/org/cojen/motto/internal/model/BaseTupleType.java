@@ -219,6 +219,30 @@ public sealed abstract class BaseTupleType extends GeneratedType
     protected abstract BaseTupleType doTrimFirst();
 
     @Override
+    public final boolean isEquivalentTo(Type other) {
+        if (!(other instanceof TupleType ott)) {
+            return false;
+        }
+
+        int numFields = numFields();
+
+        if (numFields != ott.numFields()) {
+            return false;
+        }
+
+        for (int i=0; i<numFields; i++) {
+            if (!Objects.equals(fieldName(i), ott.fieldName(i))) {
+                return false;
+            }
+            if (!fieldType(i).isEquivalentTo(ott.fieldType(i))) {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    @Override
     public final boolean isAssignableFrom(Type other) {
         if (super.isAssignableFrom(other)) {
             return true;
@@ -230,12 +254,12 @@ public sealed abstract class BaseTupleType extends GeneratedType
             return numFields == 1 && fieldType(0).isAssignableFrom(other);
         }
 
-        if (numFields != other.numFields()) {
+        if (numFields != ott.numFields()) {
             return false;
         }
 
         for (int i=0; i<numFields; i++) {
-            if (!fieldType(i).isAssignableFrom(other.fieldType(i))) {
+            if (!fieldType(i).isAssignableFrom(ott.fieldType(i))) {
                 return false;
             }
         }
@@ -244,7 +268,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
     }
 
     @Override
-    public int canConvertTo(Type to) {
+    public final int canConvertTo(Type to) {
         int code = super.canConvertTo(to);
 
         if (code != Integer.MAX_VALUE) {
@@ -280,7 +304,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
         code = 0;
 
         for (int i=0; i<numFields; i++) {
-            if (!(fieldType(0) instanceof BaseType ti)) {
+            if (!(fieldType(i) instanceof BaseType ti)) {
                 return Integer.MAX_VALUE;
             }
             int fieldCode = ti.canConvertTo(ott.fieldType(i));
@@ -294,7 +318,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
     }
 
     @Override
-    public int bindCompare(Type aParam, Type bParam) {
+    public final int bindCompare(Type aParam, Type bParam) {
         if (aParam instanceof BaseTupleType att && bParam instanceof BaseTupleType btt) {
             int numFields = numFields();
 
@@ -322,7 +346,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
     }
 
     @Override
-    public BaseTupleType withNames(String... fieldNames) {
+    public final BaseTupleType withNames(String... fieldNames) {
         return withNames(fieldNames, null);
     }
 
@@ -331,7 +355,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
      * IllegalArgumentException, duplicates are dropped and hasDupsRef[0] is set to the first
      * duplicated index; is set to -1 if no duplicates
      */
-    public BaseTupleType withNames(String[] fieldNames, int[] hasDupsRef) {
+    public final BaseTupleType withNames(String[] fieldNames, int[] hasDupsRef) {
         if (hasDupsRef != null) {
             hasDupsRef[0] = -1;
         }

@@ -104,7 +104,7 @@ public abstract sealed class BaseItem implements Item
         BaseType thisType = nearestType();
         Type viaType = via.nearestType();
 
-        if (thisType.equals(viaType)) {
+        if (thisType.isEquivalentTo(viaType)) {
             return true;
         }
 
@@ -123,7 +123,7 @@ public abstract sealed class BaseItem implements Item
                 return true;
             }
 
-            if (thisClass.nestType().equals(viaClass.nestType())) {
+            if (thisClass.nestType().isEquivalentTo(viaClass.nestType())) {
                 return true;
             }
 
