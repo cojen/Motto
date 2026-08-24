@@ -520,6 +520,11 @@ public sealed abstract class BaseTupleType extends GeneratedType
         }
 
         @Override
+        public boolean fieldExists(String name) {
+            return mNameMap.containsKey(name);
+        }
+
+        @Override
         public TupleFieldItem field(String name) {
             return field(fieldIndex(name));
         }

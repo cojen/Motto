@@ -602,29 +602,45 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     /**
-     * @param callable can pass null if code isn't directly referenced by a callable
+     * @param callable can pass null if code isn't directly referenced by a callable (the code
+     * is enclosed within a plain scope)
      */
     private void visitCode(CodeScopeStatement code, BaseCallableItem callable) {
         var newScope = new ModelScope(this, mScope, callable);
 
-        // FIXME: add the parameters
+        if (callable != null) {
+            // Parameters must be added before named local variables.
+            newScope.addParameters(callable);
+        }
 
         List<Statement> items = code.items;
 
-        // Add all the symbols first, allowing them to be accessed in any order.
-        for (Statement st : items) {
-            // FIXME: Local variables and methods. Check modifiers.
+        // Add all the symbols first, allowing them to be accessed in any order. The exception
+        // is for declarations with an unspecified type. They cannot be accessed until the
+        // DeclarationStatement assigns it a type and value.
 
-            if (st instanceof LabeledStatement ls) {
-                while (true) {
-                    if (!newScope.addLabel(ls)) {
-                        error(ls.label, "duplicate label");
+        for (Statement item : items) {
+            switch (item) {
+                case LabeledStatement ls -> {
+                    while (true) {
+                        if (!newScope.addLabel(ls)) {
+                            error(ls.label, "duplicate label");
+                        }
+                        if (ls.source instanceof LabeledStatement source) {
+                            ls = source;
+                        } else {
+                            break;
+                        }
                     }
-                    if (ls.source instanceof LabeledStatement source) {
-                        ls = source;
-                    } else {
-                        break;
-                    }
+                }
+
+                case DeclarationStatement ds -> {
+                    newScope.addDeclaration(ds, null);
+                }
+
+                // FIXME: MethodDefinitionStatement too
+
+                default -> {
                 }
             }
         }
@@ -705,16 +721,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                     fds.accept(this, null);
                 }
                 case DeclarationStatement ds -> {
-                    // This might be redundant, but it checks for additional name conflicts.
-                    mScope.addDeclaration(ds);
-
-                    /* FIXME
-                    if (ds.source != null) {
+                    if (mScope.addDeclaration(ds, null) && ds.source != null) {
                         // FIXME: Code must be added to the constructor(s) or static initializer.
                         // If a simple final constant, then initialize the JVM field directly.
                         throw null;
                     }
-                    */
                 }
                 default -> {
                     error(item, "invalid class member");
@@ -764,8 +775,36 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        // The variable should have beed defined earler by visitCode, unless the type is
+        // unspecified. The local might also be null if an error was been reported.
+        BaseBinding.Local local = mScope.tryFindLocalVariable(st.name.text);
+
+        if (st.source == null) {
+            if (local == null && st.type().isUnspecified()) {
+                mEnv.error(st, "declaration with an unspecified type must be assigned a value");
+            }
+            return BaseBinding.Void.THE;
+        }
+
+        BaseBinding source = st.source.accept(this, target);
+
+        if (source != null) {
+            if (local == null) {
+                if (st.type().isUnspecified()) {
+                    // Add the declaration now, even if the source type is unspecified (for
+                    // whatever reason).
+                    mScope.addDeclaration(st, source.type());
+                    local = mScope.tryFindLocalVariable(st.name.text);
+                }
+            }
+
+            if (local != null) {
+                // FIXME: type check or convert
+                mScope.activeBlock(st).copy(local, source);
+            }
+        }
+
+        return source;
     }
 
     @Override

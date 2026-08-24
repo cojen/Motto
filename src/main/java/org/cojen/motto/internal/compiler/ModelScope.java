@@ -25,7 +25,9 @@ import org.cojen.motto.internal.model.BaseCallableItem;
 import org.cojen.motto.internal.model.BaseFieldItem;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseScopeItem;
+import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
+import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
 import org.cojen.motto.internal.model.NewClass;
 
@@ -99,45 +101,92 @@ final class ModelScope {
     }
 
     /**
-     * @return the name of the field or variable, or else null if an error was reported
+     * Add parameters before adding any name local variables.
      */
-    String addDeclaration(DeclarationStatement ds) {
-        if (mItem instanceof NewClass clazz) {
+    void addParameters(BaseCallableItem callable) {
+        BaseTupleType inputType = callable.signature().inputType();
+        int num = inputType.numFields();
+
+        for (int i=0; i<num; i++) {
+            BaseType type = inputType.fieldType(i);
+            String name = inputType.fieldName(i);
+            var param = BaseBinding.Parameter.from(type, name, i);
+            if (mLocals.isEmpty()) {
+                mLocals = new LinkedHashMap<>();
+            }
+            // Duplicates should have been checked when the tuple was created. Also, no named
+            // local variables should be defined yet.
+            if (mLocals.putIfAbsent(name, param) != null) {
+                throw new AssertionError();
+            }
+        }
+    }
+
+    /**
+     * Try to add a declared field or local variable. When given a null actualType, then the
+     * declared type is used. If the declared type is unspecified, then the declaration isn't
+     * added, but true is still returned if no errors. When an actualType is given, it always
+     * overrides the declared type.
+     *
+     * @param actualType pass null to use the declared type
+     * @return false if an error was reported
+     */
+    boolean addDeclaration(DeclarationStatement ds, BaseType actualType) {
+        ModelScope scope = this;
+        BaseItem item = scope.mItem;
+
+        if (item instanceof NewClass clazz) {
             BaseFieldItem field = ds.addToClass(env(), clazz);
             // If null, an error should have been reported already.
-            return field == null ? null : field.name();
+            return field != null;
         }
 
-        // FIXME: declaration is a local variable; check modifiers; check conflicts; check
-        // paramConflict; check parent paramConflict; stop if parent isn't a BaseCallableItem
+        // If this point is reached, then the declaration is a local variable.
 
-        /* FIXME
-        BaseFieldItem field = ds.addToScope(env, mItem);
+        String name = ds.name.text;
 
-        if (field == null || paramConflict(env, ds)) {
-            // An error should have been reported already.
-            return null;
-        }
+        do {
+            if (item instanceof BaseCallableItem ci) {
+                if (!ci.signature().inputType().fieldExists(name)) {
+                    break;
+                }
+                env().error(ds.name, "a variable with the same name is declared as a parameter");
+                return false;
+            }
 
-        String name = field.name();
+            if (scope.mLocals.containsKey(name)) {
+                dupError(ds.name, "a variable with the same name", scope);
+                return false;
+            }
+        } while ((scope = scope.mParent) != null);
 
-        for (ModelScope parent = mParent; parent != null; parent = parent.mParent) {
-            if (parent.paramConflict(env, ds)) {
+        // FIXME: check modifiers
+
+        BaseType type;
+
+        if (actualType != null) {
+            type = actualType;
+        } else {
+            type = ds.type().tryResolve(env(), mItem);
+
+            if (type == null) {
                 // An error should have been reported already.
-                return null;
+                return false;
             }
 
-            BaseScopeItem pitem = parent.mItem;
-
-            if (!(pitem instanceof BaseClassItem) && pitem.findField(name) != null) {
-                dupError(env, ds.name, "a variable with the same name");
-                return null;
+            if (type == BaseUnspecifiedType.THE) {
+                // Don't add it.
+                return true;
             }
         }
 
-        return field;
-        */
-        throw null;
+        if (scope.mLocals.isEmpty()) {
+            scope.mLocals = new LinkedHashMap<>();
+        }
+
+        scope.mLocals.put(name, BaseBinding.Named.from(type, name));
+
+        return true;
     }
 
     BaseCallableItem addConstructor(ConstructorDefinitionStatement st) {
@@ -149,18 +198,50 @@ final class ModelScope {
         return null;
     }
 
+    /**
+     * Returns null if no method was added and an error was reported.
+     */
     BaseCallableItem addMethod(MethodDefinitionStatement st) {
+        BaseCallableItem callable;
+
         if (mItem instanceof NewClass clazz) {
-            return st.addToClass(env(), clazz);
+            callable = st.addToClass(env(), clazz);
+        } else {
+            // FIXME: local method requires a special checks and transforms
+            env().error(st, "local method not supported");
+            return null;
         }
 
-        // FIXME: local method requires a special checks and transforms
-        env().error(st, "local method not supported");
-        return null;
+        if (callable == null) {
+            // An error should have been reported already.
+            return null;
+        }
+
+        BaseTupleType inputType = callable.signature().inputType();
+        int num = inputType.numFields();
+
+        for (int i=0; i<num; i++) {
+            // FIXME: check modifiers
+
+            BaseType type = inputType.fieldType(i);
+
+            if (type == BaseUnspecifiedType.THE && !callable.isMacro()) {
+                Element e = st.paramType.fieldTypes().get(i);
+                env().error(e, "parameter type cannot be unspecified");
+            }
+        }
+
+        return callable;
     }
 
-    private void dupError(CompilationEnv env, Token.Identifier name, String prefix) {
-        env.error(name, prefix + " is declared in a parent scope");
+    private void dupError(Token.Identifier name, String message, ModelScope scope) {
+        if (scope == this) {
+            message += " is already declared";
+        } else {
+            message += " is declared in a parent scope";
+        }
+
+        env().error(name, message);
     }
 
     /**
@@ -324,14 +405,6 @@ final class ModelScope {
     }
 
     /**
-     * Find or create a named local variable.
-     */
-    public BaseBinding.Named localVariable(BaseType type, String name) {
-        // FIXME
-        throw null;
-    }
-
-    /**
      * Tries to find a find a named local variable or parameter.
      */
     public BaseBinding.Local tryFindLocalVariable(String name) {
@@ -339,11 +412,9 @@ final class ModelScope {
 
         while (true) {
             BaseBinding.Local local = scope.mLocals.get(name);
-
             if (local != null) {
                 return local;
             }
-
             if (scope.mItem instanceof BaseCallableItem || ((scope = scope.mParent) == null)) {
                 return null;
             }

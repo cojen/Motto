@@ -30,6 +30,11 @@ import org.cojen.motto.internal.model.BaseType;
  */
 public sealed interface NamedVarType extends VarType permits DeclarationStatement {
     @Override
+    public default boolean isUnspecified() {
+        return type().isUnspecified();
+    }
+
+    @Override
     public default BaseType tryResolve(CompilationEnv env, BaseItem scope) {
         return type().tryResolve(env, scope);
     }

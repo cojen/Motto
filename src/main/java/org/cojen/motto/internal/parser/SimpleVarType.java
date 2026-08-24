@@ -35,20 +35,19 @@ import org.cojen.motto.internal.model.BaseUnspecifiedType;
  */
 public sealed interface SimpleVarType extends VarType permits LoadStatement {
     @Override
+    public default boolean isUnspecified() {
+        return "_".equals(simpleName());
+    }
+
+    @Override
     public default BaseType tryResolve(CompilationEnv env, BaseItem scope) {
         BaseType type = trySelectClass(env, scope);
 
         if (type == null) {
             // Try to select a primitive type as the last resort.
-
-            List<Token.Identifier> name = typeName();
-            Token.Identifier first;
-
-            if (name.size() == 1 && !(first = name.getFirst()).quoted) {
-                String firstText = first.text;
-                type = "_".equals(firstText) ? BaseUnspecifiedType.THE
-                    : BasePrimitiveType.trySelectByName(firstText);
-            }
+            String simpleName = simpleName();
+            return "_".equals(simpleName) ? BaseUnspecifiedType.THE
+                : BasePrimitiveType.trySelectByName(simpleName);
         }
 
         if (type == null) {
@@ -56,6 +55,18 @@ public sealed interface SimpleVarType extends VarType permits LoadStatement {
         }
 
         return type;
+    }
+
+    /**
+     * Returns null if the name has more than one element or if it's quoted.
+     */
+    private String simpleName() {
+        List<Token.Identifier> name = typeName();
+        Token.Identifier first;
+        if (name.size() == 1 && !(first = name.getFirst()).quoted) {
+            return first.text;
+        }
+        return null;
     }
 
     public List<Token.Identifier> typeName();

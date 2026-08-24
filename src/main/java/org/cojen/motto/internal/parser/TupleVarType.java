@@ -66,6 +66,11 @@ public final class TupleVarType implements VarType {
     }
 
     @Override
+    public boolean isUnspecified() {
+        return false;
+    }
+
+    @Override
     public BaseType tryResolve(CompilationEnv env, BaseItem scope) {
         return tryResolve(env, scope, null);
     }

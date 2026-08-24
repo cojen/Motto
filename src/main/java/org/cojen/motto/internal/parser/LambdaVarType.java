@@ -47,6 +47,11 @@ public final class LambdaVarType implements VarType {
     }
 
     @Override
+    public boolean isUnspecified() {
+        return false;
+    }
+
+    @Override
     public BaseType tryResolve(CompilationEnv env, BaseItem scope) {
         BaseType in = inputType.tryResolve(env, scope);
         BaseType out = bodyType.tryResolve(env, scope);

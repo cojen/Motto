@@ -77,6 +77,11 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
+    public default boolean fieldExists(String name) {
+        return false;
+    }
+
+    @Override
     public default FieldItem field(String name) {
         throw new NoSuchElementException();
     }

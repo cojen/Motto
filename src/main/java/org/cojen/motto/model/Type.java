@@ -166,6 +166,11 @@ public sealed interface Type extends Constable
     public Stream<? extends FieldItem> fields();
 
     /**
+     * Returns true if a field with the given name is defined in this type.
+     */
+    public boolean fieldExists(String name);
+
+    /**
      * Finds a field by name, which is explicitly defined in this type.
      *
      * @throws NoSuchElementException if the field doesn't exist

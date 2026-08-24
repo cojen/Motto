@@ -52,6 +52,11 @@ public final class ArrayVarType implements VarType {
     }
 
     @Override
+    public boolean isUnspecified() {
+        return false;
+    }
+
+    @Override
     public BaseType tryResolve(CompilationEnv env, BaseItem scope) {
         BaseType type = mElementType.tryResolve(env, scope);
 

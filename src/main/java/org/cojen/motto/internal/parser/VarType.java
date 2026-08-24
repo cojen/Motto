@@ -29,9 +29,15 @@ public sealed interface VarType extends Element
     permits ArrayVarType, LambdaVarType, NamedVarType, SimpleVarType, TupleVarType
 {
     /**
+     * Returns true if the type represents model.UnspecifiedType.
+     */
+    public boolean isUnspecified();
+
+    /**
      * Tries to resolve the type. If unable, an error is reported and null is returned.
      *
      * @param env used for error reporting and finding classes
+     * @param scope used for finding the nearest enclosing class; see SimpleVarType
      * @return null if cannot resolve and an error was reported
      */
     public BaseType tryResolve(CompilationEnv env, BaseItem scope);
