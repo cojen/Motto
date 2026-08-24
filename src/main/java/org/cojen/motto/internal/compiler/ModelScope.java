@@ -101,7 +101,7 @@ final class ModelScope {
     }
 
     /**
-     * Add parameters before adding any name local variables.
+     * Add parameters before adding any named local variables.
      */
     void addParameters(BaseCallableItem callable) {
         BaseTupleType inputType = callable.signature().inputType();

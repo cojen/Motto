@@ -22,6 +22,12 @@ package org.cojen.motto.internal.model;
  * @author Brian S. O'Neill
  */
 public interface ActionVisitor<R> {
+    public R visit(BaseArrayAction.New action);
+
+    public R visit(BaseArrayAction.Get action);
+
+    public R visit(BaseArrayAction.Set action);
+
     public R visit(BaseBranchAction action);
 
     public R visit(BaseCallAction.Direct action);

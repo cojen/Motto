@@ -26,28 +26,25 @@ import org.cojen.motto.internal.model.BaseArrayAction;
 public sealed interface ArrayAction extends Action
     permits ArrayAction.New, ArrayAction.Get, ArrayAction.Set, BaseArrayAction
 {
-    // FIXME: sealed
-    public static non-sealed interface New extends ArrayAction {
-        public Binding output();
+    public static sealed interface New extends ArrayAction permits BaseArrayAction.New {
+        public ArrayType type();
 
-        public Type type();
+        public Binding output();
 
         public int numDimensions();
 
         public Binding dimension(int index);
     }
 
-    // FIXME: sealed
-    public static non-sealed interface Get extends ArrayAction {
-        public Binding output();
-
+    public static sealed interface Get extends ArrayAction permits BaseArrayAction.Get {
         public Binding array();
+
+        public Binding output();
 
         public Binding index();
     }
 
-    // FIXME: sealed
-    public static non-sealed interface Set extends ArrayAction {
+    public static sealed interface Set extends ArrayAction permits BaseArrayAction.Set {
         public Binding array();
 
         public Binding index();

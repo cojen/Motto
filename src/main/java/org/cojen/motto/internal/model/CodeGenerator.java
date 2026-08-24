@@ -195,6 +195,24 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     @Override
+    public BaseAction visit(BaseArrayAction.New action) {
+        // FIXME
+        throw null;
+    }
+
+    @Override
+    public BaseAction visit(BaseArrayAction.Get action) {
+        // FIXME
+        throw null;
+    }
+
+    @Override
+    public BaseAction visit(BaseArrayAction.Set action) {
+        // FIXME
+        throw null;
+    }
+
+    @Override
     public BaseAction visit(BaseBranchAction action) {
         // FIXME: Convert to switch statements if possible. Pattern matching should probably
         // start with the eq/ne math intrinsic action. For now, only support int and Integer

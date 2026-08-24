@@ -645,32 +645,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             }
         }
 
-        /* FIXME:
-        if (callable != null) {
-            // Need to allocate local variable indexes for the output and inputs.
-
-            BaseCallSignature signature;
-
-            if (!callable.isMacro()) {
-                signature = callable.signature();
-            } else {
-                signature = callable.macroSignature();
-            }
-
-            signature = signature.flatten();
-
-            BaseTupleType inputType = signature.inputType();
-            int numInputs = inputType.numElements();
-
-            // Define the output local variable.
-            newScope.localVariable(signature.outputType(), null);
-
-            for (int i=0; i<numInputs; i++) {
-                newScope.localVariable(inputType.elementType(i), inputType.elementName(i));
-            }
-        }
-        */
-
         int size = items.size();
 
         enterScope(newScope);
