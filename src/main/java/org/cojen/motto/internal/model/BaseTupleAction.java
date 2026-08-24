@@ -108,13 +108,14 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         }
 
         @Override
-        public Binding index() {
+        public BaseBinding index() {
             return mIndex;
         }
 
         @Override
         void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
             mTuple.trackBlockLocalSource(map);
+            mIndex.trackBlockLocalSource(map);
             mOutput.trackBlockLocalTarget(map);
         }
     }
@@ -154,6 +155,7 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         @Override
         void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
             mValue.trackBlockLocalSource(map);
+            mIndex.trackBlockLocalSource(map);
             mTuple.trackBlockLocalTarget(map);
         }
     }
