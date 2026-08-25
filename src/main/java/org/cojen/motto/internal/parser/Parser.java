@@ -499,7 +499,7 @@ public final class Parser implements Closeable {
 
                 case T_IDENTIFIER -> {
                     var id = (Identifier) t1;
-                    if (!id.quoted) {
+                    if (canMatchInfixTypeStatement(id)) {
                         if ("as".equals(id.text)) {
                             st = new AsStatement(st, parsePlainVarType());
                             continue;
