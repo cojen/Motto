@@ -888,10 +888,9 @@ public final class Parser implements Closeable {
             }
         }
 
-        // Stop if a context-sensitive keyword is seen, which isn't a generic identifier.
-        // Assume that parseStatementChain will handle it.
-        if (peekToken().isTextOperator()) {
-            return new LoadStatement(qname);
+        // Adjust the level if a form is seen which should be handled by parseStatementChain.
+        if (canMatchInfixTypeStatement()) {
+            idLevel = ID_BASIC;
         }
 
         /*
@@ -1044,7 +1043,7 @@ public final class Parser implements Closeable {
         vtype: {
             Token t = nextToken();
 
-            TupleStatement params;            
+            TupleStatement params;
 
             params: {
                 switch (t.type()) {
@@ -1071,10 +1070,14 @@ public final class Parser implements Closeable {
 
                     case T_IDENTIFIER -> {
                         if (idLevel > ID_NO_NEW_SYMBOLS) {
-                            vtype = CoordinateLoadStatement.from
-                                (new LoadStatement(qname), coordinates).asVarType(this);
-                            qname = parseQualifiedIdentifier((Identifier) t);
-                            break vtype;
+                            if (canMatchInfixTypeStatement(t)) {
+                                idLevel = ID_BASIC;
+                            } else {
+                                vtype = CoordinateLoadStatement.from
+                                    (new LoadStatement(qname), coordinates).asVarType(this);
+                                qname = parseQualifiedIdentifier((Identifier) t);
+                                break vtype;
+                            }
                         }
                     }
                 }
@@ -1114,6 +1117,28 @@ public final class Parser implements Closeable {
         // If this point is reached, idLevel must allow new symbols.
 
         return parseDefinitionOrDeclaration(modifiers, vtype, qname);
+    }
+
+    /**
+     * Returns true if the next token is an "as" or "is" identifier, and what follows could be
+     * parsed as a type.
+     */
+    private boolean canMatchInfixTypeStatement() throws IOException {
+        Token t = nextToken();
+        boolean result = canMatchInfixTypeStatement(t);
+        pushToken(t);
+        return result;
+    }
+
+    /**
+     * Returns true if the given token is an "as" or "is" identifier, and what follows could be
+     * parsed as a type.
+     */
+    private boolean canMatchInfixTypeStatement(Token t) throws IOException {
+        return t.isTextOperator() && switch (peekToken().type()) {
+            case T_IDENTIFIER, T_LPAREN, T_LBRACE -> true;
+            default -> false;
+        };
     }
 
     /**
