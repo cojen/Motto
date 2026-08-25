@@ -16,8 +16,6 @@
 
 package org.cojen.motto.model;
 
-import java.lang.constant.Constable;
-
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -46,7 +44,7 @@ import org.cojen.motto.internal.model.BaseVoidType;
  *
  * @author Brian S. O'Neill
  */
-public sealed interface Type extends Constable
+public sealed interface Type
     permits BaseType, UnspecifiedType, PrimitiveType, ObjectType, FunctionType
 {
     public static UnspecifiedType unspecified() {
@@ -258,7 +256,9 @@ public sealed interface Type extends Constable
     public Stream<? extends CallableItem> methods(String name);
 
     /**
-     * Finds a method by signature, which is explicitly defined in this type.
+     * Finds a method by signature, which is explicitly defined in this type. When finding an
+     * instance method, pass in a signature which doesn't start with the implicit "this"
+     * parameter. The signature of the returned item will have it, however.
      *
      * @throws NoSuchElementException if the method doesn't exist
      */

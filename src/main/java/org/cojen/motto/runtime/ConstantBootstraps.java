@@ -57,6 +57,7 @@ public final class ConstantBootstraps {
     private ConstantBootstraps() {
     }
 
+    /* FIXME: remove
     public static Type type(MethodHandles.Lookup lookup, String name, Class<?> unused, String desc)
         throws ReflectiveOperationException
     {
@@ -95,6 +96,7 @@ public final class ConstantBootstraps {
 
         return BaseType.from(clazz);
     }
+    */
 
     public static BigDecimal bigDecimal(MethodHandles.Lookup lookup, String name,
                                         Class<? extends BigDecimal> type, long value)
