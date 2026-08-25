@@ -377,7 +377,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                         return null;
                     }
 
-                    instanceBinding = BaseBinding.Tuple.from(instanceBinding, index);
+                    instanceBinding = BaseBinding.TupleField.from(instanceBinding, index);
                 }
 
                 case BaseArrayType t -> {

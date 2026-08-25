@@ -40,13 +40,18 @@ public sealed interface Binding permits BaseBinding {
 
     public Type type();
 
-    public boolean isVolatile();
-
     /**
      * Returns true if the binding value cannot be observed to be modified by another thread.
-     * This is usually true except for non-final field bindings.
+     * This is usually true except for non-final field bindings. To be considered stable, all
+     * dependent bindings must also be stable.
      */
     public boolean isStable();
+
+    /**
+     * Returns true if the immediate binding value can be modified. Dependent bindings may or
+     * may not be modifiable.
+     */
+    public boolean isModifiable();
 
     // FIXME: Binding needs to support restrictions, like "not null", or "known constant(s)".
 }

@@ -34,11 +34,6 @@ public abstract sealed class BaseBinding implements Binding {
     @Override
     public abstract BaseType type();
 
-    @Override
-    public boolean isVolatile() {
-        return false;
-    }
-
     /**
      * If this is an anonymous binding or if it accesses any, then map.putIfAbsent(anonymous,
      * true) is called for each of them. If successful, then the anonymous bindings are tagged
@@ -73,7 +68,17 @@ public abstract sealed class BaseBinding implements Binding {
         }
     }
 
-    public static final class Void extends Stable {
+    public static abstract sealed class Unmodifiable extends Stable {
+        Unmodifiable() {
+        }
+
+        @Override
+        public final boolean isModifiable() {
+            return false;
+        }
+    }
+
+    public static final class Void extends Unmodifiable {
         public static final Void THE = new Void();
 
         private Void() {
@@ -85,7 +90,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
     }
 
-    public static final class Null extends Stable {
+    public static final class Null extends Unmodifiable {
         public static final Null THE = new Null();
 
         private Null() {
@@ -97,7 +102,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
     }
 
-    public static final class Constant extends Stable {
+    public static final class Constant extends Unmodifiable {
         public static Constant from(BaseType type, Object value) {
             return InternSet.apply(new Constant(type, value));
         }
@@ -151,13 +156,13 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        public boolean isVolatile() {
-            return (mField.modifierBits() & Modifiers.VOLATILE) != 0;
+        public boolean isStable() {
+            return mField.isFinal();
         }
 
         @Override
-        public boolean isStable() {
-            return mField.isFinal();
+        public boolean isModifiable() {
+            return !mField.isFinal();
         }
 
         public BaseFieldItem field() {
@@ -198,13 +203,13 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        public boolean isVolatile() {
-            return (mField.modifierBits() & Modifiers.VOLATILE) != 0;
+        public boolean isStable() {
+            return mInstance.isStable() && mField.isFinal();
         }
 
         @Override
-        public boolean isStable() {
-            return mInstance.isStable() && mField.isFinal();
+        public boolean isModifiable() {
+            return !mField.isFinal();
         }
 
         public BaseBinding instance() {
@@ -237,15 +242,15 @@ public abstract sealed class BaseBinding implements Binding {
     /**
      * Defines a binding which refers to a tuple field.
      */
-    public static final class Tuple extends BaseBinding {
-        public static Tuple from(BaseBinding tuple, int index) {
-            return InternSet.apply(new Tuple(tuple, index));
+    public static final class TupleField extends BaseBinding {
+        public static TupleField from(BaseBinding tuple, int index) {
+            return InternSet.apply(new TupleField(tuple, index));
         }
 
         private final BaseBinding mTuple;
         private final int mIndex;
 
-        private Tuple(BaseBinding tuple, int index) {
+        private TupleField(BaseBinding tuple, int index) {
             if (index < 0 || !(tuple.type() instanceof BaseTupleType tt) ||
                 index > tt.numFields())
             {
@@ -264,6 +269,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public boolean isStable() {
             return mTuple.isStable();
+        }
+
+        @Override
+        public boolean isModifiable() {
+            return false;
         }
 
         public BaseBinding tuple() {
@@ -292,7 +302,7 @@ public abstract sealed class BaseBinding implements Binding {
 
         @Override
         public boolean equals(Object obj) {
-            return this == obj || obj instanceof Tuple other
+            return this == obj || obj instanceof TupleField other
                 && mTuple.equals(other.mTuple) && mIndex == other.mIndex;
         }
     }
@@ -310,6 +320,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public final BaseType type() {
             return mType;
+        }
+
+        @Override
+        public boolean isModifiable() {
+            return true;
         }
 
         /**
@@ -441,7 +456,7 @@ public abstract sealed class BaseBinding implements Binding {
     /**
      * Defines a binding which refers to code which can be passed to a macro call.
      */
-    public static final class Code extends Stable {
+    public static final class Code extends Unmodifiable {
         public static Code from(BaseType resultType, BaseBlock block) {
             return new Code(resultType, block);
         }
