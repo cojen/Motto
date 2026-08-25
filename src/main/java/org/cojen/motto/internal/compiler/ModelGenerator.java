@@ -1375,8 +1375,28 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        BaseBinding inputBinding = st.source.accept(this, null);
+
+        if (inputBinding == null) {
+            // Error state.
+            return null;
+        }
+
+        BaseBlock block = mScope.activeBlock(st);
+
+        switch (st.operator.type()) {
+            default -> {
+                error(st.operator, "unsupported prefix operator");
+                return null;
+            }
+
+            case T_PLUS  -> {return inputBinding;}
+            case T_MINUS -> {return block.neg(target, inputBinding);}
+            case T_TILDE -> {return block.com(target, inputBinding);}
+            case T_BANG  -> {return block.not(target, inputBinding);}
+
+            // FIXME: T_INC, T_DEC; LoadStatement, FieldLoadStatement, CoordinateLoadStatement
+        }
     }
 
     @Override
