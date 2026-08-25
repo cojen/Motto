@@ -143,35 +143,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         //return ToStringVisitor.toString(type);
     }
 
-    private BaseBinding tryMatchKeywordBinding(LoadStatement st) {
-        if (st.path.size() == 1) {
-            BaseBinding binding;
-
-            switch (st.path.getFirst().text) {
-                case "null" -> {
-                    binding = BaseBinding.Null.THE;
-                }
-                case "false" -> {
-                    binding = BaseBinding.Constant.from(BaseBooleanType.THE, false);
-                }
-                case "true" -> {
-                    binding = BaseBinding.Constant.from(BaseBooleanType.THE, true);
-                }
-                default -> {
-                    return null;
-                }
-            }
-
-            return binding;
-        }
-
-        return null;
-    }
-
     /**
-     * Examines the first path element to determine if it matches a local variable.
+     * Examines the first path element to determine if it matches a local variable or a special
+     * keyword.
      */
-    private BaseBinding.Local tryFindLocalVariable(ListIterator<Token.Identifier> pathIt) {
+    private BaseBinding tryMatchFirstSymbol(ListIterator<Token.Identifier> pathIt) {
         String name = pathIt.next().text;
 
         for (ModelScope scope = mScope; scope != null; scope = scope.parent()) {
@@ -196,6 +172,19 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                 return scope.localVariable(field.type(), name);
             }
             */
+
+            // Check against a keyword as the last resort.
+            switch (name) {
+                case "null" -> {
+                    return BaseBinding.Null.THE;
+                }
+                case "false" -> {
+                    return BaseBinding.Constant.from(BaseBooleanType.THE, false);
+                }
+                case "true" -> {
+                    return BaseBinding.Constant.from(BaseBooleanType.THE, true);
+                }
+            }
         }
 
         // Back up.
@@ -384,16 +373,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
             BaseType instanceType = instanceBinding.type();
 
-            if (!(instanceType instanceof BaseObjectType objType)) {
-                error(nameToken, "not an object type: " + typeString(instanceType));
-                return null;
-            }
-
-            switch (objType) {
-                case BaseNullType t -> {
-                    instanceBinding = BaseBinding.Null.THE;
-                }
-
+            switch (instanceType) {
                 case BaseTupleType t -> {
                     int index = t.fieldIndex(name);
 
@@ -415,13 +395,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                     Set<BaseFieldItem> fieldSet = t.findField(name, mScope.item());
 
                     if (fieldSet.isEmpty()) {
-                        if (st instanceof LoadStatement load) {
-                            BaseBinding keyword = tryMatchKeywordBinding(load);
-                            if (keyword != null) {
-                                return keyword;
-                            }
-                        }
-
                         String message;
                         if (autoThis) {
                             message = "cannot find symbol";
@@ -435,13 +408,18 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
                     if (fieldSet.size() != 1) {
                         // FIXME: list them all
-                        error(nameToken, "symbol is ambiguous");
+                        error(nameToken, "field is ambiguous");
                         return null;
                     }
 
                     BaseFieldItem fieldItem = fieldSet.iterator().next();
 
                     instanceBinding = BaseBinding.Instance.from(instanceBinding, fieldItem);
+                }
+
+                default -> {
+                    error(nameToken, "instance field not found");
+                    return null;
                 }
             }
 
@@ -471,12 +449,21 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                 throw new IllegalArgumentException();
             }
         } else {
-            if (!(instance.type() instanceof BaseClassTypeItem instanceType)) {
-                // FIXME: If a non-void primitive type, try boxing. Also check if a tuple.
-                error(st, "not invoking an object instance");
-                return null;
+            switch (instance.type()) {
+                case BaseClassTypeItem clazz -> {
+                    item = clazz;
+                }
+
+                case BaseNullType n -> {
+                    item = LoadedClass.classFrom(Object.class);
+                }
+
+                default -> {
+                    // FIXME: If a non-void primitive type, try boxing. Also check if a tuple.
+                    error(st, "not invoking an object instance");
+                    return null;
+                }
             }
-            item = instanceType;
         }
 
         Map<BaseCallSignature, Set<CallableItem>> methods;
@@ -1104,7 +1091,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         boolean autoThis = false;
         ListIterator<Token.Identifier> pathIt = st.path.listIterator();
 
-        BaseBinding instanceBinding = tryFindLocalVariable(pathIt);
+        BaseBinding instanceBinding = tryMatchFirstSymbol(pathIt);
 
         tryStatic: if (instanceBinding == null) {
             BaseClassTypeItem clazz = tryResolveClass(st, pathIt);
@@ -1117,12 +1104,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                     autoThis = true;
                     pathIt = st.path.listIterator();
                     break tryStatic;
-                }
-
-                BaseBinding keyword = tryMatchKeywordBinding(st);
-
-                if (keyword != null) {
-                    return keyword;
                 }
 
                 error(st.path, "cannot find symbol");
@@ -1239,10 +1220,10 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
             ListIterator<Token.Identifier> pathIt = st.path.listIterator();
 
-            BaseBinding localBinding = tryFindLocalVariable(pathIt);
+            BaseBinding firstBinding = tryMatchFirstSymbol(pathIt);
 
-            if (localBinding != null) {
-                instance = localBinding;
+            if (firstBinding != null) {
+                instance = firstBinding;
             } else {
                 BaseClassTypeItem classItem = tryResolveClass(st, pathIt);
 
