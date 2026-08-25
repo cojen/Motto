@@ -352,37 +352,11 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     @Override
     public final BaseCallableItem method(CallSignature sig) {
         Map<BaseCallSignature, BaseCallableItem> byName = methodMap().get(sig.name());
-
-        if (byName == null) {
+        BaseCallableItem item;
+        if (byName == null || (item = byName.get(sig.noFieldNames())) == null) {
             throw new NoSuchElementException();
         }
-
-        sig = sig.noFieldNames();
-
-        BaseCallableItem item = byName.get(sig);
-
-        if (item != null && item.signature().noFieldNames().equals(sig)) {
-            return item;
-        }
-
-        // Try to find a matching instance method. The first input element must be "this", but
-        // it doesn't appear in the map keys.
-
-        TupleType inputType = sig.inputType();
-
-        if (inputType.numFields() == 0 || !inputType.fieldType(0).equals(this) ||
-            !(sig instanceof BaseCallSignature baseSig))
-        {
-            throw new NoSuchElementException();
-        }
-
-        item = byName.get(baseSig.trimFirst());
-
-        if (item != null && !item.isStatic() && item.signature().noFieldNames().equals(sig)) {
-            return item;
-        }
-
-        throw new NoSuchElementException();
+        return item;
     }
 
     private Map<String, Map<BaseCallSignature, BaseCallableItem>> methodMap() {
@@ -762,6 +736,13 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         }
 
         return code;
+    }
+
+    @Override
+    public final boolean isJavaLangObject() {
+        BasePath namePath;
+        return packagePath().equals(BasePath.JAVA_LANG)
+            && (namePath = namePath()).size() == 1 && "Object".equals(namePath.getFirst());
     }
 
     final void applyModifiers(ClassMaker cm) {

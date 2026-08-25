@@ -331,5 +331,9 @@ public sealed interface BaseType extends Type, EncodableType
         return depth;
     }
 
+    public default boolean isJavaLangObject() {
+        return false;
+    }
+
     public org.cojen.maker.Type asMakerType();
 }

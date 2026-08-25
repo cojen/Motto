@@ -43,6 +43,7 @@ import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
+import org.cojen.motto.internal.model.LoadedClass;
 
 import org.cojen.motto.internal.parser.AsStatement;
 import org.cojen.motto.internal.parser.ClassDefinitionStatement;
@@ -948,8 +949,58 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        BaseBinding binding = st.source.accept(this, null);
+
+        if (binding == null) {
+            // Error state.
+            return null;
+        }
+
+        BaseType toType = st.type.tryResolve(env(), mScope.item());
+
+        if (toType == null) {
+            // Error state.
+            return null;
+        }
+
+        BaseType fromType = binding.type();
+
+        BaseBinding result;
+
+        if (fromType.equals(toType) || toType.isJavaLangObject()) {
+            result = BaseBinding.Constant.from(BaseBooleanType.THE, st.not == null);
+        } else if (fromType.isPrimitive() || toType.isPrimitive()) {
+            // FIXME: If primitive, check if wider, which always constant. Otherwise, perform a
+            // narrowing conversion check. If constant, then no runtime check is needed. Use
+            // ExactConversionsSupport.
+            throw null;
+        } else if (toType == BaseUnspecifiedType.THE) {
+            result = BaseBinding.Constant.from(BaseBooleanType.THE, st.not != null);
+        } else {
+            var classClass = LoadedClass.classFrom(Class.class);
+            var objectClass = LoadedClass.classFrom(Object.class);
+            var clazzObj = BaseBinding.Constant.from(classClass, toType.asMakerType());
+            // Note: The CodeGenerator sees that the class is a constant and uses the
+            // instanceof instruction.
+            var sig = BaseCallSignature.from
+                (BaseBooleanType.THE, "isInstance", BaseTupleType.from(objectClass), true);
+            var isInstance = classClass.method(sig);
+            BaseBlock block = mScope.activeBlock(st);
+            result = block.callVirtual(target, isInstance, clazzObj, binding);
+            if (st.not != null) {
+                result = block.not(null, result);
+            }
+        }
+
+        if (target == null) {
+            return result;
+        }
+
+        // FIXME: Automatic conversions when possible.
+
+        mScope.activeBlock(st).copy(target, result);
+
+        return target;
     }
 
     @Override

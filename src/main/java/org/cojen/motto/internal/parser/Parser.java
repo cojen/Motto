@@ -890,6 +890,7 @@ public final class Parser implements Closeable {
 
         // Adjust the level if a form is seen which should be handled by parseStatementChain.
         if (canMatchInfixTypeStatement()) {
+            // What's eventually be returned by this method should be LoadStatement.
             idLevel = ID_BASIC;
         }
 
@@ -1087,6 +1088,7 @@ public final class Parser implements Closeable {
                 // At this point, if idLevel doesn't allow new symbols, then modifiers is empty.
 
                 if (modifiers.isEmpty()) {
+                    // Note: If no coordinates, then LoadStatement is returned.
                     return CoordinateLoadStatement.from(new LoadStatement(qname), coordinates);
                 }
 

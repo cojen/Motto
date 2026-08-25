@@ -354,21 +354,40 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
     @Override
     public BaseAction visit(BaseCallAction.Virtual action) {
-        Variable instanceVar = variableFor(action.input(0));
-
-        Object[] params;
-        {
-            // Drop the explicit "this" parameter.
-            int numInputs = action.numInputs();
-            params = new Object[numInputs - 1];
-            for (int i=1; i<numInputs; i++) {
-                params[i - 1] = forLoad(action.input(i));
-            }
-        }
-
+        BaseBinding instanceBinding = action.input(0);
         BaseCallableItem callable = action.callable();
+        BaseCallSignature signature = callable.signature();
 
-        var result = instanceVar.invoke(Maker.mangle(callable.signature().name()), params);
+        final Variable result;
+
+        invoke: {
+            if (instanceBinding instanceof BaseBinding.Constant c &&
+                c.value() instanceof org.cojen.maker.Type classType)
+            {
+                if (signature.name().equals("isInstance") && !callable.isStatic()
+                    && signature.inputType().numFields() == 2 && // field 0 is "this"
+                    signature.inputType().fieldType(1).isJavaLangObject())
+                {
+                    result = variableFor(action.input(1)).instanceOf(classType);
+                    break invoke;
+                }
+            }
+
+            final Object[] params;
+
+            {
+                // Drop the explicit "this" parameter.
+                int numInputs = action.numInputs();
+                params = new Object[numInputs - 1];
+                for (int i=1; i<numInputs; i++) {
+                    params[i - 1] = forLoad(action.input(i));
+                }
+            }
+
+            Variable instanceVar = variableFor(instanceBinding);
+
+            result = instanceVar.invoke(Maker.mangle(signature.name()), params);
+        }
 
         if (result != null) {
             forStore(action.output()).set(result);
