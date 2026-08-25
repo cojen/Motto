@@ -40,9 +40,10 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     /**
-     * If this is an anonymous binding, calls map.putIfAbsent(binding, true). If successful,
-     * then the binding is tagged as having a block interdependency. It depends on having a
-     * value assigned to it when the block is entered.
+     * If this is an anonymous binding or if it accesses any, then map.putIfAbsent(anonymous,
+     * true) is called for each of them. If successful, then the anonymous bindings are tagged
+     * as having a block interdependency. They depend on having a value assigned when the block
+     * is entered.
      *
      * @see BaseAction#trackBlockLocalBindings
      */
@@ -50,7 +51,7 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     /**
-     * If this is an anonymous binding, calls map.putIfAbsent(binding, false). If successful,
+     * If this is an anonymous binding, calls map.putIfAbsent(anonymous, false). If successful,
      * then the binding won't be tagged as having a block interdependency. It doesn't depend on
      * having a value assigned to it when the block is entered.
      *
@@ -215,6 +216,11 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
+        void trackBlockLocalSource(Map<Anonymous, Boolean> map) {
+            mInstance.trackBlockLocalSource(map);
+        }
+
+        @Override
         public int hashCode() {
             int hash = mInstance.hashCode();
             hash = hash * 1259428081 + mField.hashCode();
@@ -270,6 +276,11 @@ public abstract sealed class BaseBinding implements Binding {
 
         public int index() {
             return mIndex;
+        }
+
+        @Override
+        void trackBlockLocalSource(Map<Anonymous, Boolean> map) {
+            mTuple.trackBlockLocalSource(map);
         }
 
         @Override

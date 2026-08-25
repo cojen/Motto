@@ -60,8 +60,8 @@ public abstract sealed class BaseAction implements Action
      * binding value is dependent upon a prior block.
      *
      * <p>If the action has source and target bindings, all the source bindings should be
-     * tracked first, ensuring that the true value has precedence. The target could the same as
-     * the source, and so naturally, it must be accessed as a source first.
+     * tracked first, ensuring that the true value has precedence. The target could be the same
+     * as the source, and so naturally, it must be accessed as a source first.
      *
      * @param map a map associated with one block
      * @see BaseBinding
