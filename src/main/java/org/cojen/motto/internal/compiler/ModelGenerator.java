@@ -148,7 +148,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
      * keyword.
      */
     private BaseBinding tryMatchFirstSymbol(ListIterator<Token.Identifier> pathIt) {
-        String name = pathIt.next().text;
+        Token.Identifier token = pathIt.next();
+        String name = token.text;
 
         for (ModelScope scope = mScope; scope != null; scope = scope.parent()) {
             BaseItem item = scope.item();
@@ -162,18 +163,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             if (local != null) {
                 return local;
             }
+        }
 
-            // Check if declared but not yet used.
+        if (!token.quoted) {
+            // Check against a keyword.
 
-            /* FIXME
-            BaseFieldItem field = item.findField(name);
-
-            if (field != null) {
-                return scope.localVariable(field.type(), name);
-            }
-            */
-
-            // Check against a keyword as the last resort.
             switch (name) {
                 case "null" -> {
                     return BaseBinding.Null.THE;
@@ -347,9 +341,10 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     /**
-     * Follows an instance path, adding actions along the way.
+     * Follows an instance path, returning the original binding or a composite binding.
      *
      * @param st if given a MethodCallStatement, the last item  isn't followed
+     * @param instanceBinding the first binding
      * @param autoThis true if tryAccessThis was used (only affects error reporting)
      * @return null if an error was reported.
      */
