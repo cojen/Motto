@@ -78,6 +78,18 @@ public final class BaseNullType implements BaseObjectType, NullType {
     }
 
     @Override
+    public int bindCompare(Type aParam, Type bParam) {
+        // Favor binding to a plain Object parameter.
+        if (BaseType.isJavaLangObject(aParam)) {
+            return BaseType.isJavaLangObject(bParam) ? 0 : -1;
+        } else if (BaseType.isJavaLangObject(bParam)) {
+            return 1;
+        }
+
+        return BaseObjectType.super.bindCompare(aParam, bParam);
+    }
+
+    @Override
     public int canConvertTo(Type to) {
         return to instanceof ObjectType ? 0 : BaseObjectType.super.canConvertTo(to);
     }

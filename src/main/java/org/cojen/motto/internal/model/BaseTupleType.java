@@ -282,7 +282,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
                 return t0.canConvertTo(to);
             }
 
-            if (to instanceof BaseType bt && bt.isJavaLangObject()) {
+            if (BaseType.isJavaLangObject(to)) {
                 return 0;
             }
 
