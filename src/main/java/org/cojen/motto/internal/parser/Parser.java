@@ -756,35 +756,54 @@ public final class Parser implements Closeable {
     /**
      * @param source optional
      */
-    private MethodCallStatement parseMethodCall(Statement source, List<Identifier> name,
-                                                TupleStatement params)
+    private Statement parseMethodCall(Statement source, List<Identifier> name,
+                                      TupleStatement params)
         throws IOException, Abort
     {
-        // Try to parse method call segments, stopping when a separator is seen, or if the last
-        // parsed statement ends with an automatic separator.
-        List<Statement> segments;
-        if (params.end() instanceof Newline) {
-            segments = List.of();
-        } else {
-            segments = parseCallSegments();
-        }
+        // First create the method call without any call segments.
+
+        Identifier simpleName;
+        MethodCallStatement call;
 
         if (source == null) {
-            return new MethodCallStatement(name, params, segments);
+            simpleName = null;
+            call = new MethodCallStatement(name, params, List.of());
         } else {
-            return new MethodCallStatement(source, simpleName(name), params, segments);
+            simpleName = simpleName(name);
+            call = new MethodCallStatement(source, simpleName, params, List.of());
         }
+
+        if (params.end() instanceof Newline) {
+            // No segments can follow.
+            return call;
+        }
+
+        Statement chain = parseStatementChain(call);
+        
+        if (chain != call) {
+            // It's a chain, and so no segments can follow.
+            return chain;
+        }
+
+        // Try to parse call segments.
+
+        List<Statement> segments = parseCallSegments();
+
+        if (!segments.isEmpty()) {
+            if (source == null) {
+                call = new MethodCallStatement(name, params, segments);
+            } else {
+                call = new MethodCallStatement(source, simpleName, params, segments);
+            }
+        }
+
+        return call;
     }
 
     private List<Statement> parseCallSegments() throws IOException, Abort {
         List<Statement> segments = List.of();
 
         while (true) {
-            // Stop if a context-sensitive keyword is seen.
-            if (peekToken().isTextOperator()) {
-                break;
-            }
-
             // Must not parse new symbols because when the statement leads with more than one
             // identifier, it consumes identifiers which should be interpreted as segment
             // names. The inability to declare or define symbols as standalone statements isn't
@@ -809,7 +828,14 @@ public final class Parser implements Closeable {
                 segments = new ArrayList<>(4);
             }
 
-            segments.add(st);
+            Statement chain = parseStatementChain(st);
+
+            segments.add(chain);
+
+            if (chain != st) {
+                // Chain parsing rules win, and so no more segments can follow.
+                break;
+            }
         }
 
         return segments;
