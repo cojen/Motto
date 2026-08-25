@@ -143,13 +143,29 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         //return ToStringVisitor.toString(type);
     }
 
+    private BaseBinding tryMatchKeywordBinding(Token.Identifier token) {
+        if (!token.quoted) {
+            switch (token.text) {
+                case "null" -> {
+                    return BaseBinding.Null.THE;
+                }
+                case "false" -> {
+                    return BaseBinding.Constant.from(BaseBooleanType.THE, false);
+                }
+                case "true" -> {
+                    return BaseBinding.Constant.from(BaseBooleanType.THE, true);
+                }
+            }
+        }
+
+        return null;
+    }
+
     /**
-     * Examines the first path element to determine if it matches a local variable or a special
-     * keyword.
+     * Examines the first path element to determine if it matches a local variable.
      */
-    private BaseBinding tryMatchFirstSymbol(ListIterator<Token.Identifier> pathIt) {
-        Token.Identifier token = pathIt.next();
-        String name = token.text;
+    private BaseBinding.Local tryFindLocalVariable(ListIterator<Token.Identifier> pathIt) {
+        String name = pathIt.next().text;
 
         for (ModelScope scope = mScope; scope != null; scope = scope.parent()) {
             BaseItem item = scope.item();
@@ -162,22 +178,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
             if (local != null) {
                 return local;
-            }
-        }
-
-        if (!token.quoted) {
-            // Check against a keyword.
-
-            switch (name) {
-                case "null" -> {
-                    return BaseBinding.Null.THE;
-                }
-                case "false" -> {
-                    return BaseBinding.Constant.from(BaseBooleanType.THE, false);
-                }
-                case "true" -> {
-                    return BaseBinding.Constant.from(BaseBooleanType.THE, true);
-                }
             }
         }
 
@@ -1086,18 +1086,24 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         boolean autoThis = false;
         ListIterator<Token.Identifier> pathIt = st.path.listIterator();
 
-        BaseBinding instanceBinding = tryMatchFirstSymbol(pathIt);
+        BaseBinding instanceBinding = tryFindLocalVariable(pathIt);
 
         tryStatic: if (instanceBinding == null) {
             BaseClassTypeItem clazz = tryResolveClass(st, pathIt);
 
             if (clazz == null) {
+                pathIt = st.path.listIterator();
                 BaseBinding thisBinding = tryAccessThis();
 
                 if (thisBinding != null) {
                     instanceBinding = thisBinding;
                     autoThis = true;
-                    pathIt = st.path.listIterator();
+                    break tryStatic;
+                }
+
+                instanceBinding = tryMatchKeywordBinding(pathIt.next());
+
+                if (instanceBinding != null) {
                     break tryStatic;
                 }
 
@@ -1212,14 +1218,23 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
             ListIterator<Token.Identifier> pathIt = st.path.listIterator();
 
-            BaseBinding firstBinding = tryMatchFirstSymbol(pathIt);
+            BaseBinding localBinding = tryFindLocalVariable(pathIt);
 
-            if (firstBinding != null) {
-                instance = firstBinding;
+            tryInstance: if (localBinding != null) {
+                instance = localBinding;
             } else {
                 BaseClassTypeItem classItem = tryResolveClass(st, pathIt);
 
                 if (classItem == null) {
+                    pathIt = st.path.listIterator();
+
+                    BaseBinding keyword = tryMatchKeywordBinding(pathIt.next());
+
+                    if (keyword != null) {
+                        instance = keyword;
+                        break tryInstance;
+                    }
+
                     error(st.path, "cannot find symbol");
                     return null;
                 }
