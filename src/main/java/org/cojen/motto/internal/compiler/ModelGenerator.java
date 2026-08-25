@@ -322,7 +322,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     /**
      * @return null if not found, and an error was reported
      */
-    private BaseFieldItem findStaticField(BaseClassTypeItem clazz, Token.Identifier nameToken) {
+    private BaseBinding findStaticField(BaseClassTypeItem clazz, Token.Identifier nameToken) {
         Set<BaseFieldItem> set = clazz.findField
             (nameToken.text, f -> f.isStatic() && f.isAccessibleVia(mScope.item()));
 
@@ -337,7 +337,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        return set.iterator().next();
+        return BaseBinding.Static.from(set.iterator().next());
     }
 
     /**
@@ -1110,15 +1110,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                 return null;
             }
 
-            Token.Identifier nameToken = pathIt.next();
-            BaseFieldItem fieldItem = findStaticField(clazz, nameToken);
+            instanceBinding = findStaticField(clazz, pathIt.next());
 
-            if (fieldItem == null) {
+            if (instanceBinding == null) {
                 // Error state.
                 return null;
             }
-
-            instanceBinding = BaseBinding.Static.from(fieldItem);
         }
 
         return followInstancePath(st, instanceBinding, autoThis, pathIt);
@@ -1247,14 +1244,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                     return result;
                 }
 
-                BaseFieldItem fieldItem = findStaticField(classItem, nameToken);
+                BaseBinding fieldBinding = findStaticField(classItem, nameToken);
 
-                if (fieldItem == null) {
+                if (fieldBinding == null) {
                     // Error state.
                     return null;
                 }
-
-                BaseBinding fieldBinding = BaseBinding.Static.from(fieldItem);
 
                 instance = followInstancePath(st, fieldBinding, false, pathIt);
 
