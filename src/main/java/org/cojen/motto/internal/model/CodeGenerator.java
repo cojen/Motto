@@ -565,7 +565,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
                 return variableFor(b);
             }
 
-            case BaseBinding.TupleField b -> {
+            case BaseBinding.TupleAccess b -> {
                 return variableFor(b);
             }
 
@@ -727,7 +727,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         return instanceVar.field(fieldName);
     }
 
-    private Variable variableFor(BaseBinding.TupleField binding) {
+    private Variable variableFor(BaseBinding.TupleAccess binding) {
         String name = binding.tupleType().fieldName(binding.index());
         return variableFor(binding.tuple()).invoke(name);
     }

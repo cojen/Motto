@@ -242,15 +242,15 @@ public abstract sealed class BaseBinding implements Binding {
     /**
      * Defines a binding which refers to a tuple field.
      */
-    public static final class TupleField extends BaseBinding {
-        public static TupleField from(BaseBinding tuple, int index) {
-            return InternSet.apply(new TupleField(tuple, index));
+    public static final class TupleAccess extends BaseBinding {
+        public static TupleAccess from(BaseBinding tuple, int index) {
+            return InternSet.apply(new TupleAccess(tuple, index));
         }
 
         private final BaseBinding mTuple;
         private final int mIndex;
 
-        private TupleField(BaseBinding tuple, int index) {
+        private TupleAccess(BaseBinding tuple, int index) {
             if (index < 0 || !(tuple.type() instanceof BaseTupleType tt) ||
                 index > tt.numFields())
             {
@@ -302,7 +302,7 @@ public abstract sealed class BaseBinding implements Binding {
 
         @Override
         public boolean equals(Object obj) {
-            return this == obj || obj instanceof TupleField other
+            return this == obj || obj instanceof TupleAccess other
                 && mTuple.equals(other.mTuple) && mIndex == other.mIndex;
         }
     }
