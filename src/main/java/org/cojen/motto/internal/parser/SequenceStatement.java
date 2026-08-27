@@ -27,10 +27,10 @@ import java.util.List;
  */
 public final class SequenceStatement extends StatementList implements Statement {
     /**
-     * @throws IllegalArgumentException if items is empty
+     * @throws IllegalArgumentException if less than two items are provided
      */
-    SequenceStatement(List<Statement> items) {
-        if (items.isEmpty()) {
+    public SequenceStatement(List<Statement> items) {
+        if (items.size() <= 1) {
             throw new IllegalArgumentException();
         }
         super(items);
