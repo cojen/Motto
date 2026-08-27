@@ -337,7 +337,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        return BaseBinding.Static.from(set.iterator().next());
+        return BaseBinding.StaticField.from(set.iterator().next());
     }
 
     /**
@@ -377,7 +377,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                         return null;
                     }
 
-                    instanceBinding = BaseBinding.TupleAccess.from(instanceBinding, index);
+                    instanceBinding = BaseBinding.TupleField.from(instanceBinding, index);
                 }
 
                 case BaseArrayType t -> {
@@ -409,7 +409,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
                     BaseFieldItem fieldItem = fieldSet.iterator().next();
 
-                    instanceBinding = BaseBinding.Instance.from(instanceBinding, fieldItem);
+                    instanceBinding = BaseBinding.InstanceField.from(instanceBinding, fieldItem);
                 }
 
                 default -> {

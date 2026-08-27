@@ -139,14 +139,14 @@ public abstract sealed class BaseBinding implements Binding {
     /**
      * Defines a binding which refers to a static field.
      */
-    public static final class Static extends BaseBinding {
-        public static Static from(BaseFieldItem field) {
-            return InternSet.apply(new Static(field));
+    public static final class StaticField extends BaseBinding {
+        public static StaticField from(BaseFieldItem field) {
+            return InternSet.apply(new StaticField(field));
         }
 
         private final BaseFieldItem mField;
 
-        private Static(BaseFieldItem field) {
+        private StaticField(BaseFieldItem field) {
             mField = Objects.requireNonNull(field);
         }
 
@@ -176,7 +176,7 @@ public abstract sealed class BaseBinding implements Binding {
 
         @Override
         public boolean equals(Object obj) {
-            return this == obj || obj instanceof Static other
+            return this == obj || obj instanceof StaticField other
                 && mField.equals(other.mField);
         }
     }
@@ -184,15 +184,15 @@ public abstract sealed class BaseBinding implements Binding {
     /**
      * Defines a binding which refers to an instance field.
      */
-    public static final class Instance extends BaseBinding {
-        public static Instance from(BaseBinding instance, BaseFieldItem field) {
-            return InternSet.apply(new Instance(instance, field));
+    public static final class InstanceField extends BaseBinding {
+        public static InstanceField from(BaseBinding instance, BaseFieldItem field) {
+            return InternSet.apply(new InstanceField(instance, field));
         }
 
         private final BaseBinding mInstance;
         private final BaseFieldItem mField;
 
-        private Instance(BaseBinding instance, BaseFieldItem field) {
+        private InstanceField(BaseBinding instance, BaseFieldItem field) {
             mInstance = Objects.requireNonNull(instance);
             mField = Objects.requireNonNull(field);
         }
@@ -234,7 +234,7 @@ public abstract sealed class BaseBinding implements Binding {
 
         @Override
         public boolean equals(Object obj) {
-            return this == obj || obj instanceof Instance other
+            return this == obj || obj instanceof InstanceField other
                 && mInstance.equals(other.mInstance) && mField.equals(other.mField);
         }
     }
@@ -242,15 +242,15 @@ public abstract sealed class BaseBinding implements Binding {
     /**
      * Defines a binding which refers to a tuple field.
      */
-    public static final class TupleAccess extends BaseBinding {
-        public static TupleAccess from(BaseBinding tuple, int index) {
-            return InternSet.apply(new TupleAccess(tuple, index));
+    public static final class TupleField extends BaseBinding {
+        public static TupleField from(BaseBinding tuple, int index) {
+            return InternSet.apply(new TupleField(tuple, index));
         }
 
         private final BaseBinding mTuple;
         private final int mIndex;
 
-        private TupleAccess(BaseBinding tuple, int index) {
+        private TupleField(BaseBinding tuple, int index) {
             if (index < 0 || !(tuple.type() instanceof BaseTupleType tt) ||
                 index > tt.numFields())
             {
@@ -302,7 +302,7 @@ public abstract sealed class BaseBinding implements Binding {
 
         @Override
         public boolean equals(Object obj) {
-            return this == obj || obj instanceof TupleAccess other
+            return this == obj || obj instanceof TupleField other
                 && mTuple.equals(other.mTuple) && mIndex == other.mIndex;
         }
     }
