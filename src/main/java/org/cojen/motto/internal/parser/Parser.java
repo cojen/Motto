@@ -521,9 +521,8 @@ public final class Parser implements Closeable {
                 case T_LAND_A, T_LOR_A, T_LXOR_A,
                     T_PLUS_A, T_MINUS_A, T_MUL_A, T_DIV_A, T_REM_A, T_SHL_A, T_SHR_A, T_USHR_A ->
                 {
-                    // Convert `a += b` to `a = a + b`. Assignment terminates the chain.
-                    Statement source = parseStatement("assignment source");
-                    return new StoreStatement(st, new InfixStatement(st, t1, source));
+                    // Assignment terminates the chain.
+                    return new UpdateStatement(st, t1, parseStatement("assignment source"));
                 }
 
                 case T_CUSTOM_OP -> {
@@ -531,11 +530,9 @@ public final class Parser implements Closeable {
                     String opText = op.text;
 
                     if (opText.indexOf('=') == (opText.length() - 1)) {
-                        // Convert `a <op>= b` to `a = a <op> b`. Assignment terminates the chain.
-                        Statement source = parseStatement("assignment source");
-                        // Drop the "=" suffix from the operator.
-                        op = new Custom(op, opText.substring(0, opText.length() - 1));
-                        return new StoreStatement(st, new InfixStatement(st, op, source));
+                        // Custom tokens which have one '=' character, only at the end, are
+                        // treated as update assignments. Assignment terminates the chain.
+                        return new UpdateStatement(st, t1, parseStatement("assignment source"));
                     }
 
                     st = new InfixStatement(st, t1, parseStatement("infix statement"));

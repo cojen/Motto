@@ -79,6 +79,7 @@ import org.cojen.motto.internal.parser.StoreStatement;
 import org.cojen.motto.internal.parser.ThrowStatement;
 import org.cojen.motto.internal.parser.Token;
 import org.cojen.motto.internal.parser.TupleStatement;
+import org.cojen.motto.internal.parser.UpdateStatement;
 import org.cojen.motto.internal.parser.YieldStatement;
 
 import static org.cojen.motto.internal.parser.Token.*;
@@ -1443,6 +1444,16 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
     @Override
     public BaseBinding visit(TupleStatement st, BaseBinding target) {
+        if (checkUnreachable(st)) {
+            return null;
+        }
+
+        // FIXME
+        throw null;
+    }
+
+    @Override
+    public BaseBinding visit(UpdateStatement st, BaseBinding target) {
         if (checkUnreachable(st)) {
             return null;
         }

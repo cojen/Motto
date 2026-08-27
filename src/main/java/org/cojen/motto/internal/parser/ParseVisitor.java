@@ -76,5 +76,7 @@ public interface ParseVisitor<R, P> {
 
     public R visit(TupleStatement st, P param);
 
+    public R visit(UpdateStatement st, P param);
+
     public R visit(YieldStatement st, P param);
 }

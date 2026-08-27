@@ -33,7 +33,8 @@ public sealed interface Statement extends Element permits
     DefinitionStatement, EmptyStatement, FieldLoadStatement, InfixStatement, IsStatement,
     JumpStatement, LabeledStatement, LambdaStatement, LiteralStatement, NewArrayStatement,
     NewStatement, PathStatement, PostfixStatement, PrefixStatement, ReturnStatement,
-    SequenceStatement, StoreStatement, ThrowStatement, TupleStatement, YieldStatement
+    SequenceStatement, StoreStatement, ThrowStatement, TupleStatement, UpdateStatement,
+    YieldStatement
 {
     public <R, P> R accept(ParseVisitor<R, P> v, P param);
 
