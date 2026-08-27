@@ -240,7 +240,8 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     /**
-     * Defines a binding which refers to a tuple field.
+     * Defines a binding which refers to a constant tuple field. Use TupleAction.Get or
+     * TupleAction.Set if the field selection is variable.
      */
     public static final class TupleField extends BaseBinding {
         public static TupleField from(BaseBinding tuple, int index) {

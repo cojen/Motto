@@ -80,6 +80,10 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         }
     }
 
+    /**
+     * Defines an action which reads from a tuple field at a variable index. Use
+     * BaseBinding.TupleField if the index is constant.
+     */
     public static final class Get extends BaseTupleAction implements TupleAction.Get {
         private final BaseBinding mTuple;
         private final BaseBinding mOutput;
@@ -120,6 +124,10 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         }
     }
 
+    /**
+     * Defines an action which writes to a tuple field at a variable index. Use
+     * BaseBinding.TupleField if the index is constant.
+     */
     public static final class Set extends BaseTupleAction implements TupleAction.Set {
         private final BaseBinding mTuple;
         private final BaseBinding mIndex;
