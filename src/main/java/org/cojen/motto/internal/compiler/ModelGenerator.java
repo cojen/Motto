@@ -23,6 +23,8 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.function.BiFunction;
+
 import org.cojen.motto.model.CallableItem;
 
 import org.cojen.motto.internal.model.BaseArrayType;
@@ -776,6 +778,19 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
+        BaseBlock block = mScope.activeBlock(st);
+
+        return doVisit(st, (array, index) -> block.arrayGet(target, array, index));
+    }
+
+    /**
+     * @param handler is called for the last coordinate item, and is passed the array binding
+     * and the index binding
+     * @return the binding returned by the handler, or else null if an error was reported
+     */
+    private BaseBinding doVisit(CoordinateLoadStatement st,
+                                BiFunction<BaseBinding, BaseBinding, BaseBinding> handler)
+    {
         BaseBinding binding = st.source.accept(this, null);
 
         if (binding == null) {
@@ -790,6 +805,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
+        if (coordinateBindings.isEmpty()) {
+            // This likely indicates a compiler bug.
+            error(st, "no coordinates");
+            return null;
+        }
+
         Iterator<BaseBinding> it = coordinateBindings.iterator();
 
         for (Coordinate c : st.coordinates) {
@@ -801,9 +822,13 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             }
 
             BaseBinding indexBinding = it.next();
-            BaseBinding getTarget = it.hasNext() ? null : target;
 
-            binding = mScope.activeBlock(st).arrayGet(getTarget, binding, indexBinding);
+            if (it.hasNext()) {
+                binding = mScope.activeBlock(st).arrayGet(null, binding, indexBinding);
+            } else {
+                binding = handler.apply(binding, indexBinding);
+                break;
+            }
         }
 
         return binding;
@@ -1428,8 +1453,52 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        BaseBinding source = st.source.accept(this, null);
+
+        if (source == null) {
+            // Error state.
+            return null;
+        }
+
+        BaseBlock block = mScope.activeBlock(st);
+
+        BaseBinding lvalue;
+
+        switch (st.target) {
+            case LoadStatement load -> {
+                lvalue = visit(load, null);
+            }
+
+            case FieldLoadStatement fload -> {
+                lvalue = visit(fload, null);
+            }
+
+            case CoordinateLoadStatement cload -> {
+                return doVisit(cload, (array, index) -> {
+                    block.arraySet(array, index, source);
+                    return source;
+                });
+            }
+
+            default -> {
+                error(st.target, "unsupported assignment target");
+                return null;
+            }
+        }
+
+        if (lvalue == null) {
+            // Error state.
+            return null;
+        }
+
+        if (!lvalue.isModifiable()) {
+            // Note: Unmodifiable is more strict than final. Final can be assigned once.
+            error(st.target, "unmodifiable assignment target");
+        }
+
+        block.copy(lvalue, source);
+
+        return source;
     }
 
     @Override
