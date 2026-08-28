@@ -281,9 +281,7 @@ public final class Parser implements Closeable {
      * @param which optional type of statement being parsed (used for error reporting)
      * @param idLevel see ID_* constants
      */
-    private Statement parseStatement(String which, int idLevel)
-        throws IOException, Abort
-    {
+    private Statement parseStatement(String which, int idLevel) throws IOException, Abort {
         int localErrors = 0;
 
         while (true) {
@@ -293,23 +291,36 @@ public final class Parser implements Closeable {
                 return st;
             }
 
-            Token t = nextToken();
-
-            if (t.type() == T_EOF) {
-                if (numErrors() == 0) {
-                    error(t, "reached end of file while parsing");
-                }
-                throw new Abort(t);
-            }
-
-            if (localErrors++ == 0) {
-                String message = "unexpected token";
-                if (which != null) {
-                    message = message + " while parsing " + which;
-                }
-                error(t, message);
-            }
+            localErrors = unexpected(which, localErrors);
         }
+    }
+
+    /**
+     * Eat the next token and report an error when parsing cannot continue.
+     *
+     * @param localErrors pass 0 initially
+     * @param which optional type of statement being parsed
+     * @return updated localErrors value
+     */
+    private int unexpected(String which, int localErrors) throws IOException, Abort {
+        Token t = nextToken();
+
+        if (t.type() == T_EOF) {
+            if (numErrors() == 0) {
+                error(t, "reached end of file while parsing");
+            }
+            throw new Abort(t);
+        }
+
+        if (localErrors++ == 0) {
+            String message = "unexpected token";
+            if (which != null) {
+                message = message + " while parsing " + which;
+            }
+            error(t, message);
+        }
+
+        return localErrors;
     }
 
     /**
@@ -454,7 +465,7 @@ public final class Parser implements Closeable {
                 case T_EQ, T_NE, T_GE, T_LT, T_LE, T_GT, T_AND, T_OR, T_LAND, T_LOR, T_LXOR,
                     T_PLUS, T_MINUS, T_MUL, T_DIV, T_REM, T_SHL, T_SHR, T_USHR ->
                 {
-                    st = new InfixStatement(st, t1, parseStatement("infix statement"));
+                    st = parseInfixStatement(st, t1);
                 }
 
                 case T_ARROW -> {
@@ -482,7 +493,7 @@ public final class Parser implements Closeable {
                     // Synthesize a minus operator.
                     t1 = new Basic(0, -1, 0, T_MINUS);
                     pushToken(num.negate());
-                    st = new InfixStatement(st, t1, parseStatement("infix statement"));
+                    st = parseInfixStatement(st, t1);
                 }
 
                 case T_BANG -> {
@@ -535,7 +546,7 @@ public final class Parser implements Closeable {
                         return new UpdateStatement(st, t1, parseStatement("assignment source"));
                     }
 
-                    st = new InfixStatement(st, t1, parseStatement("infix statement"));
+                    st = parseInfixStatement(st, t1);
                 }
             }
         }
@@ -662,6 +673,20 @@ public final class Parser implements Closeable {
 
     private static Statement toSequenceStatement(List<Statement> sequence) {
         return sequence.size() == 1 ? sequence.getFirst() : new SequenceStatement(sequence);
+    }
+
+    private InfixStatement parseInfixStatement(Statement left, Token operator)
+        throws IOException, Abort
+    {
+        Statement right = tryParseBaseStatement(ID_FULL);
+
+        if (right == null) {
+            // Eat the next token, report an error, and select a bogus right statement.
+            unexpected("infix statement", 0);
+            right = new EmptyStatement(operator);
+        }
+
+        return new InfixStatement(left, operator, right);
     }
 
     private List<Coordinate> tryParseCoordinates() throws IOException, Abort {
