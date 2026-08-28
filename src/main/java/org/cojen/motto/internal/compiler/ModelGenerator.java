@@ -1517,6 +1517,27 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
+        List<Statement> items = st.items;
+
+        if (items.isEmpty()) {
+            // FIXME: easy case; don't care if unevaluated
+            throw null;
+        }
+
+        // FIXME: look for labels
+
+        if (st.isUnevaluated()) {
+            // FIXME: use lambdas
+            throw null;
+        }
+
+        if (items.size() == 1) {
+            Statement first = items.getFirst();
+            if (!(first instanceof LabeledStatement)) {
+                return first.accept(this, target);
+            }
+        }
+
         // FIXME
         throw null;
     }
