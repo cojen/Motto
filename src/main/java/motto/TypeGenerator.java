@@ -14,17 +14,19 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.internal.model;
+package motto;
+
+import java.lang.invoke.MethodHandles;
 
 import java.lang.management.ManagementFactory;
 
-// TODO: Use the classfile API to avoid the runtime dependency.
 import org.cojen.maker.ClassMaker;
 import org.cojen.maker.FieldMaker;
 import org.cojen.maker.MethodMaker;
 
-// Generated classes are in the "motto" package. If this changes, update GENERATED_PREFIX.
-import static motto.Lookup.LOOKUP;
+import org.cojen.motto.internal.model.DecodedType;
+import org.cojen.motto.internal.model.EncodableType;
+import org.cojen.motto.internal.model.TypeDecoder;
 
 /**
  * 
@@ -49,12 +51,14 @@ public final class TypeGenerator {
     /**
      * @param encoded base-64 string created by TypeEncoder
      */
-    public static Class<?> generateFromEncoded(String encoded) {
+    private static Class<?> generateFromEncoded(String encoded) {
         String className = EncodableType.GENERATED_PREFIX + '.' + encoded;
+
+        MethodHandles.Lookup lookup = MethodHandles.lookup();
 
         try {
             try {
-                return LOOKUP.findClass(className);
+                return lookup.findClass(className);
             } catch (ClassNotFoundException e) {
             }
 
@@ -75,11 +79,11 @@ public final class TypeGenerator {
             }
 
             try {
-                return LOOKUP.defineClass(bytes);
+                return lookup.defineClass(bytes);
             } catch (LinkageError e) {
                 // Check again if already defined.
                 try {
-                    return LOOKUP.findClass(className);
+                    return lookup.findClass(className);
                 } catch (ClassNotFoundException e2) {
                     throw e;
                 }

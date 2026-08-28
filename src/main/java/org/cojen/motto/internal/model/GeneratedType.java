@@ -16,6 +16,8 @@
 
 package org.cojen.motto.internal.model;
 
+import motto.TypeGenerator;
+
 /**
  * 
  *

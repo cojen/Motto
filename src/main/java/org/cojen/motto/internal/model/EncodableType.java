@@ -41,6 +41,7 @@ public interface EncodableType {
 
         T_INDEXED = 20; // not a real type code; real type codes must have a lower value
 
+    // Generated classes are in the "motto" package.
     public static final String GENERATED_PREFIX = "motto";
 
     /**

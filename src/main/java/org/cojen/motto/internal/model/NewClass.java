@@ -20,6 +20,7 @@ import java.io.File;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.NoSuchElementException;
 import java.util.Map;
@@ -35,6 +36,8 @@ import org.cojen.maker.MethodMaker;
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
 import org.cojen.motto.model.CallSignature;
+
+import motto.TypeGenerator;
 
 import static org.cojen.motto.internal.model.Modifiers.*;
 
@@ -56,6 +59,8 @@ public final class NewClass extends BaseClassTypeItem {
     private volatile ClassMaker mClassMaker;
 
     private ArrayList<CodeGenerator> mCodeGenerators;
+
+    private Set<String> mGeneratedTypeNames;
 
     /**
      * @param origin optional object describing where the class came from (usually a File)
@@ -80,6 +85,16 @@ public final class NewClass extends BaseClassTypeItem {
      */
     public Map<String, byte[]> finish() {
         ClassMaker cm = classMaker();
+
+        if (mGeneratedTypeNames != null) {
+            MethodMaker mm = cm.addClinit();
+            var tgVar = mm.var(TypeGenerator.class);
+            for (String typeName : mGeneratedTypeNames) {
+                tgVar.invoke("generateFromName", typeName);
+            }
+        }
+
+        // FIXME: Static initializer comes after generated types.
 
         if (mCodeGenerators != null) {
             ScopedValue.where(GeneratedType.FOR_NEW_CLASS, this).run(() -> {
@@ -316,8 +331,10 @@ public final class NewClass extends BaseClassTypeItem {
 
     // Called by GeneratedType.
     void generateType(String typeName) {
-        // FIXME: generateType; use a special clinit; call ConstantBootstraps.type(...)?
-        throw null;
+        if (mGeneratedTypeNames == null) {
+            mGeneratedTypeNames = new HashSet<>();
+        }
+        mGeneratedTypeNames.add(typeName);
     }
 
     @Override // BaseClassTypeItem

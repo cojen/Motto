@@ -16,19 +16,10 @@
 
 package org.cojen.motto.runtime;
 
-import java.lang.constant.ClassDesc;
-
 import java.lang.invoke.MethodHandles;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-
-import org.cojen.motto.model.Type;
-
-import org.cojen.motto.internal.model.BasePrimitiveType;
-import org.cojen.motto.internal.model.BaseType;
-import org.cojen.motto.internal.model.EncodableType;
-import org.cojen.motto.internal.model.TypeGenerator;
 
 import org.cojen.motto.internal.util.Canonicalizer;
 
@@ -56,47 +47,6 @@ public final class ConstantBootstraps {
 
     private ConstantBootstraps() {
     }
-
-    /* FIXME: remove
-    public static Type type(MethodHandles.Lookup lookup, String name, Class<?> unused, String desc)
-        throws ReflectiveOperationException
-    {
-        if (desc.length() == 1) {
-            Type type = BasePrimitiveType.trySelectByDescriptor(desc);
-            if (type != null) {
-                return type;
-            }
-        }
-
-        if (desc.length() == 0) {
-            throw new IllegalArgumentException();
-        }
-
-        if (desc.charAt(0) == '[') {
-            return type(lookup, name, unused, desc.substring(1)).asArray();
-        }
-
-        Class<?> clazz;
-
-        String prefix = EncodableType.GENERATED_PREFIX;
-
-        find: {
-            if (desc.startsWith('L' + prefix + '/') && desc.endsWith(";")) {
-                String encoded = desc.substring(prefix.length() + 2, desc.length() - 1);
-                try {
-                    clazz = TypeGenerator.generateFromEncoded(encoded);
-                    break find;
-                } catch (RuntimeException e) {
-                    // Assume it's not actually a generated type.
-                }
-            }
-
-            clazz = ClassDesc.ofDescriptor(desc).resolveConstantDesc(lookup);
-        }
-
-        return BaseType.from(clazz);
-    }
-    */
 
     public static BigDecimal bigDecimal(MethodHandles.Lookup lookup, String name,
                                         Class<? extends BigDecimal> type, long value)

@@ -1520,8 +1520,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         List<Statement> items = st.items;
 
         if (items.isEmpty()) {
-            // FIXME: easy case; don't care if unevaluated
-            throw null;
+            return mScope.activeBlock(st).tupleNew(target, BaseTupleType.EMPTY);
         }
 
         // FIXME: look for labels
