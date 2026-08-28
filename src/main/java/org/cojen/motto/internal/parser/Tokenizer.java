@@ -143,16 +143,18 @@ final class Tokenizer implements Closeable {
                 type = T_SEMI;
                 break loop;
 
-            case '/':
-                c = read();
-                if (c == '/') {
+            case '/': {
+                int next = read();
+                if (next == '/') {
                     skipSingleLineComment();
                     break;
-                } else if (c == '*') {
+                } else if (next == '*') {
                     skipMultiLineComment();
                     break;
                 }
+                unread(next);
                 return parseOperator(c);
+            }
 
             case '"':
                 return parseQuoted(T_STRING, "\"");
