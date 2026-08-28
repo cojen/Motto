@@ -373,12 +373,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
             switch (instanceType) {
                 case BaseTupleType t -> {
-                    int index = t.fieldIndex(name);
-
-                    if (index < 0) {
+                    if (!t.fieldExists(name)) {
                         error(nameToken, "tuple field not found");
                         return null;
                     }
+
+                    int index = t.fieldIndex(name);
 
                     instanceBinding = BaseBinding.TupleField.from(instanceBinding, index);
                 }
