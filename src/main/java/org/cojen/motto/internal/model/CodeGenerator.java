@@ -37,6 +37,7 @@ import org.cojen.motto.runtime.ConstantBootstraps;
  * @author Brian S. O'Neill
  */
 final class CodeGenerator implements ActionVisitor<BaseAction> {
+    private final NewClass mNewClass;
     private final MethodMaker mMethodMaker;
     private final BaseCallableItem mItem;
 
@@ -64,7 +65,8 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
     private int mLineNum;
 
-    CodeGenerator(MethodMaker mm, BaseCallableItem item) {
+    CodeGenerator(NewClass newClass, MethodMaker mm, BaseCallableItem item) {
+        mNewClass = newClass;
         mMethodMaker = mm;
         mItem = item;
         mLocalVars = new HashMap<>();
@@ -481,9 +483,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             // Obtain the empty singleton. See TypeGenerator.
             result = mMethodMaker.var(action.type().asMakerType()).field("\\=_");
         } else {
-            // FIXME: generateType
-            //result = mMethodMaker.new_(mClassGen.generateType(action.type()), params);
-            throw null;
+            result = mMethodMaker.new_(mNewClass.generateType(action.type()), params);
         }
 
         forStore(action.output()).set(result);

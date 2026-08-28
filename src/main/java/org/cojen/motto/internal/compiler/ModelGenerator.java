@@ -1518,27 +1518,61 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         }
 
         List<Statement> items = st.items;
+        int numItems = items.size();
 
-        if (items.isEmpty()) {
+        if (numItems == 0) {
             return mScope.activeBlock(st).tupleNew(target, BaseTupleType.EMPTY);
         }
-
-        // FIXME: look for labels
 
         if (st.isUnevaluated()) {
             // FIXME: use lambdas
             throw null;
         }
 
-        if (items.size() == 1) {
+        if (numItems == 1) {
             Statement first = items.getFirst();
             if (!(first instanceof LabeledStatement)) {
+                // A single element tuple is just a grouped expression. It can be converted
+                // into a tuple easily enough by the receiver if necessary.
                 return first.accept(this, target);
             }
         }
 
-        // FIXME
-        throw null;
+        var types = new BaseType[numItems];
+        var names = new String[types.length];
+        var inputs = new BaseBinding[types.length];
+
+        int i = 0;
+        for (Statement item : items) {
+            while (item instanceof LabeledStatement ls) {
+                if (names[i] == null) {
+                    names[i] = ls.label.text;
+                    item = ls.source;
+                } else {
+                    item = ls.noLabel(mEnv);
+                }
+            }
+
+            BaseBinding input = item.accept(this, null);
+
+            if (input == null) {
+                // Error state.
+                return null;
+            }
+
+            types[i] = input.type();
+            inputs[i] = input;
+
+            i++;
+        }
+
+        if (i != types.length) {
+            throw new AssertionError();
+        }
+
+        BaseTupleType tt = BaseTupleType.from(types).withNames(names);
+
+        return mScope.activeBlock(st).tupleNew(target, tt, (Object[]) inputs);
     }
 
     @Override

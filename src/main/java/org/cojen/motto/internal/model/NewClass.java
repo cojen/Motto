@@ -325,8 +325,14 @@ public final class NewClass extends BaseClassTypeItem {
             if (generators == null) {
                 mCodeGenerators = generators = new ArrayList<>();
             }
-            generators.add(new CodeGenerator(mm, item));
+            generators.add(new CodeGenerator(this, mm, item));
         }
+    }
+
+    // Called by CodeGenerator
+    org.cojen.maker.Type generateType(GeneratedType type) {
+        generateType(type.generatedName());
+        return type.asMakerType();
     }
 
     // Called by GeneratedType.
