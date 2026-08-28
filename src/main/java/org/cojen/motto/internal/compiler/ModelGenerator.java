@@ -814,12 +814,14 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         Iterator<BaseBinding> it = coordinateBindings.iterator();
 
         for (Coordinate c : st.coordinates) {
-            BaseType elementType = binding.type().arrayElementType();
+            BaseType type = binding.type();
 
-            if (elementType == null) {
+            if (!type.isArray()) {
                 error(st.source, "not an array type");
                 return null;
             }
+
+            BaseType elementType = type.arrayElementType();
 
             BaseBinding indexBinding = it.next();
 
