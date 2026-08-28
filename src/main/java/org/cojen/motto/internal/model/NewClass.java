@@ -86,16 +86,6 @@ public final class NewClass extends BaseClassTypeItem {
     public Map<String, byte[]> finish() {
         ClassMaker cm = classMaker();
 
-        if (mGeneratedTypeNames != null) {
-            MethodMaker mm = cm.addClinit();
-            var tgVar = mm.var(TypeGenerator.class);
-            for (String typeName : mGeneratedTypeNames) {
-                tgVar.invoke("generateFromName", typeName);
-            }
-        }
-
-        // FIXME: Static initializer comes after generated types.
-
         if (mCodeGenerators != null) {
             ScopedValue.where(GeneratedType.FOR_NEW_CLASS, this).run(() -> {
                 for (CodeGenerator generator : mCodeGenerators) {
@@ -105,6 +95,16 @@ public final class NewClass extends BaseClassTypeItem {
 
             mCodeGenerators = null;
         }
+
+        if (mGeneratedTypeNames != null) {
+            MethodMaker mm = cm.addClinit();
+            var tgVar = mm.var(TypeGenerator.class);
+            for (String typeName : mGeneratedTypeNames) {
+                tgVar.invoke("generateFromName", typeName);
+            }
+        }
+
+        // FIXME: Static initializer must come after generated types.
 
         byte[] bytes = cm.finishBytes();
 
