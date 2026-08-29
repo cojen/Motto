@@ -675,15 +675,15 @@ public final class Parser implements Closeable {
         return sequence.size() == 1 ? sequence.getFirst() : new SequenceStatement(sequence);
     }
 
-    private InfixStatement parseInfixStatement(Statement left, Token operator)
+    private Statement parseInfixStatement(Statement left, Token operator)
         throws IOException, Abort
     {
         Statement right = tryParseBaseStatement(ID_FULL);
 
         if (right == null) {
-            // Eat the next token, report an error, and select a bogus right statement.
+            // Eat the next token and report an error.
             unexpected("infix statement", 0);
-            right = new EmptyStatement(operator);
+            return left;
         }
 
         return new InfixStatement(left, operator, right);
