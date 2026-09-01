@@ -31,11 +31,19 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
     private BaseBlock mWhenTrue;
     private BaseBlock mWhenFalse;
 
-    BaseBranchAction(int position, BaseBinding condition, BaseBlock whenTrue, BaseBlock whenFalse) {
+    /**
+     * @param origin the block that this action resides in
+     */
+    BaseBranchAction(BaseBlock origin,
+                     int position, BaseBinding condition, BaseBlock whenTrue, BaseBlock whenFalse)
+    {
         super(position);
         mCondition = Objects.requireNonNull(condition);
-        mWhenTrue = Objects.requireNonNull(whenTrue);
-        mWhenFalse = Objects.requireNonNull(whenFalse);
+        Objects.requireNonNull(whenTrue);
+        whenFalse.addPredecessor(origin);
+        whenTrue.addPredecessor(origin);
+        mWhenTrue = whenTrue;
+        mWhenFalse = whenFalse;
     }
 
     @Override
@@ -58,12 +66,22 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
         return mWhenFalse;
     }
 
-    void setWhenTrue(BaseBlock whenTrue) {
-        mWhenTrue = whenTrue;
+    /**
+     * @param origin the block that this action resides in
+     */
+    void setWhenTrue(BaseBlock origin, BaseBlock newWhenTrue) {
+        newWhenTrue.addPredecessor(origin);
+        mWhenTrue.removePredecessor(origin);
+        mWhenTrue = newWhenTrue;
     }
 
-    void setWhenFalse(BaseBlock whenFalse) {
-        mWhenFalse = whenFalse;
+    /**
+     * @param origin the block that this action resides in
+     */
+    void setWhenFalse(BaseBlock origin, BaseBlock newWhenFalse) {
+        newWhenFalse.addPredecessor(origin);
+        mWhenFalse.removePredecessor(origin);
+        mWhenFalse = newWhenFalse;
     }
 
     @Override

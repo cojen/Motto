@@ -22,7 +22,11 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 import java.util.function.Consumer;
+
+import org.cojen.motto.internal.util.SimpleSet;
 
 import org.cojen.motto.model.Action;
 import org.cojen.motto.model.ArrayType;
@@ -43,6 +47,9 @@ import org.cojen.motto.runtime.Math;
  * @author Brian S. O'Neill
  */
 public final class BaseBlock implements Block {
+    // This is a bit faster than the default identity hashcode.
+    private final int mHashCode = ThreadLocalRandom.current().nextInt();
+
     private int mPosition;
 
     private BaseAction mFirstAction;
@@ -50,10 +57,15 @@ public final class BaseBlock implements Block {
 
     private boolean mReduced;
 
-    // Should only ever be 0, 1, or 2 (many).
-    private byte mReached;
+    // Can be null, a BaseBlock, or a SimpleSet<BaseBlock>.
+    private Object mPredecessors;
 
     public BaseBlock() {
+    }
+
+    @Override
+    public int hashCode() {
+        return mHashCode;
     }
 
     // FIXME: Need stricter checks that objects passed into these methods belong to the same
@@ -367,7 +379,7 @@ public final class BaseBlock implements Block {
     }
 
     public void jump(BaseBlock destination) {
-        addAction(new BaseJumpAction(mPosition, destination));
+        addAction(new BaseJumpAction(this, mPosition, destination));
     }
 
     @Override
@@ -379,9 +391,9 @@ public final class BaseBlock implements Block {
         if (condition instanceof BaseBinding.Constant constant &&
             constant.value() instanceof Boolean b)
         {
-            addAction(new BaseJumpAction(mPosition, b ? whenTrue : whenFalse));
+            addAction(new BaseJumpAction(this, mPosition, b ? whenTrue : whenFalse));
         } else {
-            addAction(new BaseBranchAction(mPosition, condition, whenTrue, whenFalse));
+            addAction(new BaseBranchAction(this, mPosition, condition, whenTrue, whenFalse));
         }
     }
 
@@ -739,8 +751,59 @@ public final class BaseBlock implements Block {
         return mFirstAction;
     }
 
+    @SuppressWarnings("unchecked")
+    void addPredecessor(BaseBlock predecessor) {
+        Object predecessors = mPredecessors;
+        if (predecessors == null) {
+            mPredecessors = predecessor;
+        } else {
+            SimpleSet<BaseBlock> set;
+            if (predecessors instanceof SimpleSet) {
+                set = (SimpleSet<BaseBlock>) predecessors;
+            } else {
+                set = new SimpleSet<>();
+                set.add((BaseBlock) predecessors);
+                mPredecessors = set;
+            }
+            set.add(predecessor);
+        }
+    }
+
+    void removePredecessor(BaseBlock predecessor) {
+        Object predecessors = mPredecessors;
+        if (predecessors == predecessor) {
+            mPredecessors = null;
+        } else if (predecessors instanceof SimpleSet set) {
+            set.remove(predecessor);
+            if (set.isEmpty()) {
+                mPredecessors = null;
+            }
+        }
+    }
+
+    int numPredecessors() {
+        Object predecessors = mPredecessors;
+        if (predecessors == null) {
+            return 0;
+        } else if (predecessors instanceof SimpleSet set) {
+            return set.size();
+        } else {
+            return 1;
+        }
+    }
+
+    /**
+     * @throws AssertionError if the number of predecessors is less than 1
+     */
     boolean isReachedOnce() {
-        return mReached == 1;
+        int num = numPredecessors();
+        if (num > 1) {
+            return false;
+        }
+        if (num < 1) {
+            throw new AssertionError("" + num);
+        }
+        return true;
     }
 
     /**
@@ -750,40 +813,7 @@ public final class BaseBlock implements Block {
      * @return false if the block isn't fully terminated
      */
     boolean finish() {
-        if (!reduce()) {
-            return false;
-        }
-
-        if (mReached == 0) {
-            countReached(this);
-        }
-
-        return true;
-    }
-
-    private static void countReached(BaseBlock block) {
-        while (true) {
-            byte reached = block.mReached;
-            if (reached >= 1) {
-                if (reached == 1) {
-                    block.mReached = 2;
-                }
-                return;
-            }
-
-            block.mReached = 1;
-
-            BaseAction last = block.mLastAction;
-
-            if (last instanceof BaseJumpAction jump) {
-                block = jump.destination(); // tail call (don't recursively call countReached)
-            } else if (last instanceof BaseBranchAction branch) {
-                countReached(branch.whenTrue());
-                block = branch.whenFalse(); // tail call (don't recursively call countReached)
-            } else {
-                return;
-            }
-        }
+        return reduce();
     }
 
     /**
@@ -817,7 +847,7 @@ public final class BaseBlock implements Block {
             while (true) {
                 if (destination.mFirstAction instanceof BaseJumpAction jump2) {
                     // Use a more direct destination.
-                    jump.setDestination(destination = jump2.destination());
+                    jump.setDestination(this, destination = jump2.destination());
                 } else {
                     break;
                 }
@@ -832,12 +862,12 @@ public final class BaseBlock implements Block {
             while (true) {
                 if (whenTrue.mFirstAction instanceof BaseJumpAction jump) {
                     // Use a more direct destination.
-                    branch.setWhenTrue(whenTrue = jump.destination());
+                    branch.setWhenTrue(this, whenTrue = jump.destination());
                 } else if (whenTrue.mFirstAction instanceof BaseBranchAction branch2 &&
                            sameCondition(branch, branch2))
                 {
                     // Use a more direct destination.
-                    branch.setWhenTrue(whenTrue = branch2.whenTrue());
+                    branch.setWhenTrue(this, whenTrue = branch2.whenTrue());
                 } else {
                     break;
                 }
@@ -852,12 +882,12 @@ public final class BaseBlock implements Block {
             while (true) {
                 if (whenFalse.mFirstAction instanceof BaseJumpAction jump) {
                     // Use a more direct destination.
-                    branch.setWhenFalse(whenFalse = jump.destination());
+                    branch.setWhenFalse(this, whenFalse = jump.destination());
                 } else if (whenFalse.mFirstAction instanceof BaseBranchAction branch2 &&
                            sameCondition(branch, branch2))
                 {
                     // Use a more direct destination.
-                    branch.setWhenFalse(whenFalse = branch2.whenFalse());
+                    branch.setWhenFalse(this, whenFalse = branch2.whenFalse());
                 } else {
                     break;
                 }

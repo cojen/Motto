@@ -53,7 +53,7 @@ public sealed interface CallSignature permits BaseCallSignature {
     public CallSignature forMacro();
 
     /**
-     * Returns a signature which has no segments and the input type is eagerly evaluated. A
+     * Returns a signature which has no segments, and the input type is eagerly evaluated. A
      * flattened signature can be used to define a Java method.
      *
      * <p>It should be noted that the flattened representation is lossy. Repetition details are

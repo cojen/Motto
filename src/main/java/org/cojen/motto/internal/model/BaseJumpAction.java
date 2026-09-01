@@ -29,9 +29,13 @@ import org.cojen.motto.model.JumpAction;
 public final class BaseJumpAction extends BaseTerminalAction implements JumpAction {
     private BaseBlock mDestination;
 
-    BaseJumpAction(int position, BaseBlock destination) {
+    /**
+     * @param origin the block that this action resides in
+     */
+    BaseJumpAction(BaseBlock origin, int position, BaseBlock destination) {
         super(position);
-        mDestination = Objects.requireNonNull(destination);
+        destination.addPredecessor(origin);
+        mDestination = destination;
     }
 
     @Override
@@ -44,8 +48,13 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
         return mDestination;
     }
 
-    void setDestination(BaseBlock destination) {
-        mDestination = destination;
+    /**
+     * @param origin the block that this action resides in
+     */
+    void setDestination(BaseBlock origin, BaseBlock newDestination) {
+        newDestination.addPredecessor(origin);
+        mDestination.removePredecessor(origin);
+        mDestination = newDestination;
     }
 
     @Override
