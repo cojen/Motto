@@ -60,6 +60,12 @@ public final class BaseBlock implements Block {
     // Can be null, a BaseBlock, or a SimpleSet<BaseBlock>.
     private Object mPredecessors;
 
+    // Postorder ordinal, starting with 0.
+    private int mOrdinal;
+
+    // Immediate dominator.
+    private BaseBlock mIdom;
+
     public BaseBlock() {
     }
 
@@ -177,12 +183,12 @@ public final class BaseBlock implements Block {
             }
 
             if (last instanceof BaseJumpAction jump) {
-                block = jump.destination();
+                block = jump.destination(); // tail call
             } else if (last instanceof BaseBranchAction branch) {
                 if (!isFullyTerminated(branch.whenTrue(), visited)) {
                     return false;
                 }
-                block = branch.whenFalse();
+                block = branch.whenFalse(); // tail call
             } else {
                 return true;
             }
@@ -804,6 +810,145 @@ public final class BaseBlock implements Block {
             throw new AssertionError("" + num);
         }
         return true;
+    }
+
+    /**
+     * Returns the immediate dominator for this block, which is only valid after computeIdom
+     * has been called from the start block.
+     */
+    BaseBlock idom() {
+        return mIdom;
+    }
+
+    /**
+     * Starting with this block, compute the immediate dominators of all successor blocks.
+     * Later, if any changes are made to the block graph, then the immediate dominators are
+     * likely invalid. This method must be called again to recompute them.
+     */
+    @SuppressWarnings("unchecked")
+    void computeIdom() {
+        var postorder = new BaseBlock[reset(this, 0)];
+        postorder(postorder, 0);
+
+        mIdom = this;
+
+        boolean changed;
+
+        do {
+            changed = false;
+
+            // "for all nodes b, in reverse postorder..."
+            for (int i=postorder.length; --i>=0; ) {
+                BaseBlock b = postorder[i];
+
+                // "...(except start_node)"
+                if (b == this) {
+                    continue;
+                }
+
+                BaseBlock newIdom;
+
+                Object preds = b.mPredecessors;
+
+                if (preds instanceof SimpleSet set) {
+                    // "new idom ← first (processed) predecessor of b (pick one)"
+                    Iterator<BaseBlock> it = set.iterator();
+                    do {
+                        newIdom = it.next();
+                    } while (newIdom.mIdom == null);
+
+                    // "for all other predecessors, p, of b"
+                    while (it.hasNext()) {
+                        BaseBlock p = it.next();
+
+                        // "if doms[p] already calculated"...
+                        if (p.mIdom != null) {
+                            // "intersect(p, new_idom)"
+
+                            BaseBlock f1 = p;
+                            BaseBlock f2 = newIdom;
+
+                            while (f1.mOrdinal != f2.mOrdinal) {
+                                while (f1.mOrdinal < f2.mOrdinal) {
+                                    f1 = f1.mIdom;
+                                }
+                                while (f2.mOrdinal < f1.mOrdinal) {
+                                    f2 = f2.mIdom;
+                                }
+                            }
+
+                            newIdom = f1;
+                        }
+                    }
+                } else {
+                    // There's only one predecessor, it must be processed, and there's no other
+                    // predecessors to intersect with.
+                    newIdom = (BaseBlock) preds;
+                    if (newIdom == null) {
+                        throw new AssertionError();
+                    }
+                }
+
+                if (b.mIdom != newIdom) {
+                    b.mIdom = newIdom;
+                    changed = true;
+                }
+            }
+        } while (changed);
+    }
+
+    /**
+     * Recursively sets mOrdinal to undefined, and sets mIdom to null.
+     *
+     * @param num initially 0
+     * @return the total number of blocks visited
+     */
+    private static int reset(BaseBlock b, int num) {
+        while (b.mOrdinal >= 0) {
+            num++;
+            b.mIdom = null;
+            b.mOrdinal = -1; // indicates undefined
+
+            BaseAction last = b.mLastAction;
+
+            if (last instanceof BaseJumpAction jump) {
+                b = jump.destination(); // tail call
+            } else if (last instanceof BaseBranchAction branch) {
+                num = branch.whenTrue().reset(b, num);
+                b = branch.whenFalse(); // tail call
+            } else {
+                break;
+            }
+        }
+
+        return num;
+    }
+
+    /**
+     * Performs a postorder traversal, storing blocks in the given array and setting mOrdinal
+     * to match the array index.
+     *
+     * @param index initially 0
+     * @return the updated index
+     */
+    private int postorder(BaseBlock[] blocks, int index) {
+        if (mOrdinal < 0) {
+            mOrdinal = Integer.MAX_VALUE; // temporary; indicates block has been visited
+
+            BaseAction last = mLastAction;
+
+            if (last instanceof BaseJumpAction jump) {
+                index = jump.destination().postorder(blocks, index);
+            } else if (last instanceof BaseBranchAction branch) {
+                index = branch.whenTrue().postorder(blocks, index);
+                index = branch.whenFalse().postorder(blocks, index);
+            }
+
+            mOrdinal = index;
+            blocks[index++] = this;
+        }
+
+        return index;
     }
 
     /**
