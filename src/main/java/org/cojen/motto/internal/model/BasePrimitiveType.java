@@ -114,6 +114,9 @@ public abstract sealed class BasePrimitiveType implements BaseType, PrimitiveTyp
         return Integer.MAX_VALUE;
     }
 
+    /**
+     * @param name cannot be null
+     */
     public static BasePrimitiveType trySelectByName(String name) {
         return switch (name) {
             default -> null;
@@ -129,6 +132,9 @@ public abstract sealed class BasePrimitiveType implements BaseType, PrimitiveTyp
         };
     }
 
+    /**
+     * @param desc cannot be null
+     */
     public static BasePrimitiveType trySelectByDescriptor(String desc) {
         return switch (desc) {
             default -> null;

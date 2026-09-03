@@ -37,7 +37,7 @@ import static org.cojen.motto.internal.model.Modifiers.*;
 public final class ClassDefinitionStatement extends DefinitionStatement {
     public final Token.Identifier type;
 
-    /** Is assigned when createNewClass is called, unless it's a duplicate. */
+    /** Is assigned when prepareNewClass is called, unless it's a duplicate. */
     public NewClass clazz;
 
     /**

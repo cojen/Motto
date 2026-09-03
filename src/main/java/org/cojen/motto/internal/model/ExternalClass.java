@@ -33,10 +33,8 @@ import java.lang.classfile.constantpool.Utf8Entry;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -227,8 +225,7 @@ public final class ExternalClass extends BaseClassTypeItem
 
         InnerClassesAttribute attr = model.findAttribute(Attributes.innerClasses()).orElse(null);
 
-        // Maps short names to full class names.
-        Map<String, String> loadableInnerClasses = null;
+        Set<String> innerClassNames = null;
 
         if (attr != null) {
             ClassEntry thisClass = model.thisClass();
@@ -243,18 +240,24 @@ public final class ExternalClass extends BaseClassTypeItem
                         }
                         ClassDesc innerDesc = info.innerClass().asSymbol();
                         if (thisPackage.equals(innerDesc.packageName())) {
-                            if (loadableInnerClasses == null) {
-                                loadableInnerClasses = new HashMap<>();
+                            if (innerClassNames == null) {
+                                innerClassNames = new HashSet<>();
                             }
-                            loadableInnerClasses.putIfAbsent
-                                (innerName.stringValue(), innerDesc.displayName());
+                            innerClassNames.add(innerName.stringValue());
                         }
                     }
                 }
             }
         }
 
-        // FIXME: If any loadableInnerClasses, then load them on demand.
+        if (innerClassNames != null) {
+            BasePath packagePath = packagePath();
+            BasePath outerClassPath = namePath();
+            for (String name : innerClassNames) {
+                BasePath innerClassPath = outerClassPath.append(name);
+                tryAddInnerClass(new ExternalClass(packagePath, innerClassPath, mFinder));
+            }
+        }
     }
 
     private BaseClassTypeItem toClassTypeItem(ClassEntry entry) throws IOException {

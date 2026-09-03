@@ -46,6 +46,7 @@ import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
 import org.cojen.motto.internal.model.LoadedClass;
+import org.cojen.motto.internal.model.NewClass;
 
 import org.cojen.motto.internal.parser.AsStatement;
 import org.cojen.motto.internal.parser.ClassDefinitionStatement;
@@ -473,6 +474,10 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             List<Statement> segments = st.segments;
 
             if (!segments.isEmpty()) {
+                // FIXME: Should process segment inputs like a single tuple. This should also
+                // ensure lambda conversion for unevaluated tuples. Unlike the main parameters,
+                // segments run in separate scopes.
+
                 /* FIXME
                 segSignatures = new BaseCallSignature.BaseSegment[segments.size()];
                 segArguments = new BaseSegmentArgument[segSignatures.length];
@@ -725,8 +730,16 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
     @Override
     public BaseBinding visit(ClassDefinitionStatement st, BaseBinding target) {
-        // The clazz field should have been assigned when createNewClass was called.
-        enterScope(new ModelScope(this, mScope, st.clazz));
+        // For a top-level class, the clazz field should have been assigned when
+        // ClassDefinitionStatement.prepareNewClass was called.
+        NewClass clazz = st.clazz;
+
+        if (clazz == null) {
+            error(st, "method local inner classes not supported yet");
+            return null;
+        }
+
+        enterScope(new ModelScope(this, mScope, clazz));
 
         for (Statement item : st.code.items) {
             switch (item) {
@@ -1173,6 +1186,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
         List<Statement> items = st.params.items;
 
+        // FIXME: Should process inputs like a single tuple. This should also ensure lambda
+        // conversion for unevaluated tuples.
         var inputTypes = new BaseType[items.size()];
         var inputBindings = new BaseBinding[inputTypes.length];
 
@@ -1445,6 +1460,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
+        // FIXME: Yield void unless the last item is a yield.
+
         // FIXME
         throw null;
     }
@@ -1583,7 +1600,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        // FIXME
+        // FIXME: Consider binding stability.
         throw null;
     }
 
