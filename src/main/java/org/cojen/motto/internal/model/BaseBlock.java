@@ -827,9 +827,14 @@ public final class BaseBlock implements Block {
      */
     @SuppressWarnings("unchecked")
     void computeIdom() {
+        // From: "A Simple, Fast Dominance Algorithm" by Keith D. Cooper, Timothy J. Harvey,
+        // and Ken Kennedy.
+
+        // "initialize the dominators array"
         var postorder = new BaseBlock[reset(this, 0)];
         postorder(postorder, 0);
 
+        // "doms[start_node] ← start_node"
         mIdom = this;
 
         boolean changed;
@@ -851,7 +856,7 @@ public final class BaseBlock implements Block {
                 Object preds = b.mPredecessors;
 
                 if (preds instanceof SimpleSet set) {
-                    // "new idom ← first (processed) predecessor of b (pick one)"
+                    // "new_idom ← first (processed) predecessor of b (pick one)"
                     Iterator<BaseBlock> it = set.iterator();
                     do {
                         newIdom = it.next();
