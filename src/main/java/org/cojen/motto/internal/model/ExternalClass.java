@@ -225,9 +225,10 @@ public final class ExternalClass extends BaseClassTypeItem
 
         InnerClassesAttribute attr = model.findAttribute(Attributes.innerClasses()).orElse(null);
 
-        Set<String> innerClassNames = null;
-
         if (attr != null) {
+            BasePath packagePath = packagePath();
+            BasePath outerNamePath = namePath();
+
             ClassEntry thisClass = model.thisClass();
             String thisPackage = null;
 
@@ -240,22 +241,11 @@ public final class ExternalClass extends BaseClassTypeItem
                         }
                         ClassDesc innerDesc = info.innerClass().asSymbol();
                         if (thisPackage.equals(innerDesc.packageName())) {
-                            if (innerClassNames == null) {
-                                innerClassNames = new HashSet<>();
-                            }
-                            innerClassNames.add(innerName.stringValue());
+                            BasePath namePath = outerNamePath.append(innerName.stringValue());
+                            tryAddInnerClass(new ExternalClass(packagePath, namePath, mFinder));
                         }
                     }
                 }
-            }
-        }
-
-        if (innerClassNames != null) {
-            BasePath packagePath = packagePath();
-            BasePath outerClassPath = namePath();
-            for (String name : innerClassNames) {
-                BasePath innerClassPath = outerClassPath.append(name);
-                tryAddInnerClass(new ExternalClass(packagePath, innerClassPath, mFinder));
             }
         }
     }
