@@ -106,8 +106,8 @@ public final class CompilationEnv {
     }
 
     /**
-     * Register a prepared NewClass which is being compiled. All classes being compiled must be
-     * prepared and registered before imports are resolved.
+     * Register a prepared top-level NewClass which is being compiled. All classes being
+     * compiled must be prepared and registered before imports are resolved.
      *
      * @return false if a matching NewClass already exists
      */
@@ -347,8 +347,8 @@ public final class CompilationEnv {
 
     /**
      * Follows the given path until a BaseClassTypeItem is found by its fully qualified name.
-     * Call fullPathSize() to obtain the number of path elements consumed, which might not be
-     * the full path size which was given. If the class isn't accessible from the package
+     * Call fullPathSize() to obtain the number of path elements consumed, which might be less
+     * than the full path size which was given. If the class isn't accessible from the package
      * associated with this CompilationEnv, null is returned.
      *
      * @return null if nothing matched

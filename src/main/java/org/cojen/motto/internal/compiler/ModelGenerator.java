@@ -220,11 +220,20 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
      * <p>When null is returned, the iterator state isn't defined. It should be discarded.
      *
      * @param pathIt must have at least one element
+     * @param canConsumeAll when false, the last path element isn't consumed
      */
     private BaseClassTypeItem tryResolveClass(PathStatement st,
-                                              ListIterator<Token.Identifier> pathIt)
+                                              ListIterator<Token.Identifier> pathIt,
+                                              boolean canConsumeAll)
     {
         Token.Identifier nameToken = pathIt.next();
+
+        if (!canConsumeAll && !pathIt.hasNext()) {
+            // Back up.
+            pathIt.previous();
+            return null;
+        }
+
         BaseItem item = mScope.item();
         String name = nameToken.text;
 
@@ -236,10 +245,17 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return clazz;
         }
 
-        clazz = findLocalClass(item, name);
+        clazz = tryFindLocalStaticClass(item, nameToken);
 
         if (clazz == null) {
-            clazz = mEnv.matchClassItem(BasePath.from(st.path));
+            BasePath path = BasePath.from(st.path);
+
+            if (!canConsumeAll) {
+                path = path.trimLastNonCanonical();
+            }
+
+            clazz = mEnv.matchClassItem(path);
+
             if (clazz != null) {
                 int pathPos = clazz.fullPathSize();
                 while (--pathPos > 0) {
@@ -263,6 +279,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
         while (pathIt.hasNext()) {
             nameToken = pathIt.next();
+
+            if (!canConsumeAll && !pathIt.hasNext()) {
+                // Back up.
+                pathIt.previous();
+                break;
+            }
 
             Set<BaseClassTypeItem> set = clazz.findInnerClass
                 (nameToken.text, c -> c.isStatic() && c.isAccessibleVia(mScope.item()));
@@ -310,15 +332,36 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     /**
      * Checks if the given name matches a local class, searching outer classes if necessary.
      */
-    private BaseClassTypeItem findLocalClass(BaseItem item, String name) {
+    private BaseClassTypeItem tryFindLocalStaticClass(BaseItem item, Token.Identifier nameToken) {
         BaseClassTypeItem clazz = item.nearestClass();
 
-        while (clazz != null) {
+        if (clazz == null) {
+            return null;
+        }
+
+        String name = nameToken.text;
+
+        Set<BaseClassTypeItem> set = clazz.findInnerClass
+            (name, c -> c.isStatic() && c.isAccessibleVia(mScope.item()));
+
+        int size = set.size();
+
+        if (size >= 1) {
+            if (size > 1) {
+                // FIXME: list them all
+                error(nameToken, "static inner class is ambiguous");
+                // Pick one and move on.
+            }
+
+            return set.iterator().next();
+        }
+
+        do {
             if (clazz.namePath().getLast().equals(name)) {
                 return clazz;
             }
             clazz = clazz.outerType();
-        }
+        } while (clazz != null);
 
         return null;
     }
@@ -730,8 +773,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
     @Override
     public BaseBinding visit(ClassDefinitionStatement st, BaseBinding target) {
-        // For a top-level class, the clazz field should have been assigned when
-        // ClassDefinitionStatement.prepareNewClass was called.
+        // For a path-accessible class, the clazz field should have been assigned when
+        // ClassDefinitionStatement.prepareClass was called.
         NewClass clazz = st.clazz;
 
         if (clazz == null) {
@@ -752,6 +795,9 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                         // If a simple final constant, then initialize the JVM field directly.
                         throw null;
                     }
+                }
+                case ClassDefinitionStatement cds -> {
+                    cds.accept(this, null);
                 }
                 default -> {
                     error(item, "invalid class member");
@@ -1130,7 +1176,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         BaseBinding instanceBinding = tryFindLocalVariable(pathIt);
 
         tryStatic: if (instanceBinding == null) {
-            BaseClassTypeItem clazz = tryResolveClass(st, pathIt);
+            BaseClassTypeItem clazz = tryResolveClass(st, pathIt, true);
 
             if (clazz == null) {
                 pathIt = st.path.listIterator();
@@ -1259,6 +1305,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                 throw new AssertionError();
             }
 
+            // Path should have at least two elements.
             ListIterator<Token.Identifier> pathIt = st.path.listIterator();
 
             BaseBinding localBinding = tryFindLocalVariable(pathIt);
@@ -1266,7 +1313,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             tryInstance: if (localBinding != null) {
                 instance = localBinding;
             } else {
-                BaseClassTypeItem classItem = tryResolveClass(st, pathIt);
+                BaseClassTypeItem classItem = tryResolveClass(st, pathIt, false);
 
                 if (classItem == null) {
                     pathIt = st.path.listIterator();
@@ -1283,6 +1330,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                 }
 
                 if (!pathIt.hasNext()) {
+                    // This likely indicates a compiler bug.
                     error(st.path, "no method is specified");
                     return null;
                 }

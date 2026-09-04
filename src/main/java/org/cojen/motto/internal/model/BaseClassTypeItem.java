@@ -203,10 +203,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public final BaseClassTypeItem outerType() {
-        // FIXME: outerType
-        return null;
-    }
+    public abstract BaseClassTypeItem outerType();
 
     @Override
     public final BaseClassTypeItem nestType() {
@@ -582,16 +579,20 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public Stream<? extends BaseClassTypeItem> innerClasses() {
-        return mInnerClassesMap.values().stream();
+        return innerClassesMap().values().stream();
     }
 
     @Override
     public BaseClassTypeItem innerClass(String name) {
-        BaseClassTypeItem clazz = mInnerClassesMap.get(name);
+        BaseClassTypeItem clazz = innerClassesMap().get(name);
         if (clazz == null) {
             throw new NoSuchElementException();
         }
         return clazz;
+    }
+
+    protected Map<String, BaseClassTypeItem> innerClassesMap() {
+        return mInnerClassesMap;
     }
 
     @Override
@@ -603,7 +604,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         (Set<BaseClassTypeItem> set, String name, Predicate<ClassTypeItem> filter,
          Set<BaseClassTypeItem> seen)
     {
-        BaseClassTypeItem inner = mInnerClassesMap.get(name);
+        BaseClassTypeItem inner = innerClassesMap().get(name);
 
         if (inner != null && (filter == null || filter.test(inner))) {
             return addItemToSet(set, inner);
@@ -655,7 +656,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      * @return null if not found
      */
     public BaseClassTypeItem findInnerClassForImport(String name) {
-        return mInnerClassesMap.get(name);
+        return innerClassesMap().get(name);
     }
 
     @Override

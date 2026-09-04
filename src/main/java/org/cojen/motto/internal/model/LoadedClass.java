@@ -93,6 +93,12 @@ public final class LoadedClass extends BaseClassTypeItem {
     }
 
     @Override
+    public LoadedClass outerType() {
+        // FIXME: outerType
+        throw null;
+    }
+
+    @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.from(mClass);
     }

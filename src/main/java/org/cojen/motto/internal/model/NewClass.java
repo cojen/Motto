@@ -48,6 +48,7 @@ import static org.cojen.motto.internal.model.Modifiers.*;
  */
 public final class NewClass extends BaseClassTypeItem {
     private final CompilationEnv mEnv;
+    private final NewClass mOuterClass;
     private final Object mOrigin;
 
     private Map<String, Integer> mPreparedFields;  // field name to modifierBits
@@ -63,13 +64,22 @@ public final class NewClass extends BaseClassTypeItem {
     private Set<String> mGeneratedTypeNames;
 
     /**
+     * @param outerClass is null for top-level classes
      * @param origin optional object describing where the class came from (usually a File)
+     * @throws IllegalArgumentException if namePath has more than one element and outerClass is
+     * null
      */
-    public NewClass(CompilationEnv env,
+    public NewClass(CompilationEnv env, NewClass outerClass,
                     int modifierBits, BasePath packagePath, BasePath namePath, Object origin)
     {
         super(modifierBits, packagePath, namePath);
+
+        if (outerClass == null && namePath.size() > 1) {
+            throw new IllegalArgumentException();
+        }
+
         mEnv = env;
+        mOuterClass = outerClass;
         mOrigin = origin;
     }
 
@@ -78,12 +88,22 @@ public final class NewClass extends BaseClassTypeItem {
         return mEnv;
     }
 
+    @Override
+    public NewClass outerType() {
+        return mOuterClass;
+    }
+
     /**
      * Finish making the class by adding in the code (if was requested), and return a map of
-     * fully qualified class names to class definitions. The first map entry is the outermost
-     * enclosing class.
+     * fully qualified class names to class definitions ((with '$' separators for inner
+     * classes). The first map entry is the outermost enclosing class.
      */
     public Map<String, byte[]> finish() {
+        return finish(null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, byte[]> finish(Map<String, byte[]> finished) {
         ClassMaker cm = classMaker();
 
         if (mCodeGenerators != null) {
@@ -106,25 +126,28 @@ public final class NewClass extends BaseClassTypeItem {
 
         // FIXME: Static initializer must come after generated types.
 
+        for (BaseClassTypeItem inner : innerClassesMap().values()) {
+            finished = ((NewClass) inner).finish(finished);
+        }
+
         byte[] bytes = cm.finishBytes();
+        String fullName = cm.name();
 
-        return Map.of(cm.name(), bytes);
+        if (finished == null) {
+            finished = Map.of(fullName, bytes);
+        } else {
+            LinkedHashMap<String, byte[]> linked;
 
-        /* FIXME: inner classes; each needs to to be a NewClass, passed to FOR_NEW_CLASS
-        if (mInnerMakers == null) {
-            return Map.of(cm.name(), bytes);
+            if (finished.size() == 1) {
+                finished = linked = new LinkedHashMap<>(finished);
+            } else {
+                linked = (LinkedHashMap) finished;
+            }
+
+            linked.putFirst(fullName, bytes);
         }
 
-        var map = LinkedHashMap.<String, byte[]>newLinkedHashMap(1 + mInnerMakers.size());
-
-        map.put(cm.name(), bytes);
-
-        for (ClassMaker inner : mInnerMakers.values()) {
-            map.put(inner.name(), inner.finishBytes());
-        }
-
-        return map;
-        */
+        return finished;
     }
 
     private ClassMaker classMaker() {
@@ -146,7 +169,13 @@ public final class NewClass extends BaseClassTypeItem {
                 return cm;
             }
 
-            cm = ClassMaker.beginExternal(fullMangledName());
+            NewClass outer = outerType();
+
+            if (outer == null) {
+                cm = ClassMaker.beginExternal(fullMangledName());
+            } else {
+                cm = outer.classMaker().addInnerClass(namePath().getLast());
+            }
 
             final ClassMaker fcm = cm; // this is annoying
             ScopedValue.where(GeneratedType.FOR_NEW_CLASS, this).run(() -> beginMaking(fcm));

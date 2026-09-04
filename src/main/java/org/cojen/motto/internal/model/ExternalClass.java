@@ -83,6 +83,12 @@ public final class ExternalClass extends BaseClassTypeItem
     }
 
     @Override
+    public ExternalClass outerType() {
+        // FIXME: outerType
+        throw null;
+    }
+
+    @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.external(fullMangledName(), this);
     }

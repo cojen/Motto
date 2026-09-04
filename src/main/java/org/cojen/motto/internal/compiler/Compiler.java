@@ -119,8 +119,9 @@ public final class Compiler implements ErrorListener, Closeable {
      * <p>No files are written by this method. The caller must write them, but only if no
      * errors are reported.
      *
-     * @return all the compiled classes, keyed by source file and fully qualified class name;
-     * the first entry of each sub map is the outermost enclosing class
+     * @return all the compiled classes, keyed by source file and fully qualified class name
+     * (with '$' separators for inner classes); the first entry of each sub map is the
+     * outermost enclosing class
      */
     public Map<File, Map<String, byte[]>> waitForCompletion() throws InterruptedException {
         for (CompileTask task : mCompileTasks.values()) {
@@ -189,8 +190,8 @@ public final class Compiler implements ErrorListener, Closeable {
     }
 
     /**
-     * Register a prepared NewClass which is being compiled. All classes being compiled must be
-     * prepared and registered before imports are resolved.
+     * Register a prepared top-level NewClass which is being compiled. All classes being
+     * compiled must be prepared and registered before imports are resolved.
      *
      * @return false if a matching NewClass already exists
      */
@@ -240,8 +241,8 @@ public final class Compiler implements ErrorListener, Closeable {
 
     /**
      * Follows the given path until a BaseClassTypeItem is found by its fully qualified name.
-     * Call fullPathSize() to obtain the number of path elements consumed, which might not be
-     * the full path size which was given.
+     * Call fullPathSize() to obtain the number of path elements consumed, which might be less
+     * than the full path size which was given.
      *
      * @return null if nothing matched
      */
@@ -308,7 +309,7 @@ public final class Compiler implements ErrorListener, Closeable {
             return;
         }
 
-        NewClass clazz = cds.prepareNewClass(env, packagePath);
+        NewClass clazz = cds.prepareClass(env, packagePath);
 
         if (clazz == null) {
             return;

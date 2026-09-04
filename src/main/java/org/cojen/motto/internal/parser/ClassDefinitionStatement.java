@@ -37,7 +37,7 @@ import static org.cojen.motto.internal.model.Modifiers.*;
 public final class ClassDefinitionStatement extends DefinitionStatement {
     public final Token.Identifier type;
 
-    /** Is assigned when prepareNewClass is called, unless it's a duplicate. */
+    /** Is assigned when prepareClass is called, unless it's a duplicate. */
     public NewClass clazz;
 
     /**
@@ -75,21 +75,34 @@ public final class ClassDefinitionStatement extends DefinitionStatement {
         return name;
     }
 
-    @Override
-    public void prepareClass(CompilationEnv env, NewClass clazz) {
-        // FIXME: Must only add all path-accessible inner classes. Path-accessible means that
-        // all path elements refer to classes/interfaces, and access isn't private. Inner
-        // classes defined in other kinds of scopes aren't accessible.
-        env.error(this, "inner classes not supported yet");
-    }
-
     /**
      * Creates a top-level NewClass, prepares it, and registers it such that it can be seen by
      * other classes. If there are any errors, they're passed to CompilationEnv.
      *
      * @return null if defining a duplicate class (an error woild be reported too)
      */
-    public NewClass prepareNewClass(CompilationEnv env, BasePath packagePath) {
+    public NewClass prepareClass(CompilationEnv env, BasePath packagePath) {
+        return prepareClass(env, packagePath, null);
+    }
+
+    /**
+     * This method should only be called if this is an inner class, not scoped in a method.
+     *
+     * @param outer required
+     */
+    @Override
+    public void prepareClass(CompilationEnv env, NewClass outer) {
+        prepareClass(env, outer.packagePath(), outer);
+    }
+
+    /**
+     * @param outer is null of this is a top-level class
+     */
+    private NewClass prepareClass(CompilationEnv env, BasePath packagePath, NewClass outer) {
+        if (this.clazz != null) {
+            throw new IllegalStateException();
+        }
+
         int modifierBits = Element.resolveModifiers
             (env, PUBLIC | PROTECTED | INTERNAL | STATIC | FINAL | ABSTRACT, modifiers);
 
@@ -102,20 +115,57 @@ public final class ClassDefinitionStatement extends DefinitionStatement {
             }
         }
 
-        var clazz = new NewClass
-            (env, modifierBits, packagePath, BasePath.from(name.text), env.sourceFile());
-
-        for (Statement st : code.items) {
-            st.prepareClass(env, clazz);
+        if (outer != null && (modifierBits & STATIC) == 0) {
+            // FIXME: Support non-static inner classes too.
+            env.error(this, "inner class must be static");
         }
 
-        if (env.tryRegister(clazz)) {
-            this.clazz = clazz;
+        BasePath namePath;
+
+        if (outer == null) {
+            namePath = BasePath.from(name.text);
         } else {
-            env.error(this, "duplicate class definition");
+            namePath = outer.namePath().append(name.text);
+        }
+
+        var clazz = new NewClass(env, outer, modifierBits, packagePath, namePath, env.sourceFile());
+
+        if (outer == null) {
+            if (!env.tryRegister(clazz)) {
+                env.error(this, "duplicate class definition");
+                clazz = null;
+            }
+        } else if (!outer.tryAddInnerClass(clazz)) {
+            env.error(this, "duplicate inner class definition");
+            clazz = null;
+        }
+            
+        this.clazz = clazz;
+
+        if (clazz != null) {
+            for (Statement st : code.items) {
+                st.prepareClass(env, clazz);
+            }
         }
 
         return clazz;
+    }
+
+    /**
+     * This method should only be called if this is a path-accessible inner class. To be
+     * path-accessible, the class cannot be defined within a method or constructor.
+     */
+    @Override
+    public NewClass addToClass(CompilationEnv env, NewClass outer) {
+        NewClass inner = this.clazz;
+
+        if (inner != null && inner.outerType() != outer) {
+            throw new IllegalStateException();
+        }
+
+        resolveClass(env);
+
+        return inner;
     }
 
     /**
@@ -141,7 +191,7 @@ public final class ClassDefinitionStatement extends DefinitionStatement {
      */
     public void resolveClass(CompilationEnv env) {
         if (clazz == null) {
-            // Assuming that prepareNewClass was called, the definition was rejected.
+            // Assuming that prepareClass was called, the definition was rejected.
             return;
         }
 

@@ -365,8 +365,8 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
             .append(className).append(".class").toString();
     }
 
-    private BaseClassTypeItem registerNewClass(BaseClassTypeItem outer,
-                                               BasePath packagePath, BasePath namePath)
+    private BaseClassTypeItem registerExternalClass(BaseClassTypeItem outer,
+                                                    BasePath packagePath, BasePath namePath)
     {
         if (outer != null) {
             // FIXME: Do something with the outer param.
@@ -620,8 +620,8 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
             BaseClassTypeItem item = byClass(packagePath).get(namePath);
 
             if (item == null) {
-                // If found, the method should have called registerNewClass, which in turn will
-                // call the register method of this class to cache the item.
+                // If found, the method should have called registerExternalClass, which in turn
+                // will call the register method of this class to cache the item.
                 item = mSource.findClass(root, el, outer, packagePath, namePath);
             }
 
@@ -920,8 +920,8 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
         {
             File file = new File(expandDir(packagePath), fileName(namePath));
 
-            if (file.exists()) {
-                return root.registerNewClass(outer, packagePath, namePath);
+            if (exists(file)) {
+                return root.registerExternalClass(outer, packagePath, namePath);
             }
 
             return null;
@@ -936,7 +936,7 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
         public byte[] loadClassBytes(BasePath packagePath, String className) throws IOException {
             File file = new File(expandDir(packagePath), className + ".class");
 
-            if (file.exists()) {
+            if (exists(file)) {
                 try (var in = new FileInputStream(file)) {
                     return in.readAllBytes();
                 } catch (FileNotFoundException e) {
@@ -956,6 +956,16 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
 
         @Override
         public void close() {
+        }
+
+        private static boolean exists(File file) throws IOException {
+            if (!file.exists()) {
+                return false;
+            }
+
+            // FIXME: must perform a case-sensitive check
+
+            return true;
         }
     }
 
@@ -984,7 +994,7 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
                 return null;
             }
 
-            return root.registerNewClass(outer, packagePath, namePath);
+            return root.registerExternalClass(outer, packagePath, namePath);
         }
 
         @Override
@@ -1045,7 +1055,7 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
                 if (Files.isSymbolicLink(p) && Files.isDirectory(p)) {
                     java.nio.file.Path fullPath = p.resolve(filePath);
                     if (Files.exists(fullPath)) {
-                        return root.registerNewClass(outer, packagePath, namePath);
+                        return root.registerExternalClass(outer, packagePath, namePath);
                     }
                 }
             }
@@ -1118,7 +1128,7 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
                 return null;
             }
 
-            return root.registerNewClass(outer, packagePath, namePath);
+            return root.registerExternalClass(outer, packagePath, namePath);
         }
 
         @Override
