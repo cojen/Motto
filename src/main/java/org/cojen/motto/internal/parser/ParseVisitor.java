@@ -70,6 +70,8 @@ public interface ParseVisitor<R, P> {
 
     public R visit(SequenceStatement st, P param);
 
+    public R visit(StaticInitStatement st, P param);
+
     public R visit(StoreStatement st, P param);
 
     public R visit(ThrowStatement st, P param);

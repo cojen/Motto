@@ -907,6 +907,23 @@ public final class Parser implements Closeable {
                         return parseClassDefinitionStatement(List.of(), first);
                     }
                 }
+
+                case "static" -> {
+                    if (mContextStack != null && mContextStack.type == DefinitionContext.T_CLASS &&
+                        peekToken().type() == T_LBRACE)
+                    {
+                        pushDefinitionContext(null, DefinitionContext.T_CLINIT);
+
+                        try {
+                            CodeScopeStatement code = codeScope
+                                (parseStatement("class initializer", ID_BASIC));
+
+                            return new StaticInitStatement(first, code);
+                        } finally {
+                            popDefinitionContext();
+                        }
+                    }
+                }
             }
         }
 
@@ -1596,7 +1613,7 @@ public final class Parser implements Closeable {
     }
 
     private static final class DefinitionContext {
-        static final int T_CLASS = 1, T_CONSTRUCTOR = 2, T_METHOD = 3;
+        static final int T_CLASS = 1, T_CONSTRUCTOR = 2, T_METHOD = 3, T_CLINIT = 4;
 
         final DefinitionContext prev;
         final List<Identifier> qname;

@@ -51,6 +51,8 @@ public final class NewClass extends BaseClassTypeItem {
     private final NewClass mOuterClass;
     private final Object mOrigin;
 
+    private ArrayList<BaseCallableItem> mClinits;
+
     private Map<String, Integer> mPreparedFields;  // field name to modifierBits
     private Map<String, Integer> mPreparedMethods; // method name to modifierBits
 
@@ -91,6 +93,17 @@ public final class NewClass extends BaseClassTypeItem {
     @Override
     public NewClass outerType() {
         return mOuterClass;
+    }
+
+    /**
+     * Add code for a static initializer.
+     */
+    public void addClinit(BaseCallableItem clinit) {
+        ArrayList<BaseCallableItem> clinits = mClinits;
+        if (clinits == null) {
+            mClinits = clinits = new ArrayList<>();
+        }
+        clinits.add(clinit);
     }
 
     /**
@@ -303,6 +316,12 @@ public final class NewClass extends BaseClassTypeItem {
             cm.implement(iface.asMakerType());
         }
 
+        if (mClinits != null) {
+            for (BaseCallableItem clinit : mClinits) {
+                addCodeGenerator(cm.addClinit(), clinit);
+            }
+        }
+
         fields().filter(f -> !f.isPseudo()).forEach(field -> {
             FieldMaker fm = cm.addField(field.type().asMakerType(), Maker.mangle(field.name()));
             field.applyModifiers(fm);
@@ -344,8 +363,6 @@ public final class NewClass extends BaseClassTypeItem {
 
             addCodeGenerator(mm, ctor);
         });
-
-        // FIXME: clinit, inner classes (inner classes before defining mMacroMaker)
     }
 
     private void addCodeGenerator(MethodMaker mm, BaseCallableItem item) {

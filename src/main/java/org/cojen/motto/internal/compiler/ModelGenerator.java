@@ -46,6 +46,7 @@ import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
 import org.cojen.motto.internal.model.LoadedClass;
+import org.cojen.motto.internal.model.Modifiers;
 import org.cojen.motto.internal.model.NewClass;
 
 import org.cojen.motto.internal.parser.AsStatement;
@@ -55,6 +56,7 @@ import org.cojen.motto.internal.parser.ConstructorDefinitionStatement;
 import org.cojen.motto.internal.parser.Coordinate;
 import org.cojen.motto.internal.parser.CoordinateLoadStatement;
 import org.cojen.motto.internal.parser.DeclarationStatement;
+import org.cojen.motto.internal.parser.DefinitionStatement;
 import org.cojen.motto.internal.parser.Element;
 import org.cojen.motto.internal.parser.EmptyStatement;
 import org.cojen.motto.internal.parser.FieldLoadStatement;
@@ -78,6 +80,7 @@ import org.cojen.motto.internal.parser.PrefixStatement;
 import org.cojen.motto.internal.parser.ReturnStatement;
 import org.cojen.motto.internal.parser.SequenceStatement;
 import org.cojen.motto.internal.parser.Statement;
+import org.cojen.motto.internal.parser.StaticInitStatement;
 import org.cojen.motto.internal.parser.StoreStatement;
 import org.cojen.motto.internal.parser.ThrowStatement;
 import org.cojen.motto.internal.parser.Token;
@@ -786,9 +789,10 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
         for (Statement item : st.code.items) {
             switch (item) {
-                case FunctionDefinitionStatement fds -> {
-                    fds.accept(this, null);
+                case DefinitionStatement def -> {
+                    def.accept(this, null);
                 }
+
                 case DeclarationStatement ds -> {
                     if (mScope.addDeclaration(ds, null) && ds.source != null) {
                         // FIXME: Code must be added to the constructor(s) or static initializer.
@@ -796,9 +800,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                         throw null;
                     }
                 }
-                case ClassDefinitionStatement cds -> {
-                    cds.accept(this, null);
+
+                case StaticInitStatement init -> {
+                    init.accept(this, null);
                 }
+
                 default -> {
                     error(item, "invalid class member");
                 }
@@ -1512,6 +1518,27 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
         // FIXME
         throw null;
+    }
+
+    @Override
+    public BaseBinding visit(StaticInitStatement st, BaseBinding target) {
+        if (checkUnreachable(st)) {
+            return null;
+        }
+
+        if (mScope.item() instanceof NewClass clazz) {
+            CodeScopeStatement code = st.code;
+            if (code != null && !code.items.isEmpty()) {
+                var sig = BaseCallSignature.from(BaseVoidType.THE, "", BaseTupleType.EMPTY, true);
+                var clinit = BaseCallableItem.from(Modifiers.STATIC, clazz, sig);
+                clazz.addClinit(clinit);
+                visitCode(code, clinit);
+            }
+        } else {
+            mEnv.error(st, "static initializer not allowed here");
+        }
+
+        return BaseBinding.Void.THE;
     }
 
     @Override
