@@ -130,14 +130,22 @@ public final class NewClass extends BaseClassTypeItem {
         }
 
         if (mGeneratedTypeNames != null) {
-            MethodMaker mm = cm.addClinit();
-            var tgVar = mm.var(TypeGenerator.class);
+            // Code for generated types must be placed in the clinit method before any
+            // user-provided static initializers, ensuring that the generated types are
+            // available to the static initializers.
+            var tgVar = cm.addClinit().var(TypeGenerator.class);
             for (String typeName : mGeneratedTypeNames) {
                 tgVar.invoke("generateFromName", typeName);
             }
         }
 
-        // FIXME: Static initializer must come after generated types.
+        if (mClinits != null) {
+            ScopedValue.where(GeneratedType.FOR_NEW_CLASS, this).run(() -> {
+                for (BaseCallableItem clinit : mClinits) {
+                    new CodeGenerator(this, cm.addClinit(), clinit).finish();
+                }
+            });
+        }
 
         for (BaseClassTypeItem inner : innerClassesMap().values()) {
             finished = ((NewClass) inner).finish(finished);
@@ -314,12 +322,6 @@ public final class NewClass extends BaseClassTypeItem {
 
         for (BaseObjectType iface : interfaces()) {
             cm.implement(iface.asMakerType());
-        }
-
-        if (mClinits != null) {
-            for (BaseCallableItem clinit : mClinits) {
-                addCodeGenerator(cm.addClinit(), clinit);
-            }
         }
 
         fields().filter(f -> !f.isPseudo()).forEach(field -> {
