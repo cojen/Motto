@@ -53,21 +53,6 @@ public sealed interface BaseType extends Type, EncodableType
         return LoadedClass.from(clazz);
     }
 
-    /* FIXME: remove
-    @Override // Constable
-    public default Optional<? extends ConstantDesc> describeConstable() {
-        DirectMethodHandleDesc bootstrap = ConstantDescs.ofConstantBootstrap
-            (ConstantBootstraps.class.describeConstable().get(), "type",
-             Type.class.describeConstable().get(), ConstantDescs.CD_String);
-
-        String desc = asClassDesc().descriptorString();
-
-        ClassDesc type = Type.class.describeConstable().get();
-
-        return Optional.of(DynamicConstantDesc.ofNamed(bootstrap, "_", type, desc));
-    }
-    */
-
     @Override
     public default int numFields() {
         return 0;
