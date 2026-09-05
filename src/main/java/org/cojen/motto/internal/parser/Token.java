@@ -48,12 +48,12 @@ public abstract sealed class Token implements Element {
 
     // Standard infix operators.
     public static final int T_EQ = 21, T_NE = 22, T_GE = 23, T_LT = 24, T_LE = 25, T_GT = 26,
-        T_AND = 27, T_OR = 28, T_LAND = 29, T_LOR = 30, T_LXOR = 31,
+        T_LAND = 27, T_LOR = 28, T_AND = 29, T_OR = 30, T_XOR = 31,
         T_PLUS = 32, T_MINUS = 33, T_MUL = 34, T_DIV = 35, T_REM = 36,
         T_SHL = 37, T_SHR = 38, T_USHR = 39, T_ARROW = 40;
 
     // Standard infix assignment operators.
-    public static final int T_LAND_A = 41, T_LOR_A = 42, T_LXOR_A = 43,
+    public static final int T_AND_A = 41, T_OR_A = 42, T_XOR_A = 43,
         T_PLUS_A = 44, T_MINUS_A = 45, T_MUL_A = 46, T_DIV_A = 47, T_REM_A = 48,
         T_SHL_A = 49, T_SHR_A = 50, T_USHR_A = 51;
 

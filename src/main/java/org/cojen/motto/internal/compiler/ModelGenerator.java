@@ -38,7 +38,6 @@ import org.cojen.motto.internal.model.BaseFieldItem;
 import org.cojen.motto.internal.model.BaseIntType;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseNullType;
-import org.cojen.motto.internal.model.BaseObjectType;
 import org.cojen.motto.internal.model.BasePath;
 import org.cojen.motto.internal.model.BaseSegmentArgument;
 import org.cojen.motto.internal.model.BaseTupleType;
@@ -60,7 +59,6 @@ import org.cojen.motto.internal.parser.DefinitionStatement;
 import org.cojen.motto.internal.parser.Element;
 import org.cojen.motto.internal.parser.EmptyStatement;
 import org.cojen.motto.internal.parser.FieldLoadStatement;
-import org.cojen.motto.internal.parser.FunctionDefinitionStatement;
 import org.cojen.motto.internal.parser.InfixStatement;
 import org.cojen.motto.internal.parser.IsStatement;
 import org.cojen.motto.internal.parser.JumpStatement;
@@ -971,7 +969,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
         int opType = st.operator.type();
 
-        if (opType == T_AND || opType == T_OR) {
+        if (opType == T_LAND || opType == T_LOR) {
             // FIXME
             throw null;
         }
@@ -1007,9 +1005,9 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             case T_LE -> {return block.le(target, leftBinding, rightBinding);}
             case T_GT -> {return block.gt(target, leftBinding, rightBinding);}
 
-            case T_LAND  -> {return block.and(target, leftBinding, rightBinding);}
-            case T_LOR   -> {return block.or(target, leftBinding, rightBinding);}
-            case T_LXOR  -> {return block.xor(target, leftBinding, rightBinding);}
+            case T_AND   -> {return block.and(target, leftBinding, rightBinding);}
+            case T_OR    -> {return block.or(target, leftBinding, rightBinding);}
+            case T_XOR   -> {return block.xor(target, leftBinding, rightBinding);}
             case T_PLUS  -> {return block.add(target, leftBinding, rightBinding);}
             case T_MINUS -> {return block.sub(target, leftBinding, rightBinding);}
             case T_MUL   -> {return block.mul(target, leftBinding, rightBinding);}

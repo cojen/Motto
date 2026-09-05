@@ -807,9 +807,9 @@ final class Tokenizer implements Closeable {
                 case '~' -> type = T_TILDE;
                 case '<' -> type = T_LT;
                 case '>' -> type = T_GT;
-                case '&' -> type = T_LAND;
-                case '|' -> type = T_LOR;
-                case '^' -> type = T_LXOR;
+                case '&' -> type = T_AND;
+                case '|' -> type = T_OR;
+                case '^' -> type = T_XOR;
                 case '+' -> type = T_PLUS;
                 case '-' -> type = T_MINUS;
                 case '*' -> type = T_MUL;
@@ -893,25 +893,25 @@ final class Tokenizer implements Closeable {
                 }
                 case '&' -> {
                     if (c2 == '=') {
-                        type = T_LAND_A;
+                        type = T_AND_A;
                     } else if (c2 == '&') {
-                        type = T_AND;
+                        type = T_LAND;
                     } else {
                         break l2;
                     }
                 }
                 case '|' -> {
                     if (c2 == '=') {
-                        type = T_LOR_A;
+                        type = T_OR_A;
                     } else if (c2 == '|') {
-                        type = T_OR;
+                        type = T_LOR;
                     } else {
                         break l2;
                     }
                 }
                 case '^' -> {
                     if (c2 == '=') {
-                        type = T_LXOR_A;
+                        type = T_XOR_A;
                     } else {
                         break l2;
                     }

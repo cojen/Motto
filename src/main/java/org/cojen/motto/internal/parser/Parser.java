@@ -462,8 +462,8 @@ public final class Parser implements Closeable {
                     st = parseMethodCall(st, List.of(name), params);
                 }
 
-                case T_EQ, T_NE, T_GE, T_LT, T_LE, T_GT, T_AND, T_OR, T_LAND, T_LOR, T_LXOR,
-                    T_PLUS, T_MINUS, T_MUL, T_DIV, T_REM, T_SHL, T_SHR, T_USHR ->
+                case T_EQ, T_NE, T_GE, T_LT, T_LE, T_GT, T_LAND, T_LOR, T_AND, T_OR, T_XOR,
+                     T_PLUS, T_MINUS, T_MUL, T_DIV, T_REM, T_SHL, T_SHR, T_USHR ->
                 {
                     st = parseInfixStatement(st, t1);
                 }
@@ -529,8 +529,8 @@ public final class Parser implements Closeable {
                     return new StoreStatement(st, parseStatement("assignment source"));
                 }
 
-                case T_LAND_A, T_LOR_A, T_LXOR_A,
-                    T_PLUS_A, T_MINUS_A, T_MUL_A, T_DIV_A, T_REM_A, T_SHL_A, T_SHR_A, T_USHR_A ->
+                case T_AND_A, T_OR_A, T_XOR_A,
+                     T_PLUS_A, T_MINUS_A, T_MUL_A, T_DIV_A, T_REM_A, T_SHL_A, T_SHR_A, T_USHR_A ->
                 {
                     // Assignment terminates the chain.
                     return new UpdateStatement(st, t1, parseStatement("assignment source"));
