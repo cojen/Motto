@@ -805,6 +805,9 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                     init.accept(this, null);
                 }
 
+                case EmptyStatement empty -> {
+                }
+
                 default -> {
                     error(item, "invalid class member");
                 }
