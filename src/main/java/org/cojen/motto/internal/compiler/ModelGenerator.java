@@ -908,7 +908,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        // The variable should have beed defined earler by visitCode, unless the type is
+        // The variable should have been defined earler by visitCode, unless the type is
         // unspecified. The local might also be null if an error was been reported.
         BaseBinding.Local local = mScope.tryFindLocalVariable(st.name.text);
 

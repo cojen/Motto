@@ -145,15 +145,12 @@ final class ModelScope {
 
         String name = ds.name.text;
 
-        do {
-            if (item instanceof BaseCallableItem ci) {
-                if (!ci.signature().inputType().fieldExists(name)) {
-                    break;
-                }
-                env().error(ds.name, "a variable with the same name is declared as a parameter");
-                return false;
-            }
+        if (item instanceof BaseCallableItem ci && ci.signature().inputType().fieldExists(name)) {
+            env().error(ds.name, "a variable with the same name is declared as a parameter");
+            return false;
+        }
 
+        do {
             if (scope.mLocals.containsKey(name)) {
                 dupError(ds.name, "a variable with the same name", scope);
                 return false;
@@ -180,11 +177,11 @@ final class ModelScope {
             }
         }
 
-        if (scope.mLocals.isEmpty()) {
-            scope.mLocals = new LinkedHashMap<>();
+        if (mLocals.isEmpty()) {
+            mLocals = new LinkedHashMap<>();
         }
 
-        scope.mLocals.put(name, BaseBinding.Named.from(type, name));
+        mLocals.put(name, BaseBinding.Named.from(type, name));
 
         return true;
     }
