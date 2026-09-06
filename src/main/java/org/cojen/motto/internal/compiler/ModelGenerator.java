@@ -970,8 +970,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         int opType = st.operator.type();
 
         if (opType == T_LAND || opType == T_LOR) {
-            // FIXME
-            throw null;
+            return visitShortCircuit(st, target, opType);
         }
 
         BaseBinding leftBinding = st.left.accept(this, null);
@@ -1017,6 +1016,52 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             case T_SHR   -> {return block.shr(target, leftBinding, rightBinding);}
             case T_USHR  -> {return block.ushr(target, leftBinding, rightBinding);}
         }
+    }
+
+    /**
+     * @param opType must be T_LAND or T_LOR
+     */
+    private BaseBinding visitShortCircuit(InfixStatement st, BaseBinding target, int opType) {
+        var stopBlock = new BaseBlock(); // short-circuit destination
+        var contBlock = mScope.activeBlock(st); // destination to continue checking
+
+        for (Statement sub : new Statement[] {st.left, st.right}) {
+            mScope.setActiveBlock(contBlock);
+            BaseBinding result = sub.accept(this, null);
+            BaseBlock activeBlock = mScope.activeBlock(st);
+
+            if (result == null) {
+                // Error state.
+                activeBlock.jump(stopBlock);
+                break;
+            }
+
+            if (result.type() != BaseBooleanType.THE) {
+                // FIXME: Also check canConvertTo.
+                error(sub, "must evaluate to a boolean");
+            }
+
+            contBlock = new BaseBlock();
+
+            if (opType == T_LAND) {
+                activeBlock.branch(result, contBlock, stopBlock);
+            } else {
+                activeBlock.branch(result, stopBlock, contBlock);
+            }
+        }
+
+        var endBlock = new BaseBlock();
+        mScope.setActiveBlock(endBlock);
+
+        BaseBinding result;
+
+        if (opType == T_LAND) {
+            result = new BaseBinding.Branch(contBlock, stopBlock, endBlock);
+        } else {
+            result = new BaseBinding.Branch(stopBlock, contBlock, endBlock);
+        }
+
+        return result;
     }
 
     @Override

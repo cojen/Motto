@@ -137,6 +137,78 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     /**
+     * Defines a constant boolean binding which is treated specially by a branch action. When
+     * possible, it skips creation of a boolean variable.
+     *
+     * @see BaseBlock#branch
+     */
+    public static final class Branch extends Unmodifiable {
+        private final BaseBinding mValue;
+        private final BaseBlock mTruePath, mFalsePath, mMerge;
+
+        /**
+         * @param truePath the block which will assign a true value
+         * @param falsePath the block which will assign a false value
+         * @param merge the block to jump to after assigning a value
+         * @throws IllegalArgumentException if either path block is terminated
+         */
+        public Branch(BaseBlock truePath, BaseBlock falsePath, BaseBlock merge) {
+            if (truePath.isTerminated() || falsePath.isTerminated()) {
+                throw new IllegalArgumentException();
+            }
+
+            mValue = new BaseBinding.Anonymous(BaseBooleanType.THE);
+
+            truePath.copy(mValue, true);
+            truePath.jump(merge);
+
+            falsePath.copy(mValue, false);
+            falsePath.jump(merge);
+
+            mTruePath = truePath;
+            mFalsePath = falsePath;
+
+            mMerge = merge;
+        }
+
+        @Override
+        public BaseType type() {
+            return mValue.type();
+        }
+
+        @Override
+        void trackBlockLocalSource(Map<Anonymous, Boolean> map) {
+            mValue.trackBlockLocalSource(map);
+        }
+
+        @Override
+        void trackBlockLocalTarget(Map<Anonymous, Boolean> map) {
+            mValue.trackBlockLocalTarget(map);
+        }
+
+        public BaseBinding value() {
+            return mValue;
+        }
+
+        BaseBlock mergeBlock() {
+            return mMerge;
+        }
+
+        /**
+         * Skip the merge block and instead jump to the given destinations. This binding should
+         * then be discarded.
+         */
+        void skip(BaseBlock whenTrue, BaseBlock whenFalse) {
+            setDestination(mTruePath, whenTrue);
+            setDestination(mFalsePath, whenFalse);
+        }
+
+        private static void setDestination(BaseBlock path, BaseBlock destination) {
+            ((BaseJumpAction) path.lastAction()).setDestination(path, destination);
+        }
+    }
+
+    /**
      * Defines a binding which refers to a static field.
      */
     public static final class StaticField extends BaseBinding {

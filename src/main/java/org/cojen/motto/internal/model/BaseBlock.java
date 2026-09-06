@@ -195,6 +195,10 @@ public final class BaseBlock implements Block {
         }
     }
 
+    BaseAction lastAction() {
+        return mLastAction;
+    }
+
     @Override
     public BaseBinding.Anonymous var(Type type) {
         return var((BaseType) type);
@@ -398,9 +402,15 @@ public final class BaseBlock implements Block {
             constant.value() instanceof Boolean b)
         {
             addAction(new BaseJumpAction(this, mPosition, b ? whenTrue : whenFalse));
-        } else {
-            addAction(new BaseBranchAction(this, mPosition, condition, whenTrue, whenFalse));
+            return;
         }
+
+        if (condition instanceof BaseBinding.Branch b && b.mergeBlock() == this) {
+            b.skip(whenTrue, whenFalse);
+            return;
+        }
+
+        addAction(new BaseBranchAction(this, mPosition, condition, whenTrue, whenFalse));
     }
 
     @Override

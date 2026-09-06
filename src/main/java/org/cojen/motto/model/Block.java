@@ -29,8 +29,7 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
      * a jump or branch action.
      */
     public static Block newBlock() {
-        // FIXME
-        throw null;
+        return new BaseBlock();
     }
 
     /**

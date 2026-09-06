@@ -18,6 +18,7 @@ package org.cojen.motto.internal.compiler;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import org.cojen.motto.internal.model.BaseBinding;
 import org.cojen.motto.internal.model.BaseBlock;
@@ -453,6 +454,10 @@ final class ModelScope {
         BaseBlock block = mActiveBlock;
         block.sourcePosition(position);
         return block;
+    }
+
+    void setActiveBlock(BaseBlock block) {
+        mActiveBlock = Objects.requireNonNull(block);
     }
 
     BaseBinding activeBlockResult() {

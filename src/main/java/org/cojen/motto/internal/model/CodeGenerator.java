@@ -558,6 +558,10 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
                 return forLoad(b);
             }
 
+            case BaseBinding.Branch b -> {
+                return variableFor(b);
+            }
+
             case BaseBinding.StaticField b -> {
                 return variableFor(b);
             }
@@ -681,6 +685,10 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             // Object is a constant, so use a temporary variable.
             return mMethodMaker.var(binding.type().asMakerType()).set(obj);
         }
+    }
+
+    private Variable variableFor(BaseBinding.Branch binding) {
+        return variableFor(binding.value());
     }
 
     private Variable variableFor(BaseBinding.StaticField binding) {
