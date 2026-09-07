@@ -336,7 +336,7 @@ public final class Compiler implements ErrorListener, Closeable {
             return;
         }
 
-        cds.accept(new ModelGenerator(env), null);
+        cds.accept(new ModelGenerator(env));
 
         if (env.numErrors() != 0) {
             return;

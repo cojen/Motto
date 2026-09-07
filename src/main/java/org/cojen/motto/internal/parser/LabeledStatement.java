@@ -33,8 +33,8 @@ public final class LabeledStatement implements Statement {
     }
 
     @Override
-    public <R, P> R accept(ParseVisitor<R, P> v, P param) {
-        return v.visit(this, param);
+    public <R> R accept(ParseVisitor<R> v) {
+        return v.visit(this);
     }
 
     @Override

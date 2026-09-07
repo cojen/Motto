@@ -21,64 +21,64 @@ package org.cojen.motto.internal.parser;
  *
  * @author Brian S. O'Neill
  */
-public interface ParseVisitor<R, P> {
-    public R visit(AsStatement st, P param);
+public interface ParseVisitor<R> {
+    public R visit(AsStatement st);
 
-    public R visit(ClassDefinitionStatement st, P param);
+    public R visit(ClassDefinitionStatement st);
 
-    public R visit(CodeScopeStatement st, P param);
+    public R visit(CodeScopeStatement st);
 
-    public R visit(ConstructorDefinitionStatement st, P param);
+    public R visit(ConstructorDefinitionStatement st);
 
-    public R visit(CoordinateLoadStatement st, P param);
+    public R visit(CoordinateLoadStatement st);
 
-    public R visit(DeclarationStatement st, P param);
+    public R visit(DeclarationStatement st);
 
-    public R visit(EmptyStatement st, P param);
+    public R visit(EmptyStatement st);
 
-    public R visit(FieldLoadStatement st, P param);
+    public R visit(FieldLoadStatement st);
 
-    public R visit(InfixStatement st, P param);
+    public R visit(InfixStatement st);
 
-    public R visit(IsStatement st, P param);
+    public R visit(IsStatement st);
 
-    public R visit(JumpStatement st, P param);
+    public R visit(JumpStatement st);
 
-    public R visit(LabeledStatement st, P param);
+    public R visit(LabeledStatement st);
 
-    public R visit(LambdaStatement st, P param);
+    public R visit(LambdaStatement st);
 
-    public R visit(LiteralStatement st, P param);
+    public R visit(LiteralStatement st);
 
-    public R visit(LoadStatement st, P param);
+    public R visit(LoadStatement st);
 
-    public R visit(MethodCallStatement st, P param);
+    public R visit(MethodCallStatement st);
 
-    public R visit(MethodDefinitionStatement st, P param);
+    public R visit(MethodDefinitionStatement st);
 
-    public R visit(NewArrayStatement st, P param);
+    public R visit(NewArrayStatement st);
 
-    public R visit(NewClassDefinitionStatement st, P param);
+    public R visit(NewClassDefinitionStatement st);
 
-    public R visit(NewStatement st, P param);
+    public R visit(NewStatement st);
 
-    public R visit(PostfixStatement st, P param);
+    public R visit(PostfixStatement st);
 
-    public R visit(PrefixStatement st, P param);
+    public R visit(PrefixStatement st);
 
-    public R visit(ReturnStatement st, P param);
+    public R visit(ReturnStatement st);
 
-    public R visit(SequenceStatement st, P param);
+    public R visit(SequenceStatement st);
 
-    public R visit(StaticInitStatement st, P param);
+    public R visit(StaticInitStatement st);
 
-    public R visit(StoreStatement st, P param);
+    public R visit(StoreStatement st);
 
-    public R visit(ThrowStatement st, P param);
+    public R visit(ThrowStatement st);
 
-    public R visit(TupleStatement st, P param);
+    public R visit(TupleStatement st);
 
-    public R visit(UpdateStatement st, P param);
+    public R visit(UpdateStatement st);
 
-    public R visit(YieldStatement st, P param);
+    public R visit(YieldStatement st);
 }

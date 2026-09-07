@@ -195,10 +195,6 @@ public final class BaseBlock implements Block {
         }
     }
 
-    BaseAction lastAction() {
-        return mLastAction;
-    }
-
     @Override
     public BaseBinding.Anonymous var(Type type) {
         return var((BaseType) type);
@@ -301,25 +297,21 @@ public final class BaseBlock implements Block {
     }
 
     @Override
-    public BaseBinding callDirect(Binding target, CallableItem callable, Object... inputs) {
-        return callDirect(target, callable, inputs, (SegmentArgument[]) null);
+    public BaseBinding callDirect(CallableItem callable, Object... inputs) {
+        return callDirect(callable, inputs, (SegmentArgument[]) null);
     }
 
     @Override
-    public BaseBinding callDirect(Binding target, CallableItem callable, Object[] inputs,
+    public BaseBinding callDirect(CallableItem callable, Object[] inputs,
                                   SegmentArgument... segments)
     {
-        return callDirect((BaseBinding) target, (BaseCallableItem) callable, inputs, segments);
+        return callDirect((BaseCallableItem) callable, inputs, segments);
     }
 
-    public BaseBinding callDirect(BaseBinding target, BaseCallableItem callable,
+    public BaseBinding callDirect(BaseCallableItem callable,
                                   Object[] inputs, SegmentArgument... segments)
     {
         // FIXME: verify target and input types
-
-        if (target == null) {
-            target = targetVar(callable);
-        }
 
         BaseSegmentArgument[] extArray = null;
 
@@ -334,6 +326,8 @@ public final class BaseBlock implements Block {
             }
         }
 
+        BaseBinding target = targetVar(callable);
+
         addAction(new BaseCallAction.Direct
                   (mPosition, callable, target, toBindings(inputs), extArray));
 
@@ -341,18 +335,14 @@ public final class BaseBlock implements Block {
     }
 
     @Override
-    public BaseBinding callNew(Binding target, CallableItem callable, Object... inputs) {
-        return callNew((BaseBinding) target, (BaseCallableItem) callable, inputs);
+    public BaseBinding callNew(CallableItem callable, Object... inputs) {
+        return callNew((BaseCallableItem) callable, inputs);
     }
 
-    public BaseBinding callNew(BaseBinding target, BaseCallableItem callable,
-                               Object... inputs)
-    {
+    public BaseBinding callNew(BaseCallableItem callable, Object... inputs) {
         // FIXME: verify target, "this" input, and other input types
 
-        if (target == null) {
-            target = var(callable.signature().inputType().fieldType(0));
-        }
+        BaseBinding target = var(callable.signature().inputType().fieldType(0));
 
         addAction(new BaseCallAction.New(mPosition, callable, target, toBindings(inputs)));
 
@@ -360,18 +350,14 @@ public final class BaseBlock implements Block {
     }
 
     @Override
-    public BaseBinding callVirtual(Binding target, CallableItem callable, Object... inputs) {
-        return callVirtual((BaseBinding) target, (BaseCallableItem) callable, inputs);
+    public BaseBinding callVirtual(CallableItem callable, Object... inputs) {
+        return callVirtual((BaseCallableItem) callable, inputs);
     }
 
-    public BaseBinding callVirtual(BaseBinding target, BaseCallableItem callable,
-                                   Object... inputs)
-    {
+    public BaseBinding callVirtual(BaseCallableItem callable, Object... inputs) {
         // FIXME: verify target, "this" input, and other input types
 
-        if (target == null) {
-            target = targetVar(callable);
-        }
+        BaseBinding target = targetVar(callable);
 
         addAction(new BaseCallAction.Virtual(mPosition, callable, target, toBindings(inputs)));
 
@@ -433,16 +419,14 @@ public final class BaseBlock implements Block {
     }
 
     @Override
-    public BaseBinding arrayNew(Binding target, ArrayType type, Object... dims) {
-        return arrayNew((BaseBinding) target, (BaseArrayType) type, dims);
+    public BaseBinding arrayNew(ArrayType type, Object... dims) {
+        return arrayNew((BaseArrayType) type, dims);
     }
 
-    public BaseBinding arrayNew(BaseBinding target, BaseArrayType type, Object... dims) {
+    public BaseBinding arrayNew(BaseArrayType type, Object... dims) {
         // FIXME: verify target and dimension types
 
-        if (target == null) {
-            target = var(type);
-        }
+        BaseBinding target = var(type);
 
         addAction(new BaseArrayAction.New(mPosition, type, target, toBindings(dims)));
 
@@ -450,14 +434,12 @@ public final class BaseBlock implements Block {
     }
 
     @Override
-    public BaseBinding arrayGet(Binding target, Binding array, Object index) {
-        return arrayGet((BaseBinding) target, (BaseBinding) array, index);
+    public BaseBinding arrayGet(Binding array, Object index) {
+        return arrayGet((BaseBinding) array, index);
     }
 
-    public BaseBinding arrayGet(BaseBinding target, BaseBinding array, Object index) {
-        if (target == null) {
-            target = var(array.type().arrayElementType());
-        }
+    public BaseBinding arrayGet(BaseBinding array, Object index) {
+        BaseBinding target = var(array.type().arrayElementType());
 
         addAction(new BaseArrayAction.Get(mPosition, array, target, toBinding(index)));
 
@@ -474,16 +456,14 @@ public final class BaseBlock implements Block {
     }
 
     @Override
-    public BaseBinding tupleNew(Binding target, TupleType type, Object... inputs) {
-        return tupleNew((BaseBinding) target, (BaseTupleType) type, inputs);
+    public BaseBinding tupleNew(TupleType type, Object... inputs) {
+        return tupleNew((BaseTupleType) type, inputs);
     }
 
-    public BaseBinding tupleNew(BaseBinding target, BaseTupleType type, Object... inputs) {
+    public BaseBinding tupleNew(BaseTupleType type, Object... inputs) {
         // FIXME: verify target and input types
 
-        if (target == null) {
-            target = var(type);
-        }
+        BaseBinding target = var(type);
 
         addAction(new BaseTupleAction.New(mPosition, type, target, toBindings(inputs)));
 
@@ -491,20 +471,20 @@ public final class BaseBlock implements Block {
     }
 
     @Override
-    public BaseBinding tupleGet(Binding target, Binding tuple, Binding index) {
+    public BaseBinding tupleGet(Binding tuple, Binding index) {
         // FIXME: Check if binding is an int/long/String. Check if constant. Must define
         // methods in the tuple class for doing runtime lookup.
         throw null;
     }
 
     @Override
-    public BaseBinding tupleGet(Binding target, Binding tuple, int index) {
+    public BaseBinding tupleGet(Binding tuple, int index) {
         // FIXME: throw IndexOutOfBoundsException if index is wrong.
         throw null;
     }
 
     @Override
-    public BaseBinding tupleGet(Binding target, Binding tuple, String label) {
+    public BaseBinding tupleGet(Binding tuple, String label) {
         // FIXME: Find index; throw IllegalArgumentException if not found.
         throw null;
     }
@@ -528,106 +508,106 @@ public final class BaseBlock implements Block {
     }
 
     @Override
-    public BaseBinding add(Binding target, Object input1, Object input2) {
-        return mathOp("add", target, input1, input2);
+    public BaseBinding add(Object input1, Object input2) {
+        return mathOp("add", input1, input2);
     }
 
     @Override
-    public BaseBinding sub(Binding target, Object input1, Object input2) {
-        return mathOp("sub", target, input1, input2);
+    public BaseBinding sub(Object input1, Object input2) {
+        return mathOp("sub", input1, input2);
     }
 
     @Override
-    public BaseBinding mul(Binding target, Object input1, Object input2) {
-        return mathOp("mul", target, input1, input2);
+    public BaseBinding mul(Object input1, Object input2) {
+        return mathOp("mul", input1, input2);
     }
 
     @Override
-    public BaseBinding div(Binding target, Object input1, Object input2) {
-        return mathOp("div", target, input1, input2);
+    public BaseBinding div(Object input1, Object input2) {
+        return mathOp("div", input1, input2);
     }
 
     @Override
-    public BaseBinding rem(Binding target, Object input1, Object input2) {
-        return mathOp("rem", target, input1, input2);
+    public BaseBinding rem(Object input1, Object input2) {
+        return mathOp("rem", input1, input2);
     }
 
     @Override
-    public BaseBinding shl(Binding target, Object input1, Object input2) {
-        return mathOp("shl", target, input1, input2);
+    public BaseBinding shl(Object input1, Object input2) {
+        return mathOp("shl", input1, input2);
     }
 
     @Override
-    public BaseBinding shr(Binding target, Object input1, Object input2) {
-        return mathOp("shr", target, input1, input2);
+    public BaseBinding shr(Object input1, Object input2) {
+        return mathOp("shr", input1, input2);
     }
 
     @Override
-    public BaseBinding ushr(Binding target, Object input1, Object input2) {
-        return mathOp("ushr", target, input1, input2);
+    public BaseBinding ushr(Object input1, Object input2) {
+        return mathOp("ushr", input1, input2);
     }
 
     @Override
-    public BaseBinding and(Binding target, Object input1, Object input2) {
-        return mathOp("and", target, input1, input2);
+    public BaseBinding and(Object input1, Object input2) {
+        return mathOp("and", input1, input2);
     }
 
     @Override
-    public BaseBinding or(Binding target, Object input1, Object input2) {
-        return mathOp("or", target, input1, input2);
+    public BaseBinding or(Object input1, Object input2) {
+        return mathOp("or", input1, input2);
     }
 
     @Override
-    public BaseBinding xor(Binding target, Object input1, Object input2) {
-        return mathOp("xor", target, input1, input2);
+    public BaseBinding xor(Object input1, Object input2) {
+        return mathOp("xor", input1, input2);
     }
 
     @Override
-    public BaseBinding eq(Binding target, Object input1, Object input2) {
-        return mathOp("eq", target, input1, input2);
+    public BaseBinding eq(Object input1, Object input2) {
+        return mathOp("eq", input1, input2);
     }
 
     @Override
-    public BaseBinding ne(Binding target, Object input1, Object input2) {
-        return mathOp("ne", target, input1, input2);
+    public BaseBinding ne(Object input1, Object input2) {
+        return mathOp("ne", input1, input2);
     }
 
     @Override
-    public BaseBinding lt(Binding target, Object input1, Object input2) {
-        return mathOp("lt", target, input1, input2);
+    public BaseBinding lt(Object input1, Object input2) {
+        return mathOp("lt", input1, input2);
     }
 
     @Override
-    public BaseBinding ge(Binding target, Object input1, Object input2) {
-        return mathOp("ge", target, input1, input2);
+    public BaseBinding ge(Object input1, Object input2) {
+        return mathOp("ge", input1, input2);
     }
 
     @Override
-    public BaseBinding gt(Binding target, Object input1, Object input2) {
-        return mathOp("gt", target, input1, input2);
+    public BaseBinding gt(Object input1, Object input2) {
+        return mathOp("gt", input1, input2);
     }
 
     @Override
-    public BaseBinding le(Binding target, Object input1, Object input2) {
-        return mathOp("le", target, input1, input2);
+    public BaseBinding le(Object input1, Object input2) {
+        return mathOp("le", input1, input2);
     }
 
     @Override
-    public BaseBinding neg(Binding target, Object input) {
-        return mathOp("neg", target, input);
+    public BaseBinding neg(Object input) {
+        return mathOp("neg", input);
     }
 
     @Override
-    public BaseBinding com(Binding target, Object input) {
-        return mathOp("com", target, input);
+    public BaseBinding com(Object input) {
+        return mathOp("com", input);
     }
 
     @Override
-    public BaseBinding not(Binding target, Object input) {
-        return mathOp("not", target, input);
+    public BaseBinding not(Object input) {
+        return mathOp("not", input);
     }
 
-    private BaseBinding mathOp(String op, Binding target, Object input1, Object input2) {
+    private BaseBinding mathOp(String op, Object input1, Object input2) {
         // FIXME: Support BigDecimal and BigInteger.
 
         BaseBinding in1 = toBinding(input1);
@@ -643,10 +623,10 @@ public final class BaseBlock implements Block {
 
         // FIXME: constant folding
 
-        return callDirect(target, callable, in1, in2);
+        return callDirect(callable, in1, in2);
     }
 
-    private BaseBinding mathOp(String op, Binding target, Object input) {
+    private BaseBinding mathOp(String op, Object input) {
         // FIXME: Support BigDecimal and BigInteger.
 
         BaseBinding in = toBinding(input);
@@ -661,7 +641,7 @@ public final class BaseBlock implements Block {
 
         // FIXME: constant folding
 
-        return callDirect(target, callable, in);
+        return callDirect(callable, in);
     }
 
     private static CallableItem oneCallable(Map<BaseCallSignature, Set<CallableItem>> methods) {
@@ -765,6 +745,10 @@ public final class BaseBlock implements Block {
 
     BaseAction firstAction() {
         return mFirstAction;
+    }
+
+    BaseAction lastAction() {
+        return mLastAction;
     }
 
     @SuppressWarnings("unchecked")

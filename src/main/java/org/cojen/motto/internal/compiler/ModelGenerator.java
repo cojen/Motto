@@ -93,7 +93,7 @@ import static org.cojen.motto.internal.parser.Token.*;
  *
  * @author Brian S. O'Neill
  */
-final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
+final class ModelGenerator implements ParseVisitor<BaseBinding> {
     private final CompilationEnv mEnv;
 
     private ModelScope mScope;
@@ -479,7 +479,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
      * @return null if no method was found or if an error was reported
      * @throws IllegalArgumentException if both a member and an instance were provided
      */
-    private BaseBinding tryMakeMethodCall(MethodCallStatement st, BaseBinding target,
+    private BaseBinding tryMakeMethodCall(MethodCallStatement st,
                                           BaseItem item, BaseBinding instance,
                                           Token.Identifier nameToken,
                                           BaseType[] inputTypes, BaseBinding[] inputBindings,
@@ -545,7 +545,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                     boolean hasError = false;
 
                     for (int j=0; j<segBindings.length; j++) {
-                        BaseBinding segInput = items.get(j).accept(this, null);
+                        BaseBinding segInput = items.get(j).accept(this);
                         if (segInput == null) {
                             hasError = true;
                         } else {
@@ -629,9 +629,9 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         BaseBlock block = mScope.activeBlock(st);
 
         if (direct | staticCall | callable.isPrivate() | segArguments != null) {
-            return block.callDirect(target, callable, (Object[]) inputBindings, segArguments);
+            return block.callDirect(callable, (Object[]) inputBindings, segArguments);
         } else {
-            return block.callVirtual(target, callable, (Object[]) inputBindings);
+            return block.callVirtual(callable, (Object[]) inputBindings);
         }
     }
 
@@ -685,7 +685,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
         try {
             for (Statement st : items) {
-                st.accept(this, null);
+                st.accept(this);
             }
 
             LabeledStatement ls = mScope.checkLabelReachability();
@@ -737,7 +737,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                 error(c, "no more sizes can be specified");
                 return null;
             } else {
-                BaseBinding binding = coordinate.accept(this, null);
+                BaseBinding binding = coordinate.accept(this);
 
                 if (binding == null) {
                     // Error state.
@@ -758,12 +758,10 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     // Visit methods: Null is returned if an error was reported. Void is returned if the
-    // statement returns void, and a non-void target binding is returned otherwise. If a null
-    // target binding is passed in, then the visit method must provide a target binding on its
-    // own if necessary. Otherwise, it should use the target binding already provided.
+    // statement returns void, and a non-void target binding is returned otherwise.
 
     @Override
-    public BaseBinding visit(AsStatement st, BaseBinding target) {
+    public BaseBinding visit(AsStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -773,7 +771,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(ClassDefinitionStatement st, BaseBinding target) {
+    public BaseBinding visit(ClassDefinitionStatement st) {
         // For a path-accessible class, the clazz field should have been assigned when
         // ClassDefinitionStatement.prepareClass was called.
         NewClass clazz = st.clazz;
@@ -788,7 +786,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         for (Statement item : st.code.items) {
             switch (item) {
                 case DefinitionStatement def -> {
-                    def.accept(this, null);
+                    def.accept(this);
                 }
 
                 case DeclarationStatement ds -> {
@@ -800,7 +798,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                 }
 
                 case StaticInitStatement init -> {
-                    init.accept(this, null);
+                    init.accept(this);
                 }
 
                 case EmptyStatement empty -> {
@@ -818,7 +816,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(CodeScopeStatement st, BaseBinding target) {
+    public BaseBinding visit(CodeScopeStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -829,7 +827,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(ConstructorDefinitionStatement st, BaseBinding target) {
+    public BaseBinding visit(ConstructorDefinitionStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -839,14 +837,14 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(CoordinateLoadStatement st, BaseBinding target) {
+    public BaseBinding visit(CoordinateLoadStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
 
         BaseBlock block = mScope.activeBlock(st);
 
-        return doVisit(st, (array, index) -> block.arrayGet(target, array, index));
+        return doVisit(st, (array, index) -> block.arrayGet(array, index));
     }
 
     /**
@@ -857,7 +855,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     private BaseBinding doVisit(CoordinateLoadStatement st,
                                 BiFunction<BaseBinding, BaseBinding, BaseBinding> handler)
     {
-        BaseBinding binding = st.source.accept(this, null);
+        BaseBinding binding = st.source.accept(this);
 
         if (binding == null) {
             // Error state.
@@ -892,7 +890,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             BaseBinding indexBinding = it.next();
 
             if (it.hasNext()) {
-                binding = mScope.activeBlock(st).arrayGet(null, binding, indexBinding);
+                binding = mScope.activeBlock(st).arrayGet(binding, indexBinding);
             } else {
                 binding = handler.apply(binding, indexBinding);
                 break;
@@ -903,7 +901,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(DeclarationStatement st, BaseBinding target) {
+    public BaseBinding visit(DeclarationStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -919,7 +917,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return BaseBinding.Void.THE;
         }
 
-        BaseBinding source = st.source.accept(this, target);
+        BaseBinding source = st.source.accept(this);
 
         if (source != null) {
             if (local == null) {
@@ -941,18 +939,18 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(EmptyStatement st, BaseBinding target) {
+    public BaseBinding visit(EmptyStatement st) {
         // No actions are added, so don't bother checking reachability.
         return BaseBinding.Void.THE;
     }
 
     @Override
-    public BaseBinding visit(FieldLoadStatement st, BaseBinding target) {
+    public BaseBinding visit(FieldLoadStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
 
-        BaseBinding binding = st.source.accept(this, null);
+        BaseBinding binding = st.source.accept(this);
 
         if (binding != null) {
             binding = followInstancePath(st, binding, false, List.of(st.name).listIterator());
@@ -962,7 +960,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(InfixStatement st, BaseBinding target) {
+    public BaseBinding visit(InfixStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -970,17 +968,17 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         int opType = st.operator.type();
 
         if (opType == T_LAND || opType == T_LOR) {
-            return visitShortCircuit(st, target, opType);
+            return visitShortCircuit(st, opType);
         }
 
-        BaseBinding leftBinding = st.left.accept(this, null);
+        BaseBinding leftBinding = st.left.accept(this);
 
         if (leftBinding == null) {
             // Error state.
             return null;
         }
 
-        BaseBinding rightBinding = st.right.accept(this, null);
+        BaseBinding rightBinding = st.right.accept(this);
 
         if (rightBinding == null) {
             // Error state.
@@ -997,37 +995,37 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                 return null;
             }
 
-            case T_EQ -> {return block.eq(target, leftBinding, rightBinding);}
-            case T_NE -> {return block.ne(target, leftBinding, rightBinding);}
-            case T_GE -> {return block.ge(target, leftBinding, rightBinding);}
-            case T_LT -> {return block.lt(target, leftBinding, rightBinding);}
-            case T_LE -> {return block.le(target, leftBinding, rightBinding);}
-            case T_GT -> {return block.gt(target, leftBinding, rightBinding);}
+            case T_EQ -> {return block.eq(leftBinding, rightBinding);}
+            case T_NE -> {return block.ne(leftBinding, rightBinding);}
+            case T_GE -> {return block.ge(leftBinding, rightBinding);}
+            case T_LT -> {return block.lt(leftBinding, rightBinding);}
+            case T_LE -> {return block.le(leftBinding, rightBinding);}
+            case T_GT -> {return block.gt(leftBinding, rightBinding);}
 
-            case T_AND   -> {return block.and(target, leftBinding, rightBinding);}
-            case T_OR    -> {return block.or(target, leftBinding, rightBinding);}
-            case T_XOR   -> {return block.xor(target, leftBinding, rightBinding);}
-            case T_PLUS  -> {return block.add(target, leftBinding, rightBinding);}
-            case T_MINUS -> {return block.sub(target, leftBinding, rightBinding);}
-            case T_MUL   -> {return block.mul(target, leftBinding, rightBinding);}
-            case T_DIV   -> {return block.div(target, leftBinding, rightBinding);}
-            case T_REM   -> {return block.rem(target, leftBinding, rightBinding);}
-            case T_SHL   -> {return block.shl(target, leftBinding, rightBinding);}
-            case T_SHR   -> {return block.shr(target, leftBinding, rightBinding);}
-            case T_USHR  -> {return block.ushr(target, leftBinding, rightBinding);}
+            case T_AND   -> {return block.and(leftBinding, rightBinding);}
+            case T_OR    -> {return block.or(leftBinding, rightBinding);}
+            case T_XOR   -> {return block.xor(leftBinding, rightBinding);}
+            case T_PLUS  -> {return block.add(leftBinding, rightBinding);}
+            case T_MINUS -> {return block.sub(leftBinding, rightBinding);}
+            case T_MUL   -> {return block.mul(leftBinding, rightBinding);}
+            case T_DIV   -> {return block.div(leftBinding, rightBinding);}
+            case T_REM   -> {return block.rem(leftBinding, rightBinding);}
+            case T_SHL   -> {return block.shl(leftBinding, rightBinding);}
+            case T_SHR   -> {return block.shr(leftBinding, rightBinding);}
+            case T_USHR  -> {return block.ushr(leftBinding, rightBinding);}
         }
     }
 
     /**
      * @param opType must be T_LAND or T_LOR
      */
-    private BaseBinding visitShortCircuit(InfixStatement st, BaseBinding target, int opType) {
+    private BaseBinding visitShortCircuit(InfixStatement st, int opType) {
         var stopBlock = new BaseBlock(); // short-circuit destination
         var contBlock = mScope.activeBlock(st); // destination to continue checking
 
         for (Statement sub : new Statement[] {st.left, st.right}) {
             mScope.setActiveBlock(contBlock);
-            BaseBinding result = sub.accept(this, null);
+            BaseBinding result = sub.accept(this);
             BaseBlock activeBlock = mScope.activeBlock(st);
 
             if (result == null) {
@@ -1065,12 +1063,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(IsStatement st, BaseBinding target) {
+    public BaseBinding visit(IsStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
 
-        BaseBinding binding = st.source.accept(this, null);
+        BaseBinding binding = st.source.accept(this);
 
         if (binding == null) {
             // Error state.
@@ -1107,25 +1105,17 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                 (BaseBooleanType.THE, "isInstance", BaseTupleType.from(objectClass), true);
             var isInstance = classClass.method(sig);
             BaseBlock block = mScope.activeBlock(st);
-            result = block.callVirtual(target, isInstance, clazzObj, binding);
+            result = block.callVirtual(isInstance, clazzObj, binding);
             if (st.not != null) {
-                result = block.not(null, result);
+                result = block.not(result);
             }
         }
 
-        if (target == null) {
-            return result;
-        }
-
-        // FIXME: Automatic conversions when possible.
-
-        mScope.activeBlock(st).copy(target, result);
-
-        return target;
+        return result;
     }
 
     @Override
-    public BaseBinding visit(JumpStatement st, BaseBinding target) {
+    public BaseBinding visit(JumpStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1164,7 +1154,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(LabeledStatement st, BaseBinding target) {
+    public BaseBinding visit(LabeledStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1174,11 +1164,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             error(st.label, "label not declared");
         }
 
-        return st.source.accept(this, null);
+        return st.source.accept(this);
     }
 
     @Override
-    public BaseBinding visit(LambdaStatement st, BaseBinding target) {
+    public BaseBinding visit(LambdaStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1188,7 +1178,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(LiteralStatement st, BaseBinding target) {
+    public BaseBinding visit(LiteralStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1203,21 +1193,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             return null;
         }
 
-        BaseBinding constant = BaseBinding.Constant.from(type, value);
-
-        if (target == null) {
-            return constant;
-        }
-
-        // FIXME: Automatic conversions when possible. Sometimes String to char.
-
-        mScope.activeBlock(st).copy(target, constant);
-
-        return target;
+        return BaseBinding.Constant.from(type, value);
     }
 
     @Override
-    public BaseBinding visit(LoadStatement st, BaseBinding target) {
+    public BaseBinding visit(LoadStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1267,7 +1247,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(MethodCallStatement st, BaseBinding target) {
+    public BaseBinding visit(MethodCallStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1275,7 +1255,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         BaseBinding sourceBinding = null;
 
         if (st.source != null) {
-            sourceBinding = st.source.accept(this, null);
+            sourceBinding = st.source.accept(this);
             if (sourceBinding == null) {
                 // Error state.
                 return null;
@@ -1291,7 +1271,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
         int i = 0;
         for (Statement paramItem : items) {
-            BaseBinding param = paramItem.accept(this, null);
+            BaseBinding param = paramItem.accept(this);
             if (param == null) {
                 // Error state.
                 return null;
@@ -1321,7 +1301,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                 int numErrors = mEnv.numErrors();
 
                 BaseBinding result = tryMakeMethodCall
-                    (st, target, mScope.item(), null, nameToken, inputTypes, inputBindings, false);
+                    (st, mScope.item(), null, nameToken, inputTypes, inputBindings, false);
 
                 if (result != null || numErrors != mEnv.numErrors()) {
                     return result;
@@ -1333,7 +1313,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                     numErrors = mEnv.numErrors();
 
                     result = tryMakeMethodCall
-                        (st, target, classItem, null, nameToken, inputTypes, inputBindings, false);
+                        (st, classItem, null, nameToken, inputTypes, inputBindings, false);
 
                     if (result != null || numErrors != mEnv.numErrors()) {
                         return result;
@@ -1393,7 +1373,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                     int numErrors = mEnv.numErrors();
 
                     BaseBinding result = tryMakeMethodCall
-                        (st, target, classItem, null, nameToken, inputTypes, inputBindings, false);
+                        (st, classItem, null, nameToken, inputTypes, inputBindings, false);
 
                     if (result == null && numErrors == mEnv.numErrors()) {
                         error(nameToken, "cannot find static method");
@@ -1423,7 +1403,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         int numErrors = mEnv.numErrors();
 
         BaseBinding result = tryMakeMethodCall
-            (st, target, null, instance, nameToken, inputTypes, inputBindings, false);
+            (st, null, instance, nameToken, inputTypes, inputBindings, false);
 
         if (result == null && numErrors == mEnv.numErrors()) {
             String message;
@@ -1439,7 +1419,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(MethodDefinitionStatement st, BaseBinding target) {
+    public BaseBinding visit(MethodDefinitionStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1459,7 +1439,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(NewArrayStatement st, BaseBinding target) {
+    public BaseBinding visit(NewArrayStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1469,7 +1449,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(NewClassDefinitionStatement st, BaseBinding target) {
+    public BaseBinding visit(NewClassDefinitionStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1479,7 +1459,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(NewStatement st, BaseBinding target) {
+    public BaseBinding visit(NewStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1489,7 +1469,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(PostfixStatement st, BaseBinding target) {
+    public BaseBinding visit(PostfixStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1499,12 +1479,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(PrefixStatement st, BaseBinding target) {
+    public BaseBinding visit(PrefixStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
 
-        BaseBinding inputBinding = st.source.accept(this, null);
+        BaseBinding inputBinding = st.source.accept(this);
 
         if (inputBinding == null) {
             // Error state.
@@ -1520,16 +1500,16 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             }
 
             case T_PLUS  -> {return inputBinding;}
-            case T_MINUS -> {return block.neg(target, inputBinding);}
-            case T_TILDE -> {return block.com(target, inputBinding);}
-            case T_BANG  -> {return block.not(target, inputBinding);}
+            case T_MINUS -> {return block.neg(inputBinding);}
+            case T_TILDE -> {return block.com(inputBinding);}
+            case T_BANG  -> {return block.not(inputBinding);}
 
             // FIXME: T_INC, T_DEC; LoadStatement, FieldLoadStatement, CoordinateLoadStatement
         }
     }
 
     @Override
-    public BaseBinding visit(ReturnStatement st, BaseBinding target) {
+    public BaseBinding visit(ReturnStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1542,9 +1522,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             result = BaseBinding.Void.THE;
         } else {
             BaseBinding retVar = mScope.returnVar(st);
-            result = st.source.accept(this, retVar);
+            result = st.source.accept(this);
             if (result != null) {
-                // Note: The copy does nothing if the source result is the return var.
                 block.copy(retVar, result);
             }
         }
@@ -1555,7 +1534,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(SequenceStatement st, BaseBinding target) {
+    public BaseBinding visit(SequenceStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1567,7 +1546,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(StaticInitStatement st, BaseBinding target) {
+    public BaseBinding visit(StaticInitStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1588,12 +1567,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(StoreStatement st, BaseBinding target) {
+    public BaseBinding visit(StoreStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
 
-        BaseBinding source = st.source.accept(this, null);
+        BaseBinding source = st.source.accept(this);
 
         if (source == null) {
             // Error state.
@@ -1606,11 +1585,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
         switch (st.target) {
             case LoadStatement load -> {
-                lvalue = visit(load, null);
+                lvalue = visit(load);
             }
 
             case FieldLoadStatement fload -> {
-                lvalue = visit(fload, null);
+                lvalue = visit(fload);
             }
 
             case CoordinateLoadStatement cload -> {
@@ -1642,7 +1621,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(ThrowStatement st, BaseBinding target) {
+    public BaseBinding visit(ThrowStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1652,7 +1631,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(TupleStatement st, BaseBinding target) {
+    public BaseBinding visit(TupleStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1661,7 +1640,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
         int numItems = items.size();
 
         if (numItems == 0) {
-            return mScope.activeBlock(st).tupleNew(target, BaseTupleType.EMPTY);
+            return mScope.activeBlock(st).tupleNew(BaseTupleType.EMPTY);
         }
 
         if (st.isUnevaluated()) {
@@ -1674,7 +1653,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
             if (!(first instanceof LabeledStatement)) {
                 // A single element tuple is just a grouped expression. It can be converted
                 // into a tuple easily enough by the receiver if necessary.
-                return first.accept(this, target);
+                return first.accept(this);
             }
         }
 
@@ -1693,7 +1672,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
                 }
             }
 
-            BaseBinding input = item.accept(this, null);
+            BaseBinding input = item.accept(this);
 
             if (input == null) {
                 // Error state.
@@ -1712,11 +1691,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
 
         BaseTupleType tt = BaseTupleType.from(types).withNames(names);
 
-        return mScope.activeBlock(st).tupleNew(target, tt, (Object[]) inputs);
+        return mScope.activeBlock(st).tupleNew(tt, (Object[]) inputs);
     }
 
     @Override
-    public BaseBinding visit(UpdateStatement st, BaseBinding target) {
+    public BaseBinding visit(UpdateStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1726,7 +1705,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding, BaseBinding> {
     }
 
     @Override
-    public BaseBinding visit(YieldStatement st, BaseBinding target) {
+    public BaseBinding visit(YieldStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }

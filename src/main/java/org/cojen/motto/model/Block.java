@@ -109,37 +109,32 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     public void convert(Binding target, Object source);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param inputs Bindings or constants
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding callDirect(Binding target, CallableItem callable, Object... inputs);
+    public Binding callDirect(CallableItem callable, Object... inputs);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param inputs Bindings or constants
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding callDirect(Binding target, CallableItem callable, Object[] inputs,
-                              SegmentArgument... segments);
+    public Binding callDirect(CallableItem callable, Object[] inputs, SegmentArgument... segments);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param inputs Bindings or constants
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding callNew(Binding target, CallableItem callable, Object... inputs);
+    public Binding callNew(CallableItem callable, Object... inputs);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param inputs Bindings or constants
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding callVirtual(Binding target, CallableItem callable, Object... inputs);
+    public Binding callVirtual(CallableItem callable, Object... inputs);
 
     /**
      * Append a jump action to the end of this block, and then terminate it.
@@ -176,20 +171,18 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     public Binding catch_(Type exceptionType, String varName, Block handler);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param dims Bindings or constants
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding arrayNew(Binding target, ArrayType type, Object... dims);
+    public Binding arrayNew(ArrayType type, Object... dims);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param index a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding arrayGet(Binding target, Binding array, Object index);
+    public Binding arrayGet(Binding array, Object index);
 
     /**
      * @param index a Binding or a constant
@@ -199,33 +192,29 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     public void arraySet(Binding array, Object index, Object value);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param inputs Bindings or constants
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding tupleNew(Binding target, TupleType type, Object... inputs);
+    public Binding tupleNew(TupleType type, Object... inputs);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding tupleGet(Binding target, Binding tuple, Binding index);
+    public Binding tupleGet(Binding tuple, Binding index);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding tupleGet(Binding target, Binding tuple, int index);
+    public Binding tupleGet(Binding tuple, int index);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding tupleGet(Binding target, Binding tuple, String label);
+    public Binding tupleGet(Binding tuple, String label);
 
     /**
      * @param value a Binding or a constant
@@ -246,179 +235,160 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     public void tupleSet(Binding tuple, String index, Object value);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding add(Binding target, Object input1, Object input2);
+    public Binding add(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding sub(Binding target, Object input1, Object input2);
+    public Binding sub(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding mul(Binding target, Object input1, Object input2);
+    public Binding mul(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding div(Binding target, Object input1, Object input2);
+    public Binding div(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding rem(Binding target, Object input1, Object input2);
+    public Binding rem(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding shl(Binding target, Object input1, Object input2);
+    public Binding shl(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
+
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding shr(Binding target, Object input1, Object input2);
+    public Binding shr(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding ushr(Binding target, Object input1, Object input2);
+    public Binding ushr(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding and(Binding target, Object input1, Object input2);
+    public Binding and(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding or(Binding target, Object input1, Object input2);
+    public Binding or(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding xor(Binding target, Object input1, Object input2);
+    public Binding xor(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding eq(Binding target, Object input1, Object input2);
+    public Binding eq(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding ne(Binding target, Object input1, Object input2);
+    public Binding ne(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding lt(Binding target, Object input1, Object input2);
+    public Binding lt(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding ge(Binding target, Object input1, Object input2);
+    public Binding ge(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding gt(Binding target, Object input1, Object input2);
+    public Binding gt(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input1 a Binding or a constant
      * @param input2 a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding le(Binding target, Object input1, Object input2);
+    public Binding le(Object input1, Object input2);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding neg(Binding target, Object input);
+    public Binding neg(Object input);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding com(Binding target, Object input);
+    public Binding com(Object input);
 
     /**
-     * @param target the target binding; pass null to have one automatically created
      * @param input a Binding or a constant
-     * @return the target binding
+     * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding not(Binding target, Object input);
+    public Binding not(Object input);
 }
