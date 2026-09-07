@@ -196,6 +196,38 @@ public final class BaseBlock implements Block {
     }
 
     @Override
+    public BaseBlock merge() {
+        return merge(this, null, new HashSet<>());
+    }
+
+    private BaseBlock merge(BaseBlock block, BaseBlock common, HashSet<BaseBlock> visited) {
+        // Note: The block being processed can match the common block when following a path
+        // which was already merged.
+        while (block != common && visited.add(block)) {
+            BaseAction last = block.mLastAction;
+
+            if (last == null || !(last instanceof TerminalAction)) {
+                if (common == null) {
+                    common = new BaseBlock();
+                }
+                block.jump(common);
+                break;
+            }
+
+            if (last instanceof BaseJumpAction jump) {
+                block = jump.destination(); // tail call
+            } else if (last instanceof BaseBranchAction branch) {
+                common = merge(branch.whenTrue(), common, visited);
+                block = branch.whenFalse(); // tail call
+            } else {
+                break;
+            }
+        }
+
+        return common;
+    }
+
+    @Override
     public BaseBinding.Anonymous var(Type type) {
         return var((BaseType) type);
     }

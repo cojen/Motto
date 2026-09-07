@@ -49,7 +49,7 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
      *
      * @return a new block if the merge succeeded
      */
-    //public Block merge();
+    public Block merge();
 
     /**
      * Return a new anonymous local variable binding which is visible to all actions within the
