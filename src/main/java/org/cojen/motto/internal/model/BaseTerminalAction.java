@@ -24,7 +24,7 @@ import org.cojen.motto.model.TerminalAction;
  * @author Brian S. O'Neill
  */
 public abstract sealed class BaseTerminalAction extends BaseAction implements TerminalAction
-    permits BaseBranchAction, BaseJumpAction, BaseThrowAction
+    permits BaseBranchAction, BaseJumpAction, BaseReturnAction, BaseThrowAction
 {
     BaseTerminalAction(int position) {
         super(position);

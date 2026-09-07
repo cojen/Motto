@@ -25,9 +25,7 @@ import org.cojen.motto.model.Action;
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed class BaseAction implements Action
-    permits FlowAction, BaseTerminalAction, BaseYieldAction
-{
+public abstract sealed class BaseAction implements Action permits FlowAction, BaseTerminalAction {
     private final int mPosition;
 
     /**

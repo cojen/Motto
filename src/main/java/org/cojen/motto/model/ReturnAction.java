@@ -16,13 +16,13 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.BaseYieldAction;
+import org.cojen.motto.internal.model.BaseReturnAction;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface YieldAction extends Action permits BaseYieldAction {
+public sealed interface ReturnAction extends TerminalAction permits BaseReturnAction {
     public Binding result();
 }

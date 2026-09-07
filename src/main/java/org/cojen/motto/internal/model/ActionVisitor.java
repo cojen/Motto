@@ -46,6 +46,8 @@ public interface ActionVisitor<R> {
 
     public R visit(BaseJumpAction action);
 
+    public R visit(BaseReturnAction action);
+
     public R visit(BaseThrowAction action);
 
     public R visit(BaseTupleAction.New action);
@@ -53,6 +55,4 @@ public interface ActionVisitor<R> {
     public R visit(BaseTupleAction.Get action);
 
     public R visit(BaseTupleAction.Set action);
-
-    public R visit(BaseYieldAction action);
 }

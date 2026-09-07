@@ -19,20 +19,18 @@ package org.cojen.motto.internal.model;
 import java.util.Map;
 import java.util.Objects;
 
-import org.cojen.motto.model.YieldAction;
+import org.cojen.motto.model.ReturnAction;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public final class BaseYieldAction extends BaseAction implements YieldAction {
-    private final FlowAction mPrev;
+public final class BaseReturnAction extends BaseTerminalAction implements ReturnAction {
     private final BaseBinding mResult;
 
-    BaseYieldAction(int position, FlowAction prev, BaseBinding result) {
+    BaseReturnAction(int position, BaseBinding result) {
         super(position);
-        mPrev = prev;
         mResult = Objects.requireNonNull(result);
     }
 
@@ -44,10 +42,6 @@ public final class BaseYieldAction extends BaseAction implements YieldAction {
     @Override
     public BaseBinding result() {
         return mResult;
-    }
-
-    FlowAction previous() {
-        return mPrev;
     }
 
     @Override

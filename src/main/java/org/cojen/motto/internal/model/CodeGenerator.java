@@ -187,12 +187,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         }
 
         if (!block.isTerminated()) {
-            BaseBinding result = block.result();
-            if (result == BaseBinding.Void.THE) {
-                mMethodMaker.return_();
-            } else {
-                mMethodMaker.return_(variableFor(result));
-            }
+            mMethodMaker.return_();
         }
     }
 
@@ -416,7 +411,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     public BaseAction visit(BaseCopyAction action) {
         BaseBinding target = action.target();
 
-        /* FIXME: yield
+        /* FIXME: return optimization
         if (action.next instanceof BaseReturnAction && target instanceof BaseBinding.Local) {
             // Return directly, avoiding the creation of an unnecessary temporary variable
             // which cannot always be optimized away by the Maker library. This happens when
@@ -450,6 +445,23 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         } else {
             label(block).goto_();
             maybeVisitLater(block);
+        }
+
+        return null;
+    }
+
+    @Override
+    public BaseAction visit(BaseReturnAction action) {
+        if (mItem.isMacro()) {
+            // FIXME: macro
+            throw null;
+        } else {
+            BaseBinding result = action.result();
+            if (result.type() == BaseVoidType.THE) {
+                mMethodMaker.return_();
+            } else {
+                mMethodMaker.return_(forLoad(result));
+            }
         }
 
         return null;
@@ -503,12 +515,6 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         throw null;
     }
 
-    @Override
-    public BaseAction visit(BaseYieldAction action) {
-        // The doVisitCode method will add the return op.
-        return null;
-    }
-
     /**
      * Returns true if the block is reached once, or is empty, or it consists of one small
      * terminal action.
@@ -518,7 +524,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             return true;
         }
         BaseAction first = block.firstAction();
-        return first == null || first instanceof BaseYieldAction;
+        return first == null || first instanceof BaseReturnAction;
     }
 
     private void maybeVisitLater(BaseBlock block) {

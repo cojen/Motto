@@ -24,6 +24,6 @@ import org.cojen.motto.internal.model.BaseTerminalAction;
  * @author Brian S. O'Neill
  */
 public sealed interface TerminalAction extends Action
-    permits BranchAction, JumpAction, ThrowAction, BaseTerminalAction
+    permits BranchAction, JumpAction, ReturnAction, ThrowAction, BaseTerminalAction
 {
 }

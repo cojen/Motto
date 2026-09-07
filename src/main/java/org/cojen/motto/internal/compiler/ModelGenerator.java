@@ -1514,21 +1514,9 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        BaseBlock block = mScope.activeBlock(st);
+        BaseBinding result = st.source == null ? BaseBinding.Void.THE : st.source.accept(this);
 
-        BaseBinding result;
-
-        if (st.source == null) {
-            result = BaseBinding.Void.THE;
-        } else {
-            BaseBinding retVar = mScope.returnVar(st);
-            result = st.source.accept(this);
-            if (result != null) {
-                block.copy(retVar, result);
-            }
-        }
-
-        block.jump(mScope.returnBlock(st));
+        mScope.activeBlock(st).return_(result);
 
         return BaseBinding.Void.THE;
     }
@@ -1539,7 +1527,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        // FIXME: Yield void unless the last item is a yield.
+        // FIXME: Yield void (using a goto) unless the last item is a yield.
 
         // FIXME
         throw null;

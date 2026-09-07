@@ -222,42 +222,6 @@ public final class BaseBlock implements Block {
     }
 
     @Override
-    public void yield(Object result) {
-        this.yield(toBinding(result));
-    }
-
-    public void yield(BaseBinding result) {
-        BaseAction action;
-        BaseAction last = mLastAction;
-
-        if (last == null) {
-            action = new BaseYieldAction(mPosition, null, result);
-            mFirstAction = action;
-        } else if (last instanceof FlowAction flow) {
-            action = new BaseYieldAction(mPosition, flow, result);
-            flow.next = action;
-        } else if (last instanceof BaseYieldAction yield) {
-            FlowAction prev = yield.previous();
-            if (prev == null) {
-                action = new BaseYieldAction(mPosition, null, result);
-                mFirstAction = action;
-            } else {
-                action = new BaseYieldAction(mPosition, prev, result);
-                prev.next = action;
-            }
-        } else {
-            throw new TerminatedBlockException();
-        }
-
-        mLastAction = action;
-    }
-
-    @Override
-    public BaseBinding result() {
-        return mLastAction instanceof BaseYieldAction yield ? yield.result() : BaseBinding.Void.THE;
-    }
-
-    @Override
     public void copy(Binding target, Object source) {
         copy((BaseBinding) target, toBinding(source));
     }
@@ -367,6 +331,15 @@ public final class BaseBlock implements Block {
     private BaseBinding targetVar(BaseCallableItem callable) {
         BaseType type = callable.signature().outputType();
         return type == BaseVoidType.THE ? BaseBinding.Void.THE : var(type);
+    }
+
+    @Override
+    public void return_(Object result) {
+        this.return_(toBinding(result));
+    }
+
+    public void return_(BaseBinding result) {
+        addAction(new BaseReturnAction(mPosition, result));
     }
 
     @Override
@@ -729,13 +702,6 @@ public final class BaseBlock implements Block {
             mFirstAction = action;
         } else if (last instanceof FlowAction flow) {
             flow.next = action;
-        } else if (last instanceof BaseYieldAction yield) {
-            FlowAction prev = yield.previous();
-            if (prev == null) {
-                mFirstAction = action;
-            } else {
-                prev.next = action;
-            }
         } else {
             throw new TerminatedBlockException();
         }

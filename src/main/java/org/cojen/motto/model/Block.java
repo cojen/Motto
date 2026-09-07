@@ -49,7 +49,6 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
      *
      * @return a new block if the merge succeeded
      */
-    // FIXME: special yield handling?
     //public Block merge();
 
     /**
@@ -65,21 +64,6 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
      * @param name can pass null to create an anonymous variable
      */
     public Binding var(Type type, String name);
-
-    /**
-     * Append an action which specifies a computed {@link #result result}. If any actions are
-     * added afterwards, then the yielded result is discarded, effectively becoming void.
-     *
-     * @param result a Binding or a constant
-     * @throws TerminatedBlockException if this block is terminated
-     */
-    public void yield(Object result);
-
-    /**
-     * Returns the current result binding, as specified by the {@link #yield yield} method. If
-     * not specified, then the result is {@link Binding#void_ void}.
-     */
-    public Binding result();
 
     /**
      * Append a copy action to the end of this block. If necessary, a widening conversion is
@@ -135,6 +119,17 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding callVirtual(CallableItem callable, Object... inputs);
+
+    /**
+     * Terminate a block and retuen a value, possibly void. A return exits the current context,
+     * which might be a method, a constructor, or a macro. Returning from a macro doesn't exit
+     * the calling method or constructor. Like a method, it returns control to the point after
+     * the macro call.
+     *
+     * @param result a Binding or a constant
+     * @throws TerminatedBlockException if this block is terminated
+     */
+    public void return_(Object result);
 
     /**
      * Append a jump action to the end of this block, and then terminate it.

@@ -57,9 +57,6 @@ final class ModelScope {
 
     private Map<String, LabelTarget> mLabels;
 
-    private BaseBlock mReturnBlock;
-    private BaseBinding mReturnVar;
-
     private static final class LabelTarget {
         LabeledStatement statement;
         final BaseBlock block;
@@ -299,74 +296,6 @@ final class ModelScope {
     }
 
     /**
-     * Returns a block to jump to when returning from a callable.
-     *
-     * @param st for error reporting
-     */
-    BaseBlock returnBlock(Statement st) {
-        BaseBlock retBlock = mReturnBlock;
-        if (retBlock == null) {
-            initReturn(st);
-            retBlock = mReturnBlock;
-        }
-        return retBlock;
-    }
-
-    /**
-     * Returns a variable to use with the return block.
-     *
-     * @param st for error reporting
-     */
-    BaseBinding returnVar(Statement st) {
-        BaseBinding retVar = mReturnVar;
-        if (retVar == null) {
-            initReturn(st);
-            retVar = mReturnVar;
-        }
-        return retVar;
-    }
-
-    private void initReturn(Statement st) {
-        ModelScope scope = this;
-        BaseCallableItem callable;
-
-        while (true) {
-            if (scope.mItem instanceof BaseCallableItem c) {
-                callable = c;
-                break;
-            }
-
-            ModelScope parent = scope.mParent;
-
-            if (parent == null) {
-                env().error(st, "not in a returnable scope");
-                mReturnBlock = new BaseBlock();
-                mReturnVar = BaseBinding.Void.THE;
-                return;
-            }
-
-            scope = parent;
-        }
-
-        BaseBlock retBlock = scope.mReturnBlock;
-        BaseBinding retVar = scope.mReturnVar;
-
-        if (retBlock == null) {
-            scope.mReturnBlock = retBlock = new BaseBlock();
-
-            BaseType outputType = callable.signature().outputType();
-            scope.mReturnVar = retVar = retBlock.var(outputType);
-
-            if (outputType != BaseVoidType.THE) {
-                retBlock.yield(retVar);
-            }
-        }
-
-        mReturnBlock = retBlock;
-        mReturnVar = retVar;
-    }
-
-    /**
      * Returns true if the active block isn't terminated. Unlike checkReachability, calling
      * this method doesn't alter the reachability check failure count.
      */
@@ -458,10 +387,6 @@ final class ModelScope {
 
     void setActiveBlock(BaseBlock block) {
         mActiveBlock = Objects.requireNonNull(block);
-    }
-
-    BaseBinding activeBlockResult() {
-        return mActiveBlock.result();
     }
 
     /**
