@@ -50,11 +50,16 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
 
     /**
      * @param origin the block that this action resides in
+     * @return false if nothing changed
      */
-    void setDestination(BaseBlock origin, BaseBlock newDestination) {
+    boolean setDestination(BaseBlock origin, BaseBlock newDestination) {
+        if (newDestination == mDestination) {
+            return false;
+        }
         newDestination.addPredecessor(origin);
         mDestination.removePredecessor(origin);
         mDestination = newDestination;
+        return true;
     }
 
     @Override

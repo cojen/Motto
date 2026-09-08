@@ -993,7 +993,10 @@ public final class BaseBlock implements Block {
             while (true) {
                 if (destination.mFirstAction instanceof BaseJumpAction jump2) {
                     // Use a more direct destination.
-                    jump.setDestination(this, destination = jump2.destination());
+                    destination = jump2.destination();
+                    if (!jump.setDestination(this, destination)) {
+                        break;
+                    }
                 } else {
                     break;
                 }
@@ -1008,12 +1011,18 @@ public final class BaseBlock implements Block {
             while (true) {
                 if (whenTrue.mFirstAction instanceof BaseJumpAction jump) {
                     // Use a more direct destination.
-                    branch.setWhenTrue(this, whenTrue = jump.destination());
+                    whenTrue = jump.destination();
+                    if (!branch.setWhenTrue(this, whenTrue)) {
+                        break;
+                    }
                 } else if (whenTrue.mFirstAction instanceof BaseBranchAction branch2 &&
                            sameCondition(branch, branch2))
                 {
                     // Use a more direct destination.
-                    branch.setWhenTrue(this, whenTrue = branch2.whenTrue());
+                    whenTrue = branch2.whenTrue();
+                    if (!branch.setWhenTrue(this, whenTrue)) {
+                        break;
+                    }
                 } else {
                     break;
                 }
@@ -1028,12 +1037,18 @@ public final class BaseBlock implements Block {
             while (true) {
                 if (whenFalse.mFirstAction instanceof BaseJumpAction jump) {
                     // Use a more direct destination.
-                    branch.setWhenFalse(this, whenFalse = jump.destination());
+                    whenFalse = jump.destination();
+                    if (!branch.setWhenFalse(this, whenFalse)) {
+                        break;
+                    }
                 } else if (whenFalse.mFirstAction instanceof BaseBranchAction branch2 &&
                            sameCondition(branch, branch2))
                 {
                     // Use a more direct destination.
-                    branch.setWhenFalse(this, whenFalse = branch2.whenFalse());
+                    whenFalse = branch2.whenFalse();
+                    if (!branch.setWhenFalse(this, whenFalse)) {
+                        break;
+                    }
                 } else {
                     break;
                 }

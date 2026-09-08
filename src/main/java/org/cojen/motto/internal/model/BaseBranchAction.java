@@ -68,20 +68,30 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
 
     /**
      * @param origin the block that this action resides in
+     * @return false if nothing changed
      */
-    void setWhenTrue(BaseBlock origin, BaseBlock newWhenTrue) {
+    boolean setWhenTrue(BaseBlock origin, BaseBlock newWhenTrue) {
+        if (newWhenTrue == mWhenTrue) {
+            return false;
+        }
         newWhenTrue.addPredecessor(origin);
         mWhenTrue.removePredecessor(origin);
         mWhenTrue = newWhenTrue;
+        return true;
     }
 
     /**
      * @param origin the block that this action resides in
+     * @return false if nothing changed
      */
-    void setWhenFalse(BaseBlock origin, BaseBlock newWhenFalse) {
+    boolean setWhenFalse(BaseBlock origin, BaseBlock newWhenFalse) {
+        if (newWhenFalse == mWhenFalse) {
+            return false;
+        }
         newWhenFalse.addPredecessor(origin);
         mWhenFalse.removePredecessor(origin);
         mWhenFalse = newWhenFalse;
+        return true;
     }
 
     @Override
