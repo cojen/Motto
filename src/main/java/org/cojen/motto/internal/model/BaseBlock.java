@@ -94,6 +94,10 @@ public final class BaseBlock implements Block {
     void baseForEach(boolean skipAny, Consumer<? super BaseAction> consumer) {
         BaseAction action = mFirstAction;
 
+        if (action == null) {
+            return;
+        }
+
         while (true) {
             if (skipAny) {
                 action = skipSimpleJumps(action);
