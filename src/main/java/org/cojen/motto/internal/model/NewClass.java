@@ -220,7 +220,7 @@ public final class NewClass extends BaseClassTypeItem {
             if (outer == null) {
                 cm = ClassMaker.beginExternal(fullMangledName());
             } else {
-                cm = outer.classMaker().addInnerClass(namePath().getLast());
+                cm = outer.classMaker().addInnerClass(Maker.mangle(namePath().getLast()));
             }
 
             mClassMaker = cm;
