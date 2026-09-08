@@ -223,7 +223,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
      * @param pathIt must have at least one element
      * @param canConsumeAll when false, the last path element isn't consumed
      */
-    private BaseClassTypeItem tryResolveClass(PathStatement st,
+    private BaseClassTypeItem tryResolveClass(List<Token.Identifier> fullPath,
                                               ListIterator<Token.Identifier> pathIt,
                                               boolean canConsumeAll)
     {
@@ -249,7 +249,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         clazz = tryFindLocalStaticClass(item, nameToken);
 
         if (clazz == null) {
-            BasePath path = BasePath.from(st.path);
+            BasePath path = BasePath.from(fullPath);
 
             if (!canConsumeAll) {
                 path = path.trimLastNonCanonical();
@@ -1208,7 +1208,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         BaseBinding instanceBinding = tryFindLocalVariable(pathIt);
 
         tryStatic: if (instanceBinding == null) {
-            BaseClassTypeItem clazz = tryResolveClass(st, pathIt, true);
+            BaseClassTypeItem clazz = tryResolveClass(st.path, pathIt, true);
 
             if (clazz == null) {
                 pathIt = st.path.listIterator();
@@ -1345,7 +1345,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             tryInstance: if (localBinding != null) {
                 instance = localBinding;
             } else {
-                BaseClassTypeItem classItem = tryResolveClass(st, pathIt, false);
+                BaseClassTypeItem classItem = tryResolveClass(st.path, pathIt, false);
 
                 if (classItem == null) {
                     pathIt = st.path.listIterator();
@@ -1464,8 +1464,58 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        if (st.source != null) {
+            // FIXME
+            throw null;
+        }
+
+        List<Statement> items = st.params.items;
+
+        var inputTypes = new BaseType[items.size()];
+        var inputBindings = new BaseBinding[inputTypes.length];
+
+        int i = 0;
+        for (Statement paramItem : items) {
+            BaseBinding input = paramItem.accept(this);
+            if (input == null) {
+                // Error state.
+                return null;
+            }
+            inputTypes[i] = input.type();
+            inputBindings[i] = input;
+            i++;
+        }
+
+        if (i != inputTypes.length) {
+            throw new AssertionError();
+        }
+
+        BaseClassTypeItem clazz = tryResolveClass(st.name, st.name.listIterator(), true);
+
+        if (clazz == null) {
+            error(st.name, "cannot find symbol");
+            return null;
+        }
+
+        BaseTupleType inputType = BaseTupleType.from(clazz, inputTypes);
+
+        Map<BaseCallSignature, BaseCallableItem> ctors =
+            clazz.findConstructor(inputType, c -> c.isAccessibleVia(mScope.item()));
+
+        if (ctors.isEmpty()) {
+            error(st, "constructor not found");
+            return null;
+        }
+
+        if (ctors.size() > 1) {
+            // FIXME: Report more info.
+            error(st, "ambiguous constructor");
+            return null;
+        }
+
+        BaseCallableItem ctor = ctors.values().iterator().next();
+
+        return mScope.activeBlock(st).callNew(ctor, (Object[]) inputBindings);
     }
 
     @Override
