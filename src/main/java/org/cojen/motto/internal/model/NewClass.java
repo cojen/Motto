@@ -198,10 +198,10 @@ public final class NewClass extends BaseClassTypeItem {
                 cm = outer.classMaker().addInnerClass(namePath().getLast());
             }
 
+            mClassMaker = cm;
+
             final ClassMaker fcm = cm; // this is annoying
             ScopedValue.where(GeneratedType.FOR_NEW_CLASS, this).run(() -> beginMaking(fcm));
-
-            mClassMaker = cm;
         }
 
         return cm;
