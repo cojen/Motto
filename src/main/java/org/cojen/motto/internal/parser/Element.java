@@ -54,8 +54,8 @@ public abstract sealed interface Element
                 int selectedBit = switch (token.text) {
                     default -> 0;
                     case "public" -> PUBLIC;
-                    case "internal" -> INTERNAL;
                     case "protected" -> PROTECTED;
+                    case "private" -> PRIVATE;
                     case "static" -> STATIC;
                     case "final" -> FINAL;
                     case "synchronized" -> SYNCHRONIZED;

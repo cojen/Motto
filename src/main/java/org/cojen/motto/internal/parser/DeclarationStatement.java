@@ -137,7 +137,7 @@ public final class DeclarationStatement implements Statement, NamedVarType {
 
         if (modifierBits == -1) {
             mModifierBits = modifierBits = Element.resolveModifiers
-                (env, PUBLIC | PROTECTED | INTERNAL | STATIC | FINAL | VOLATILE | TRANSIENT,
+                (env, PUBLIC | PROTECTED | PRIVATE | STATIC | FINAL | VOLATILE | TRANSIENT,
                  modifiers);
         }
 

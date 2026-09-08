@@ -104,7 +104,7 @@ public final class ConstructorDefinitionStatement extends FunctionDefinitionStat
 
         if (modifierBits == -1) {
             mModifierBits = modifierBits = Element.resolveModifiers
-                (env, PUBLIC | PROTECTED | INTERNAL | SYNCHRONIZED, modifiers);
+                (env, PUBLIC | PROTECTED | PRIVATE | SYNCHRONIZED, modifiers);
         }
 
         return modifierBits;

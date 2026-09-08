@@ -228,7 +228,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public final boolean isInterface() {
-        return (modifierBits() & INTERFACE) != 0;
+        return Modifiers.isInterface(modifierBits());
     }
 
     @Override
@@ -480,14 +480,14 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     static boolean isMoreAccessible(int existing, int modifierBits) {
-        if ((existing & PUBLIC) != 0) {
+        if (isPublic(existing)) {
             return false;
-        } else if ((existing & PROTECTED) != 0) {
-            return (modifierBits & PUBLIC) != 0;
-        } else if ((existing & INTERNAL) != 0) {
+        } else if (isProtected(existing)) {
+            return isPublic(modifierBits);
+        } else if (isPackagePrivate(existing)) {
             return (modifierBits & (PUBLIC | PROTECTED)) != 0;
         } else {
-            return (modifierBits & (PUBLIC | PROTECTED | INTERNAL)) != 0;
+            return !Modifiers.isPrivate(modifierBits);
         }
     }
 
@@ -751,7 +751,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
         int modifiers = modifierBits();
 
-        if ((modifiers & INTERFACE) != 0) {
+        if (Modifiers.isInterface(modifiers)) {
             cm.interface_();
         } else if ((modifiers & ABSTRACT) != 0) {
             cm.abstract_();
@@ -893,13 +893,13 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
                     continue;
                 }
 
-                if ((item.modifierBits() & INTERNAL) != 0) {
-                    // Check if an internal method can be inherited. It must be in the same
-                    // package as the base.
+                if (isPackagePrivate(item.modifierBits())) {
+                    // Check if a package-private method can be inherited. It must be in the
+                    // same package as the base.
 
                     if (!(item.enclosingType() instanceof ClassTypeItem enclosing)) {
                         // The item cannot be defined in a package, and so it can't really have
-                        // inheritable internal methods anyhow.
+                        // inheritable package-private methods anyhow.
                         continue;
                     }
 

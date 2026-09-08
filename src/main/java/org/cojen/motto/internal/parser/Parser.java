@@ -979,7 +979,7 @@ public final class Parser implements Closeable {
                         break loop;
                     }
 
-                    case "public", "internal", "protected", "private", "static", "final",
+                    case "public", "protected", "private", "static", "final",
                         "synchronized", "volatile", "transient", "native", "abstract", "enum",
                         "struct", "sealed", "non-sealed", "override", "macro" ->
                     {

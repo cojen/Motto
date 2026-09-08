@@ -32,7 +32,7 @@ import java.lang.reflect.Member;
  * @author Brian S. O'Neill
  */
 public class Modifiers {
-    public static final int PUBLIC = 0x0001, INTERNAL = 0x0002, PROTECTED = 0x0004,
+    public static final int PUBLIC = 0x0001, PRIVATE = 0x0002, PROTECTED = 0x0004,
         STATIC = 0x0008, FINAL = 0x0010, SYNCHRONIZED = 0x0020, VOLATILE = 0x0040, BRIDGE = 0x0040,
         TRANSIENT = 0x0080, VARARGS = 0x0080, NATIVE = 0x0100, INTERFACE = 0x0200,
         ABSTRACT = 0x0400, STRICT = 0x0800, SYNTHETIC = 0x1000, ANNOTATION = 0x2000, ENUM = 0x4000,
@@ -42,7 +42,7 @@ public class Modifiers {
         PSEUDO = 0x4000_0000, CLASS = 0x2000_0000, MACRO = 0x1000_0000;
 
     public static int from(ClassModel model) {
-        int modifiers = adjustModifiers(model.flags().flagsMask());
+        int modifiers = model.flags().flagsMask();
 
         if ((modifiers & INTERFACE) == 0) {
             modifiers |= CLASS;
@@ -53,7 +53,7 @@ public class Modifiers {
         if (attr != null) {
             for (InnerClassInfo info : attr.classes()) {
                 if (!info.outerClass().isEmpty() && info.innerClass().equals(model.thisClass())) {
-                    modifiers |= adjustModifiers(info.flagsMask());
+                    modifiers |= info.flagsMask();
                     break;
                 }
             }
@@ -63,39 +63,38 @@ public class Modifiers {
     }
 
     public static int from(FieldModel model) {
-        return adjustModifiers(model.flags().flagsMask());
+        return model.flags().flagsMask();
     }
 
     public static int from(MethodModel model) {
-        return adjustModifiers(model.flags().flagsMask());
+        return model.flags().flagsMask();
     }
 
     public static int from(Class<?> clazz) {
-        return adjustModifiers(clazz.getModifiers());
+        return clazz.getModifiers();
     }
 
     public static int from(Member member) {
-        return adjustModifiers(member.getModifiers());
+        return member.getModifiers();
     }
 
-    /**
-     * Converts modifiers from JVM format to/from this format.
-     */
-    static int adjustModifiers(int modifiers) {
-        // Java class files use 0x0002 for PRIVATE. Flip things if necessary.
-
-        if ((modifiers & (PUBLIC | PROTECTED | INTERNAL)) == 0) {
-            // package-private --> internal
-            modifiers |= INTERNAL;
-        } else if ((modifiers & INTERNAL) != 0) {
-            // private --> implicitly private
-            modifiers &= ~(PUBLIC | INTERNAL | PROTECTED);
-        }
-
-        return modifiers;
+    public static boolean isPublic(int modifiers) {
+        return (modifiers & (PUBLIC | PRIVATE | PROTECTED)) == PUBLIC;
     }
 
-    static boolean isPrivate(int modifiers) {
-        return (modifiers & (PUBLIC | INTERNAL | PROTECTED)) == 0;
+    public static boolean isPrivate(int modifiers) {
+        return (modifiers & PRIVATE) != 0;
+    }
+
+    public static boolean isProtected(int modifiers) {
+        return (modifiers & PROTECTED) != 0;
+    }
+
+    public static boolean isPackagePrivate(int modifiers) {
+        return (modifiers & (PUBLIC | PRIVATE | PROTECTED)) == 0;
+    }
+
+    public static boolean isInterface(int modifiers) {
+        return (modifiers & INTERFACE) != 0;
     }
 }

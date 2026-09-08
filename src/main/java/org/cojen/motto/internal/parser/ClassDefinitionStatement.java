@@ -255,7 +255,7 @@ public final class ClassDefinitionStatement extends DefinitionStatement {
 
         if (modifierBits == -1) {
             modifierBits = Element.resolveModifiers
-                (env, PUBLIC | PROTECTED | INTERNAL | STATIC | FINAL | ABSTRACT, modifiers);
+                (env, PUBLIC | PROTECTED | PRIVATE | STATIC | FINAL | ABSTRACT, modifiers);
 
             switch (type.text) {
                 case "class" -> {

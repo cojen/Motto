@@ -339,7 +339,7 @@ public final class NewClass extends BaseClassTypeItem {
         int modifierBits = modifierBits();
 
         // Use only the relevant modifiers.
-        modifierBits &= Modifiers.PUBLIC | Modifiers.INTERNAL | Modifiers.PROTECTED;
+        modifierBits &= Modifiers.PUBLIC | Modifiers.PRIVATE | Modifiers.PROTECTED;
 
         return tryAddConstructor(modifierBits, BaseTupleType.from(this).withNames("this"), true);
     }

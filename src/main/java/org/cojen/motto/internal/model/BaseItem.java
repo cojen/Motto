@@ -16,7 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import org.cojen.motto.model.ClassTypeItem;
 import org.cojen.motto.model.Item;
 import org.cojen.motto.model.Type;
 
@@ -72,7 +71,7 @@ public abstract sealed class BaseItem implements Item
 
     @Override
     public final boolean isPrivate() {
-        return (modifierBits() & (PUBLIC | INTERNAL | PROTECTED)) == 0;
+        return Modifiers.isPrivate(modifierBits());
     }
 
     public final boolean isBridge() {
@@ -91,7 +90,7 @@ public abstract sealed class BaseItem implements Item
     public boolean isAccessibleVia(Item via) {
         int modifierBits = modifierBits();
 
-        if ((modifierBits & PUBLIC) != 0) {
+        if (Modifiers.isPublic(modifierBits)) {
             // FIXME: All parents must be public too. Ignore inheritance stuff. A public method
             // defined by an interface implemented in an internal class isn't public.
             return true;
@@ -117,7 +116,7 @@ public abstract sealed class BaseItem implements Item
                 return true;
             }
 
-            if ((modifierBits & (INTERNAL | PROTECTED)) != 0 &&
+            if (!Modifiers.isPrivate(modifierBits) &&
                 thisClass.packagePath().equals(viaClass.packagePath()))
             {
                 return true;
@@ -127,7 +126,7 @@ public abstract sealed class BaseItem implements Item
                 return true;
             }
 
-            if ((modifierBits & PROTECTED) != 0) {
+            if (Modifiers.isProtected(modifierBits)) {
                 return thisClass.isAssignableFrom(viaClass);
             }
         }
@@ -140,12 +139,10 @@ public abstract sealed class BaseItem implements Item
 
         if ((modifiers & Modifiers.PUBLIC) != 0) {
             maker.public_();
-        } else if ((modifiers & Modifiers.INTERNAL) != 0) {
-            // Nothing to do.
+        } else if ((modifiers & Modifiers.PRIVATE) != 0) {
+            maker.private_();
         } else if ((modifiers & Modifiers.PROTECTED) != 0) {
             maker.protected_();
-        } else {
-            maker.private_();
         }
 
         if ((modifiers & Modifiers.STATIC) != 0) {

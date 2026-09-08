@@ -27,14 +27,13 @@ import java.util.SequencedCollection;
 
 import org.cojen.motto.internal.model.BaseClassTypeItem;
 import org.cojen.motto.internal.model.BasePath;
+import org.cojen.motto.internal.model.Modifiers;
 import org.cojen.motto.internal.model.NewClass;
 
 import org.cojen.motto.internal.parser.CompilationUnit;
 import org.cojen.motto.internal.parser.Element;
 import org.cojen.motto.internal.parser.ImportDirective;
 import org.cojen.motto.internal.parser.Token;
-
-import static org.cojen.motto.internal.model.Modifiers.*;
 
 /**
  * A CompilationEnv is associated with a single source file.
@@ -293,10 +292,10 @@ public final class CompilationEnv {
     }
 
     private boolean isAccessible(BaseClassTypeItem clazz, int modifierBits) {
-        if ((modifierBits & PUBLIC) != 0) {
+        if (Modifiers.isPublic(modifierBits)) {
             return true;
         }
-        if ((modifierBits & (PROTECTED | INTERNAL)) != 0) {
+        if (!Modifiers.isPrivate(modifierBits)) {
             return Objects.equals(mPackagePath, clazz.packagePath());
         }
         return clazz.env() == this;
@@ -305,7 +304,7 @@ public final class CompilationEnv {
     private void reportInaccessible(ImportDirective imp, BaseClassTypeItem clazz,
                                     boolean reportErrors)
     {
-        String type = (clazz.modifierBits() & INTERFACE) != 0 ? "interface" : "class";
+        String type = Modifiers.isInterface(clazz.modifierBits()) ? "interface" : "class";
         reportInaccessible(imp, type, reportErrors);
     }
 

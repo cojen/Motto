@@ -169,7 +169,7 @@ public final class MethodDefinitionStatement extends FunctionDefinitionStatement
 
         if (modifierBits == -1) {
             mModifierBits = modifierBits = Element.resolveModifiers
-                (env, PUBLIC | PROTECTED | INTERNAL | STATIC | FINAL
+                (env, PUBLIC | PROTECTED | PRIVATE | STATIC | FINAL
                  | SYNCHRONIZED | NATIVE | ABSTRACT | MACRO,
                  modifiers);
         }
