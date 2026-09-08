@@ -832,8 +832,14 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        // If the returned ctor is null, then an error should have been reported already.
+        BaseCallableItem ctor = mScope.addConstructor(st);
+
+        if (ctor != null && st.code != null) {
+            visitCode(st.code, ctor);
+        }
+
+        return BaseBinding.Void.THE;
     }
 
     @Override
@@ -1500,7 +1506,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         BaseTupleType inputType = BaseTupleType.from(clazz, inputTypes);
 
         Map<BaseCallSignature, BaseCallableItem> ctors =
-            clazz.findConstructor(inputType, c -> c.isAccessibleVia(mScope.item()));
+            clazz.findConstructor(inputType, mScope.item());
 
         if (ctors.isEmpty()) {
             error(st, "constructor not found");
