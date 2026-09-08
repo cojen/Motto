@@ -258,20 +258,18 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
     public abstract boolean packageExists(BasePath packagePath) throws IOException;
 
     /**
-     * Tries to find an outer class by its package and name. Searches the class path, module
-     * path, and any registered NewClass instances which are currently being compiled.
+     * Tries to find an outer or inner class by its package and name. Searches the class path,
+     * module path, and any registered NewClass instances which are currently being compiled.
      *
      * @param packagePath required, but can be empty
-     * @param className required (must not be an inner class name)
+     * @param className outer or inner class name, no package name, no dots (usually '$' instead)
      * @return null if not found
      */
     public final BaseClassTypeItem findClass(ErrorListener el,
                                              BasePath packagePath, String className)
         throws IOException
     {
-        // FIXME: support inner classes by splitting on '$'
-
-        return findClass(this, el, null, packagePath, BasePath.from(className));
+        return findClass(this, el, null, packagePath, BasePath.parse(className, '$'));
     }
 
     /**
