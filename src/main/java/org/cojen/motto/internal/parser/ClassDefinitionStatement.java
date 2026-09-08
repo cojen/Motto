@@ -103,17 +103,7 @@ public final class ClassDefinitionStatement extends DefinitionStatement {
             throw new IllegalStateException();
         }
 
-        int modifierBits = Element.resolveModifiers
-            (env, PUBLIC | PROTECTED | INTERNAL | STATIC | FINAL | ABSTRACT, modifiers);
-
-        switch (type.text) {
-            case "class" -> {
-                modifierBits |= CLASS;
-            }
-            case "interface" -> {
-                modifierBits |= INTERFACE;
-            }
-        }
+        int modifierBits = modifierBits(env);
 
         if (outer != null && (modifierBits & STATIC) == 0) {
             // FIXME: Support non-static inner classes too.
@@ -196,6 +186,7 @@ public final class ClassDefinitionStatement extends DefinitionStatement {
         }
 
         try {
+            boolean explicitSuperType = true;
             BaseClassTypeItem superClass = null;
             Set<BaseClassTypeItem> interfaces = null;
 
@@ -242,10 +233,11 @@ public final class ClassDefinitionStatement extends DefinitionStatement {
             }
 
             if (superClass == null) {
+                explicitSuperType = false;
                 superClass = LoadedClass.classFrom(Object.class);
             }
 
-            clazz.setSuperTypes(superClass, interfaces);
+            clazz.setSuperTypes(explicitSuperType, superClass, interfaces);
 
             for (Statement st : code.items) {
                 st.addToClass(env, clazz);
@@ -255,5 +247,28 @@ public final class ClassDefinitionStatement extends DefinitionStatement {
         }
 
         clazz.checkForInheritanceCycle();
+    }
+
+    @Override
+    public int modifierBits(CompilationEnv env) {
+        int modifierBits = mModifierBits;
+
+        if (modifierBits == -1) {
+            modifierBits = Element.resolveModifiers
+                (env, PUBLIC | PROTECTED | INTERNAL | STATIC | FINAL | ABSTRACT, modifiers);
+
+            switch (type.text) {
+                case "class" -> {
+                    modifierBits |= CLASS;
+                }
+                case "interface" -> {
+                    modifierBits |= INTERFACE;
+                }
+            }
+
+            mModifierBits = modifierBits;
+        }
+
+        return modifierBits;
     }
 }

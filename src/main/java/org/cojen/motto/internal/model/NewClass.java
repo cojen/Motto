@@ -26,6 +26,8 @@ import java.util.NoSuchElementException;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.function.Predicate;
+
 import java.util.stream.Stream;
 
 import org.cojen.maker.ClassMaker;
@@ -35,6 +37,7 @@ import org.cojen.maker.MethodMaker;
 
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
+import org.cojen.motto.model.CallableItem;
 import org.cojen.motto.model.CallSignature;
 
 import motto.TypeGenerator;
@@ -50,6 +53,8 @@ public final class NewClass extends BaseClassTypeItem {
     private final CompilationEnv mEnv;
     private final NewClass mOuterClass;
     private final Object mOrigin;
+
+    private boolean mExplicitSuperType;
 
     private ArrayList<BaseCallableItem> mClinits;
 
@@ -93,6 +98,26 @@ public final class NewClass extends BaseClassTypeItem {
     @Override
     public NewClass outerType() {
         return mOuterClass;
+    }
+
+    /**
+     * @throws UnsupportedOperationException call the other setSuperTypes method
+     */
+    @Override
+    public void setSuperTypes(BaseClassTypeItem superType, Set<BaseClassTypeItem> interfaces) {
+        throw new UnsupportedOperationException();
+    }
+ 
+    /**
+     * @param explicitSuperType true when the superType was explicitly specified
+     * @param superType optional (only for java.lang.Object)
+     * @param interfaces optional
+     */
+    public void setSuperTypes(boolean explicitSuperType, BaseClassTypeItem superType, 
+                              Set<BaseClassTypeItem> interfaces)
+    {
+        super.setSuperTypes(superType, interfaces);
+        mExplicitSuperType = explicitSuperType;
     }
 
     /**
@@ -268,6 +293,59 @@ public final class NewClass extends BaseClassTypeItem {
             return modifierBits == null ? -1 : modifierBits;
         }
         return super.findMethodForImport(name);
+    }
+
+    @Override
+    public Map<BaseCallSignature, BaseCallableItem> findConstructor
+        (BaseTupleType inputType, Predicate<CallableItem> filter)
+    {
+        Map<BaseCallSignature, BaseCallableItem> ctors = super.findConstructor(inputType, filter);
+
+        if (ctors.isEmpty() && inputType.numFields() == 1 && inputType.fieldType(0).equals(this)) {
+            BaseCallableItem ctor = addAutoConstructor(false);
+            if (ctor != null) {
+                ctors = Map.of(ctor.signature(), ctor);
+            }
+        }
+
+        return ctors;
+    }
+
+    /**
+     * Adds a no-arg constructor when these conditions are met:
+     *
+     * - No constructors exist.
+     * - A superclass has been explicitly specified, or at least one instance member exists.
+     * - The superclass has an accessible no-arg constructor.
+     *
+     * @param hasInstanceMembers pass true if it's already known that instance members exist
+     * @return null if not added
+     */
+    public BaseCallableItem addAutoConstructor(boolean hasInstanceMembers) {
+        if (numConstructors() != 0) {
+            return null;
+        }
+
+        if (!mExplicitSuperType && !hasInstanceMembers && !anyInstanceMember(methods()) &&
+            !anyInstanceMember(fields()) && !anyInstanceMember(innerClasses()))
+        {
+            return null;
+        }
+
+        if (superType().findConstructor(BaseTupleType.EMPTY, this).isEmpty()) {
+            return null;
+        }
+
+        int modifierBits = modifierBits();
+
+        // Use only the relevant modifiers.
+        modifierBits &= Modifiers.PUBLIC | Modifiers.INTERNAL | Modifiers.PROTECTED;
+
+        return tryAddConstructor(modifierBits, BaseTupleType.from(this).withNames("this"), true);
+    }
+
+    private static boolean anyInstanceMember(Stream<? extends BaseItem> items) {
+        return items.filter(i -> !i.isStatic()).findAny().isPresent();
     }
 
     /**

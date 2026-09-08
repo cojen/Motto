@@ -39,8 +39,6 @@ import static org.cojen.motto.internal.model.Modifiers.*;
 public final class MethodDefinitionStatement extends FunctionDefinitionStatement {
     public final List<DefinitionSegment> segments;
 
-    private int mModifierBits;
-
     // These are assigned when addToClass is called.
     private NewClass mClass;
     private BaseCallableItem mItem;
@@ -59,7 +57,6 @@ public final class MethodDefinitionStatement extends FunctionDefinitionStatement
     {
         super(modifiers, name, clauses, code, returnType, paramType);
         this.segments = segments;
-        mModifierBits = -1; // unresolved
     }
 
     @Override
@@ -166,7 +163,8 @@ public final class MethodDefinitionStatement extends FunctionDefinitionStatement
         return mItem;
     }
 
-    private int modifierBits(CompilationEnv env) {
+    @Override
+    public int modifierBits(CompilationEnv env) {
         int modifierBits = mModifierBits;
 
         if (modifierBits == -1) {

@@ -78,8 +78,7 @@ public final class ConstructorDefinitionStatement extends FunctionDefinitionStat
             return null;
         }
 
-        int modifierBits = Element.resolveModifiers
-            (env, PUBLIC | PROTECTED | INTERNAL | SYNCHRONIZED, modifiers);
+        int modifierBits = modifierBits(env);
 
         BaseTupleType inputType = paramType.tryResolve(env, clazz, clazz);
 
@@ -97,5 +96,17 @@ public final class ConstructorDefinitionStatement extends FunctionDefinitionStat
         }
 
         return mItem;
+    }
+
+    @Override
+    public int modifierBits(CompilationEnv env) {
+        int modifierBits = mModifierBits;
+
+        if (modifierBits == -1) {
+            mModifierBits = modifierBits = Element.resolveModifiers
+                (env, PUBLIC | PROTECTED | INTERNAL | SYNCHRONIZED, modifiers);
+        }
+
+        return modifierBits;
     }
 }

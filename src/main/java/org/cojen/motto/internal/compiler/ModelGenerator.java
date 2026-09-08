@@ -783,10 +783,19 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         enterScope(new ModelScope(this, mScope, clazz));
 
+        boolean hasCtor = false;
+        boolean hasInstanceMembers = false;
+
         for (Statement item : st.code.items) {
             switch (item) {
+                case ConstructorDefinitionStatement def -> {
+                    def.accept(this);
+                    hasCtor = true;
+                }
+
                 case DefinitionStatement def -> {
                     def.accept(this);
+                    hasInstanceMembers |= (def.modifierBits(mEnv) & Modifiers.STATIC) == 0;
                 }
 
                 case DeclarationStatement ds -> {
@@ -795,6 +804,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                         // If a simple final constant, then initialize the JVM field directly.
                         throw null;
                     }
+                    hasInstanceMembers |= (ds.modifierBits(mEnv) & Modifiers.STATIC) == 0;
                 }
 
                 case StaticInitStatement init -> {
@@ -808,6 +818,10 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                     error(item, "invalid class member");
                 }
             }
+        }
+
+        if (!hasCtor) {
+            clazz.addAutoConstructor(hasInstanceMembers);
         }
 
         exitScope();

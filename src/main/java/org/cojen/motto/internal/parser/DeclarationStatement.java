@@ -37,7 +37,7 @@ public final class DeclarationStatement implements Statement, NamedVarType {
     public final Token.Identifier name;
     public final Statement source;
 
-    private int mModifierBits;
+    private int mModifierBits = -1; // unresolved
 
     // These are assigned when addToClass is called.
     private NewClass mClass;
@@ -56,7 +56,6 @@ public final class DeclarationStatement implements Statement, NamedVarType {
         this.type = type;
         this.name = name;
         this.source = source;
-        mModifierBits = -1; // unresolved
     }
 
     @Override
@@ -133,7 +132,7 @@ public final class DeclarationStatement implements Statement, NamedVarType {
         return mItem;
     }
 
-    private int modifierBits(CompilationEnv env) {
+    public int modifierBits(CompilationEnv env) {
         int modifierBits = mModifierBits;
 
         if (modifierBits == -1) {

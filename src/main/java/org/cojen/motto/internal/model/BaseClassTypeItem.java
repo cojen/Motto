@@ -762,9 +762,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      * @param superType optional (only for java.lang.Object)
      * @param interfaces optional
      */
-    public final void setSuperTypes(BaseClassTypeItem superType,
-                                    Set<BaseClassTypeItem> interfaces)
-    {
+    public void setSuperTypes(BaseClassTypeItem superType, Set<BaseClassTypeItem> interfaces) {
         mSuperType = superType;
         mSuperInterfaces = interfaces == null ? Set.of() : interfaces;
     }

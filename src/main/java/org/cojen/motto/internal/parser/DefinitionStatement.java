@@ -18,6 +18,8 @@ package org.cojen.motto.internal.parser;
 
 import java.util.List;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 /**
  * 
  *
@@ -30,6 +32,8 @@ public abstract sealed class DefinitionStatement implements Statement
     public final Token.Identifier name;
     public final List<Clause> clauses;
     public final CodeScopeStatement code;
+
+    protected int mModifierBits = -1; // unresolved
 
     /**
      * @param modifiers required; might be empty
@@ -45,4 +49,6 @@ public abstract sealed class DefinitionStatement implements Statement
         this.clauses = clauses;
         this.code = code;
     }
+
+    public abstract int modifierBits(CompilationEnv env);
 }
