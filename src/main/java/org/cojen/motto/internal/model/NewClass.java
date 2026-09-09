@@ -358,9 +358,7 @@ public final class NewClass extends BaseClassTypeItem {
         mPreparedFields = null;
         mPreparedMethods = null;
 
-        /* FIXME
         tryAddClassField();
-        */
 
         mAvailable = Math.max(1, mAvailable);
 

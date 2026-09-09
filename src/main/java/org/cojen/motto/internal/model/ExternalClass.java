@@ -196,6 +196,8 @@ public final class ExternalClass extends BaseClassTypeItem
             tryAddField(Modifiers.from(field), fieldType, fieldName);
         }
 
+        tryAddClassField();
+
         for (MethodModel method : model.methods()) {
             String mname = method.methodName().stringValue();
 
