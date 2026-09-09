@@ -497,7 +497,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                     item = clazz;
                 }
 
-                case BaseNullType n -> {
+                case BaseArrayType _, BaseNullType _ -> {
                     item = LoadedClass.classFrom(Object.class);
                 }
 
