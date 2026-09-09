@@ -332,9 +332,7 @@ public final class NewClass extends BaseClassTypeItem {
             return null;
         }
 
-        BaseClassTypeItem superType = superType();
-
-        if (superType.findConstructor(BaseTupleType.from(superType), this).isEmpty()) {
+        if (superType().findConstructor(BaseTupleType.EMPTY, this).isEmpty()) {
             return null;
         }
 

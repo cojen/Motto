@@ -566,7 +566,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         var ctor = BaseCallableItem.from(modifierBits, this, sig);
 
         Map<BaseCallSignature, BaseCallableItem> map = mConstructorMap;
-        BaseCallSignature key = sig.noFieldNames();
+        BaseCallSignature key = sig.trimFirst().noFieldNames();
 
         if (map.isEmpty()) {
             mConstructorMap = map = new LinkedHashMap<>();
