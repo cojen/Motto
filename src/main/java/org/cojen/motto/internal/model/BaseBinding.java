@@ -312,6 +312,56 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     /**
+     * Defines a binding which obtains the length of an array.
+     */
+    public static final class ArrayLength extends BaseBinding {
+        public static ArrayLength from(BaseBinding instance) {
+            return InternSet.apply(new ArrayLength(instance));
+        }
+
+        private final BaseBinding mInstance;
+
+        private ArrayLength(BaseBinding instance) {
+            mInstance = Objects.requireNonNull(instance);
+        }
+
+        @Override
+        public BaseType type() {
+            return BaseIntType.THE;
+        }
+
+        @Override
+        public boolean isStable() {
+            return mInstance.isStable();
+        }
+
+        @Override
+        public boolean isModifiable() {
+            return false;
+        }
+
+        public BaseBinding instance() {
+            return mInstance;
+        }
+
+        @Override
+        void trackBlockLocalSource(Map<Anonymous, Boolean> map) {
+            mInstance.trackBlockLocalSource(map);
+        }
+
+        @Override
+        public int hashCode() {
+            return mInstance.hashCode() * 321510741;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return this == obj || obj instanceof ArrayLength other
+                && mInstance.equals(other.mInstance);
+        }
+    }
+
+    /**
      * Defines a binding which refers to a constant tuple field. Use TupleAction.Get or
      * TupleAction.Set if the field selection is variable.
      */

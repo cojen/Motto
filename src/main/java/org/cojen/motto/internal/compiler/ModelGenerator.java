@@ -429,9 +429,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 }
 
                 case BaseArrayType t -> {
-                    // FIXME: Support a pseudo final length field.
-                    error(nameToken, "array field not found");
-                    return null;
+                    if ("length".equals(name)) {
+                        instanceBinding = BaseBinding.ArrayLength.from(instanceBinding);
+                    } else {
+                        error(nameToken, "array field not found");
+                        return null;
+                    }
                 }
 
                 case BaseClassTypeItem t -> {

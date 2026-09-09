@@ -576,6 +576,10 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
                 return variableFor(b);
             }
 
+            case BaseBinding.ArrayLength b -> {
+                return variableFor(b.instance()).alength();
+            }
+
             case BaseBinding.TupleField b -> {
                 return variableFor(b);
             }
