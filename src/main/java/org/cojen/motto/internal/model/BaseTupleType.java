@@ -269,10 +269,8 @@ public sealed abstract class BaseTupleType extends GeneratedType
 
     @Override
     public final int canConvertTo(Type to) {
-        int code = super.canConvertTo(to);
-
-        if (code != Integer.MAX_VALUE) {
-            return code;
+        if (isEquivalentTo(to) || to == Type.unspecified()) {
+            return 0;
         }
 
         int numFields = numFields();
@@ -293,7 +291,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
             return Integer.MAX_VALUE;
         }
 
-        code = 0;
+        int code = 0;
 
         for (int i=0; i<numFields; i++) {
             if (!(fieldType(i) instanceof BaseType ti)) {
