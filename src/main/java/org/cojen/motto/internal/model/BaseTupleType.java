@@ -411,7 +411,8 @@ public sealed abstract class BaseTupleType extends GeneratedType
         int numFields = fields.length;
 
         if (numFields == 1) {
-            return Map.of(fields[0].name(), 0);
+            String name = fields[0].name();
+            return name == null ? Map.of() : Map.of(name, 0);
         }
 
         var map = HashMap.<String, Integer>newHashMap(numFields);
@@ -516,10 +517,6 @@ public sealed abstract class BaseTupleType extends GeneratedType
         private final TupleFieldItem[] mFields;
         private final Map<String, Integer> mNameMap;
 
-        private WithNames(TupleFieldItem[] fields) {
-            this(fields, buildNameMap(fields, null));
-        }
-
         private WithNames(TupleFieldItem[] fields, Map<String, Integer> nameMap) {
             mFields = fields;
             mNameMap = nameMap;
@@ -570,24 +567,30 @@ public sealed abstract class BaseTupleType extends GeneratedType
         }
 
         @Override
-        protected WithNames doTrimFirst() {
-            return new WithNames(Arrays.copyOfRange(mFields, 1, mFields.length));
+        protected BaseTupleType doTrimFirst() {
+            TupleFieldItem[] fields = Arrays.copyOfRange(mFields, 1, mFields.length);
+            Map<String, Integer> nameMap = buildNameMap(fields, null);
+            return nameMap.isEmpty() ? doWithoutNames(fields) : new WithNames(fields, nameMap);
         }
 
         @Override
         protected NoNames withoutNames() {
-            var fieldTypes = new BaseType[mFields.length];
+            return InternSet.apply(doWithoutNames(mFields));
+        }
+
+        private static NoNames doWithoutNames(TupleFieldItem[] fields) {
+            var fieldTypes = new BaseType[fields.length];
             for (int i=0; i<fieldTypes.length; i++) {
-                fieldTypes[i] = mFields[i].type();
+                fieldTypes[i] = fields[i].type();
             }
-            return InternSet.apply(new BaseTupleType.NoNames(fieldTypes));
+            return new NoNames(fieldTypes);
         }
 
         @Override
         protected WithNames doWithFirstType(BaseType type) {
             var fields = mFields.clone();
             fields[0] = fields[0].withType(type);
-            return new WithNames(fields);
+            return new WithNames(fields, mNameMap);
         }
 
         @Override
