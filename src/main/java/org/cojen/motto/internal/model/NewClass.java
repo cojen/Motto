@@ -358,8 +358,6 @@ public final class NewClass extends BaseClassTypeItem {
         mPreparedFields = null;
         mPreparedMethods = null;
 
-        tryAddClassField();
-
         mAvailable = Math.max(1, mAvailable);
 
         notifyAll();
@@ -400,14 +398,14 @@ public final class NewClass extends BaseClassTypeItem {
             cm.implement(iface.asMakerType());
         }
 
-        fields().filter(f -> !f.isPseudo()).forEach(field -> {
+        fields().forEach(field -> {
             FieldMaker fm = cm.addField(field.type().asMakerType(), Maker.mangle(field.name()));
             field.applyModifiers(fm);
 
             // FIXME: check if the field has an initial value
         });
 
-        methods().filter(m -> !m.isPseudo()).forEach(method -> {
+        methods().forEach(method -> {
             // FIXME: If any types are unspecified, use Object (as is currently done), but also
             // define an attribute which has a correct signature. Something special is needed
             // for void parameters too. Also use a signature for macros, or signatures which
@@ -433,7 +431,7 @@ public final class NewClass extends BaseClassTypeItem {
             addCodeGenerator(mm, method);
         });
 
-        constructors().filter(c -> !c.isPseudo()).forEach(ctor -> {
+        constructors().forEach(ctor -> {
             MethodMaker mm = cm.addConstructor(makerParamsFor(ctor));
 
             ctor.applyModifiers(mm);

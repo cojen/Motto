@@ -289,13 +289,6 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         }
     }
 
-    /**
-     * Attempt to add a class literal pseudo field.
-     */
-    final BaseFieldItem tryAddClassField() {
-        return tryAddField(PUBLIC | STATIC | FINAL | PSEUDO, this, "class");
-    }
-
     @Override
     public Set<BaseFieldItem> findField(String name, Predicate<FieldItem> filter) {
         return doFindField(Set.of(), name, filter, new HashSet<>());

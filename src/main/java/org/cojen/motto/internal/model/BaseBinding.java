@@ -362,6 +362,51 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     /**
+     * Defines a binding for supporting class literals.
+     */
+    public static final class ClassLiteral extends BaseBinding {
+        public static ClassLiteral from(BaseObjectType objType) {
+            return InternSet.apply(new ClassLiteral(objType));
+        }
+
+        private final BaseObjectType mObjType;
+
+        private ClassLiteral(BaseObjectType objType) {
+            mObjType = Objects.requireNonNull(objType);
+        }
+
+        @Override
+        public BaseType type() {
+            return LoadedClass.classFrom(Class.class);
+        }
+
+        @Override
+        public boolean isStable() {
+            return true;
+        }
+
+        @Override
+        public boolean isModifiable() {
+            return false;
+        }
+
+        public BaseObjectType objectType() {
+            return mObjType;
+        }
+
+        @Override
+        public int hashCode() {
+            return mObjType.hashCode() * 1414798747;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return this == obj || obj instanceof ClassLiteral other
+                && mObjType.equals(other.mObjType);
+        }
+    }
+
+    /**
      * Defines a binding which refers to a constant tuple field. Use TupleAction.Get or
      * TupleAction.Set if the field selection is variable.
      */

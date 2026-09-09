@@ -580,6 +580,10 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
                 return variableFor(b.instance()).alength();
             }
 
+            case BaseBinding.ClassLiteral b -> {
+                return mMethodMaker.var(Class.class).set(b.objectType().asMakerType());
+            }
+
             case BaseBinding.TupleField b -> {
                 return variableFor(b);
             }
@@ -713,15 +717,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
      * @param instanceBinding is null for static field
      */
     private Variable variableFor(BaseFieldItem fieldItem, BaseBinding instanceBinding) {
-        String fieldName = fieldItem.name();
-
-        if (fieldItem.isPseudo() && "class".equals(fieldName)) {
-            // Class literal.
-            BaseObjectType enclosingType = fieldItem.nearestClass();
-            return mMethodMaker.var(Class.class).set(enclosingType.asMakerType());
-        }
-
-        fieldName = Maker.mangle(fieldName);
+        String fieldName = Maker.mangle(fieldItem.name());
 
         if (instanceBinding == null) {
             // Static field.

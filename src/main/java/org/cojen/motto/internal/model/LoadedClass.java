@@ -173,8 +173,6 @@ public final class LoadedClass extends BaseClassTypeItem {
                 tryAddField(modifierBits, from(f.getType()), Maker.demangle(f.getName()));
             }
 
-            tryAddClassField();
-
             mInitState |= mask;
         }
     }

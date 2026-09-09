@@ -39,7 +39,7 @@ public class Modifiers {
         MODULE = 0x8000;
 
     public static final int LOADED = 0x8000_0000, // see ExternalClass
-        PSEUDO = 0x4000_0000, CLASS = 0x2000_0000, MACRO = 0x1000_0000;
+        CLASS = 0x4000_0000, MACRO = 0x2000_0000;
 
     public static int from(ClassModel model) {
         int modifiers = model.flags().flagsMask();

@@ -116,7 +116,7 @@ public final class ExternalClass extends BaseClassTypeItem
 
     @Override // Type.Provider
     public void addFields(ClassMaker cm) {
-        fields().filter(f -> !f.isPseudo()).forEach(field -> {
+        fields().forEach(field -> {
             FieldMaker fm = cm.addField(field.type().asMakerType(), Maker.mangle(field.name()));
             field.applyModifiers(fm);
         });
@@ -124,7 +124,7 @@ public final class ExternalClass extends BaseClassTypeItem
 
     @Override // Type.Provider
     public void addMethods(ClassMaker cm) {
-        methods().filter(m -> !m.isPseudo()).forEach(method -> {
+        methods().forEach(method -> {
             // FIXME: If any types are unspecified, use Object (as is currently done), but also
             // define an attribute which has a correct signature. Something special is needed
             // for void parameters too. Also use a signature for macros, or signatures which
@@ -150,7 +150,7 @@ public final class ExternalClass extends BaseClassTypeItem
 
     @Override // Type.Provider
     public void addConstructors(ClassMaker cm) {
-        constructors().filter(c -> !c.isPseudo()).forEach(ctor -> {
+        constructors().forEach(ctor -> {
             MethodMaker mm = cm.addConstructor(makerParamsFor(ctor, ctor.signature()));
             ctor.applyModifiers(mm);
         });
@@ -195,8 +195,6 @@ public final class ExternalClass extends BaseClassTypeItem
             String fieldName = Maker.demangle(field.fieldName().stringValue());
             tryAddField(Modifiers.from(field), fieldType, fieldName);
         }
-
-        tryAddClassField();
 
         for (MethodModel method : model.methods()) {
             String mname = method.methodName().stringValue();

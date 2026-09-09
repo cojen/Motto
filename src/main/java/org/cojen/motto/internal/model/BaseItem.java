@@ -78,10 +78,6 @@ public abstract sealed class BaseItem implements Item
         return (modifierBits() & BRIDGE) != 0;
     }
 
-    public final boolean isPseudo() {
-        return (modifierBits() & PSEUDO) != 0;
-    }
-
     public final boolean isMacro() {
         return (modifierBits() & MACRO) != 0;
     }

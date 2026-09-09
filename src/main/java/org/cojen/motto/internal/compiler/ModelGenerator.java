@@ -371,10 +371,16 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
      * @return null if not found, and an error was reported
      */
     private BaseBinding findStaticField(BaseClassTypeItem clazz, Token.Identifier nameToken) {
+        String name = nameToken.text;
+
         Set<BaseFieldItem> set = clazz.findField
-            (nameToken.text, f -> f.isStatic() && f.isAccessibleVia(mScope.item()));
+            (name, f -> f.isStatic() && f.isAccessibleVia(mScope.item()));
 
         if (set.isEmpty()) {
+            if ("class".equals(name)) {
+                return BaseBinding.ClassLiteral.from(clazz);
+            }
+
             error(nameToken, "static field not found");
             return null;
         }
