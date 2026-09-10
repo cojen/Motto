@@ -70,6 +70,10 @@ public final class TupleStatement extends EnclosedStatementList implements State
 
         VarType first = asVarType(p, 0);
 
+        if (first == null) {
+            return null;
+        }
+
         if (canUnwrap && size == 1 && !(first instanceof NamedVarType)) {
             // Unwrap tuple types which consist of a single unnamed element.
             return first;
@@ -79,7 +83,11 @@ public final class TupleStatement extends EnclosedStatementList implements State
         fieldTypes.add(first); 
 
         for (int i=1; i<size; i++) {
-            fieldTypes.add(asVarType(p, i));
+            VarType fieldType = asVarType(p, i);
+            if (fieldType == null) {
+                return null;
+            }
+            fieldTypes.add(fieldType);
         }
 
         return new TupleVarType(open, fieldTypes, close);
@@ -87,6 +95,10 @@ public final class TupleStatement extends EnclosedStatementList implements State
 
     private VarType asVarType(Parser p, int index) {
         VarType type = items.get(index).asVarType(p);
+
+        if (type == null) {
+            return null;
+        }
 
         if (isUnevaluated()) {
             // Convert type to a lambda. Need to define an empty tuple, but no parens were

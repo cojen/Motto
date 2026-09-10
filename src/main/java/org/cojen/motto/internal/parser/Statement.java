@@ -55,9 +55,13 @@ public sealed interface Statement extends Element permits
     }
 
     /**
-     * @param p for reporting errors
+     * @param p for reporting errors; pass null to return null from this method instead
+     * @return null only if p was null and conversion to a VarType isn't possible
      */
     public default VarType asVarType(Parser p) {
+        if (p == null) {
+            return null;
+        }
         p.error(this, "illegal type");
         // Return a bogus type.
         return new TupleVarType(start(), List.of(), end());

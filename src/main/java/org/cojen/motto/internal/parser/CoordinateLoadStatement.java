@@ -65,11 +65,18 @@ public final class CoordinateLoadStatement implements Statement {
     public ArrayVarType asVarType(Parser p) {
         VarType elementType = source.asVarType(p);
 
+        if (elementType == null) {
+            return null;
+        }
+
         List<Coordinate> coordinates = this.coordinates;
 
         for (Coordinate c : coordinates) {
             for (Statement item : c.items) {
                 if (item != null) {
+                    if (p == null) {
+                        return null;
+                    }
                     p.error(item, "length not allowed here");
                 }
             }

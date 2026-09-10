@@ -82,6 +82,9 @@ public final class DeclarationStatement implements Statement, NamedVarType {
     @Override
     public NamedVarType asVarType(Parser p) {
         if (source != null) {
+            if (p == null) {
+                return null;
+            }
             p.error(this, "default value not allowed");
         }
         return this;

@@ -365,14 +365,14 @@ public abstract sealed class BaseBinding implements Binding {
      * Defines a binding for supporting class literals.
      */
     public static final class ClassLiteral extends BaseBinding {
-        public static ClassLiteral from(BaseObjectType objType) {
-            return InternSet.apply(new ClassLiteral(objType));
+        public static ClassLiteral from(BaseType sourceType) {
+            return InternSet.apply(new ClassLiteral(sourceType));
         }
 
-        private final BaseObjectType mObjType;
+        private final BaseType mSourceType;
 
-        private ClassLiteral(BaseObjectType objType) {
-            mObjType = Objects.requireNonNull(objType);
+        private ClassLiteral(BaseType sourceType) {
+            mSourceType = Objects.requireNonNull(sourceType);
         }
 
         @Override
@@ -390,19 +390,19 @@ public abstract sealed class BaseBinding implements Binding {
             return false;
         }
 
-        public BaseObjectType objectType() {
-            return mObjType;
+        public BaseType sourceType() {
+            return mSourceType;
         }
 
         @Override
         public int hashCode() {
-            return mObjType.hashCode() * 1414798747;
+            return mSourceType.hashCode() * 1414798747;
         }
 
         @Override
         public boolean equals(Object obj) {
             return this == obj || obj instanceof ClassLiteral other
-                && mObjType.equals(other.mObjType);
+                && mSourceType.equals(other.mSourceType);
         }
     }
 

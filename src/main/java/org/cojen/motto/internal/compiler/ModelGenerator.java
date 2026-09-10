@@ -38,7 +38,9 @@ import org.cojen.motto.internal.model.BaseFieldItem;
 import org.cojen.motto.internal.model.BaseIntType;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseNullType;
+import org.cojen.motto.internal.model.BaseObjectType;
 import org.cojen.motto.internal.model.BasePath;
+import org.cojen.motto.internal.model.BasePrimitiveType;
 import org.cojen.motto.internal.model.BaseSegmentArgument;
 import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
@@ -84,6 +86,7 @@ import org.cojen.motto.internal.parser.ThrowStatement;
 import org.cojen.motto.internal.parser.Token;
 import org.cojen.motto.internal.parser.TupleStatement;
 import org.cojen.motto.internal.parser.UpdateStatement;
+import org.cojen.motto.internal.parser.VarType;
 import org.cojen.motto.internal.parser.YieldStatement;
 
 import static org.cojen.motto.internal.parser.Token.*;
@@ -370,16 +373,18 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
     /**
      * @return null if not found, and an error was reported
      */
-    private BaseBinding findStaticField(BaseClassTypeItem clazz, Token.Identifier nameToken) {
+    private BaseBinding findStaticField(BaseType type, Token.Identifier nameToken) {
         String name = nameToken.text;
 
-        Set<BaseFieldItem> set = clazz.findField
+        Set<BaseFieldItem> set = type.findField
             (name, f -> f.isStatic() && f.isAccessibleVia(mScope.item()));
 
         if (set.isEmpty()) {
             if ("class".equals(name)) {
-                return BaseBinding.ClassLiteral.from(clazz);
+                return BaseBinding.ClassLiteral.from(type);
             }
+
+            // FIXME: Support static fields on primitive types.
 
             error(nameToken, "static field not found");
             return null;
@@ -979,6 +984,18 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
+        if ("class".equals(st.name.text)) {
+            VarType vtype = st.source.asVarType(null);
+            if (vtype != null) {
+                BaseType type = vtype.tryResolve(mEnv, mScope.item());
+                if (type == null) {
+                    // Error state.
+                    return null;
+                }
+                return BaseBinding.ClassLiteral.from(type);
+            }
+        }
+
         BaseBinding binding = st.source.accept(this);
 
         if (binding != null) {
@@ -1237,26 +1254,32 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         BaseBinding instanceBinding = tryFindLocalVariable(pathIt);
 
         tryStatic: if (instanceBinding == null) {
-            BaseClassTypeItem clazz = tryResolveClass(st.path, pathIt, true);
+            BaseType type = tryResolveClass(st.path, pathIt, true);
 
-            if (clazz == null) {
+            if (type == null) {
                 pathIt = st.path.listIterator();
-                BaseBinding thisBinding = tryAccessThis();
+                Token.Identifier nameToken = pathIt.next();
 
-                if (thisBinding != null) {
-                    instanceBinding = thisBinding;
-                    autoThis = true;
-                    break tryStatic;
+                type = BasePrimitiveType.trySelectByName(nameToken.text);
+
+                if (type == null) {
+                    BaseBinding thisBinding = tryAccessThis();
+
+                    if (thisBinding != null) {
+                        instanceBinding = thisBinding;
+                        autoThis = true;
+                        break tryStatic;
+                    }
+
+                    instanceBinding = tryMatchKeywordBinding(nameToken);
+
+                    if (instanceBinding != null) {
+                        break tryStatic;
+                    }
+
+                    error(st.path, "cannot resolve type");
+                    return null;
                 }
-
-                instanceBinding = tryMatchKeywordBinding(pathIt.next());
-
-                if (instanceBinding != null) {
-                    break tryStatic;
-                }
-
-                error(st.path, "cannot find symbol");
-                return null;
             }
 
             if (!pathIt.hasNext()) {
@@ -1264,7 +1287,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 return null;
             }
 
-            instanceBinding = findStaticField(clazz, pathIt.next());
+            instanceBinding = findStaticField(type, pathIt.next());
 
             if (instanceBinding == null) {
                 // Error state.
@@ -1374,20 +1397,25 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             tryInstance: if (localBinding != null) {
                 instance = localBinding;
             } else {
-                BaseClassTypeItem classItem = tryResolveClass(st.path, pathIt, false);
+                BaseType type = tryResolveClass(st.path, pathIt, false);
 
-                if (classItem == null) {
+                if (type == null) {
                     pathIt = st.path.listIterator();
+                    nameToken = pathIt.next();
 
-                    BaseBinding keyword = tryMatchKeywordBinding(pathIt.next());
+                    type = BasePrimitiveType.trySelectByName(nameToken.text);
 
-                    if (keyword != null) {
-                        instance = keyword;
-                        break tryInstance;
+                    if (type == null) {
+                        BaseBinding keyword = tryMatchKeywordBinding(nameToken);
+
+                        if (keyword != null) {
+                            instance = keyword;
+                            break tryInstance;
+                        }
+
+                        error(st.path, "cannot resolve type");
+                        return null;
                     }
-
-                    error(st.path, "cannot find symbol");
-                    return null;
                 }
 
                 if (!pathIt.hasNext()) {
@@ -1401,8 +1429,15 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 if (!pathIt.hasNext()) {
                     int numErrors = mEnv.numErrors();
 
-                    BaseBinding result = tryMakeMethodCall
-                        (st, classItem, null, nameToken, inputTypes, inputBindings, false);
+                    BaseBinding result;
+
+                    if (type instanceof BaseClassTypeItem classItem) {
+                        result = tryMakeMethodCall
+                            (st, classItem, null, nameToken, inputTypes, inputBindings, false);
+                    } else {
+                        // FIXME: Support static calls on primitive types.
+                        result = null;
+                    }
 
                     if (result == null && numErrors == mEnv.numErrors()) {
                         error(nameToken, "cannot find static method");
@@ -1411,7 +1446,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                     return result;
                 }
 
-                BaseBinding fieldBinding = findStaticField(classItem, nameToken);
+                BaseBinding fieldBinding = findStaticField(type, nameToken);
 
                 if (fieldBinding == null) {
                     // Error state.
@@ -1522,7 +1557,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         BaseClassTypeItem clazz = tryResolveClass(st.name, st.name.listIterator(), true);
 
         if (clazz == null) {
-            error(st.name, "cannot find symbol");
+            error(st.name, "cannot resolve type");
             return null;
         }
 

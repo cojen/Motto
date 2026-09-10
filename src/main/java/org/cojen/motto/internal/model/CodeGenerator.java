@@ -581,7 +581,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             }
 
             case BaseBinding.ClassLiteral b -> {
-                return mMethodMaker.var(Class.class).set(b.objectType().asMakerType());
+                return mMethodMaker.var(Class.class).set(b.sourceType().asMakerType());
             }
 
             case BaseBinding.TupleField b -> {

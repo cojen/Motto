@@ -47,6 +47,10 @@ public final class LambdaStatement implements Statement {
 
     @Override
     public VarType asVarType(Parser p) {
-        return new LambdaVarType(inputType, body.asVarType(p));
+        VarType bodyType = body.asVarType(p);
+        if (bodyType == null) {
+            return null;
+        }
+        return new LambdaVarType(inputType, bodyType);
     }
 }

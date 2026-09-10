@@ -47,8 +47,13 @@ public sealed interface SimpleVarType extends VarType permits LoadStatement {
             // Try to select a primitive type as the last resort.
             String simpleName = simpleName();
             if (simpleName != null) {
-                return "_".equals(simpleName) ? BaseUnspecifiedType.THE
-                    : BasePrimitiveType.trySelectByName(simpleName);
+                if ("_".equals(simpleName)) {
+                    return BaseUnspecifiedType.THE;
+                }
+                type = BasePrimitiveType.trySelectByName(simpleName);
+                if (type != null) {
+                    return type;
+                }
             }
         }
 
