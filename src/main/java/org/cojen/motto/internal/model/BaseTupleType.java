@@ -84,6 +84,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
         return InternSet.apply(new NoNames(fieldTypes));
     }
 
+    /*
     public static BaseTupleType from(BaseType firstType, BaseType[] moreTypes) {
         Objects.requireNonNull(firstType);
         var fieldTypes = new BaseType[1 + moreTypes.length];
@@ -93,6 +94,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
         }
         return InternSet.apply(new NoNames(fieldTypes));
     }
+    */
 
     static BaseTupleType from(Collection<BaseType> types) {
         if (types == null || types.isEmpty()) {

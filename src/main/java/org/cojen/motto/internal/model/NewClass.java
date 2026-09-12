@@ -300,7 +300,7 @@ public final class NewClass extends BaseClassTypeItem {
     {
         Map<BaseCallSignature, BaseCallableItem> ctors = super.findConstructor(inputType, filter);
 
-        if (ctors.isEmpty() && inputType.numFields() == 1 && inputType.fieldType(0).equals(this)) {
+        if (ctors.isEmpty() && inputType.numFields() == 0) {
             BaseCallableItem ctor = addAutoConstructor(false);
             if (ctor != null) {
                 ctors = Map.of(ctor.signature(), ctor);

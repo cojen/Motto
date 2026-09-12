@@ -1616,7 +1616,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        BaseTupleType inputType = BaseTupleType.from(clazz, inputTypes);
+        BaseTupleType inputType = BaseTupleType.from(inputTypes);
 
         Map<BaseCallSignature, BaseCallableItem> ctors =
             clazz.findConstructor(inputType, mScope.item());
