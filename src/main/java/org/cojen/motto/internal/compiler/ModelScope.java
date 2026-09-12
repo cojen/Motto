@@ -30,8 +30,11 @@ import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
+import org.cojen.motto.internal.model.Modifiers;
 import org.cojen.motto.internal.model.NewClass;
+import org.cojen.motto.internal.model.NewLocalClass;
 
+import org.cojen.motto.internal.parser.ClassDefinitionStatement;
 import org.cojen.motto.internal.parser.ConstructorDefinitionStatement;
 import org.cojen.motto.internal.parser.DeclarationStatement;
 import org.cojen.motto.internal.parser.Element;
@@ -184,6 +187,16 @@ final class ModelScope {
         return true;
     }
 
+    private void dupError(Token.Identifier name, String message, ModelScope scope) {
+        if (scope == this) {
+            message += " is already declared";
+        } else {
+            message += " is declared in a parent scope";
+        }
+
+        env().error(name, message);
+    }
+
     BaseCallableItem addConstructor(ConstructorDefinitionStatement st) {
         if (mItem instanceof NewClass clazz) {
             return st.addToClass(env(), clazz);
@@ -229,14 +242,47 @@ final class ModelScope {
         return callable;
     }
 
-    private void dupError(Token.Identifier name, String message, ModelScope scope) {
-        if (scope == this) {
-            message += " is already declared";
-        } else {
-            message += " is declared in a parent scope";
+    /**
+     * Adds a local inner class as defined by the given statement, and also recursively adds
+     * all path-accessible inner classes within it. As a side-effect, the statement `clazz`
+     * field will refer to the NewLocalClass object.
+     *
+     * Returns null if no class was added and an error was reported.
+     */
+    NewLocalClass addLocalInnerClass(ClassDefinitionStatement st) {
+        CompilationEnv env = env();
+        int modifierBits = st.modifierBits(env);
+
+        modifierBits &= ~(Modifiers.PUBLIC | Modifiers.PROTECTED | Modifiers.STATIC);
+        modifierBits |= Modifiers.PRIVATE;
+
+        NewLocalClass local;
+        try {
+            local = mItem.tryAddLocalInnerClass(modifierBits, st.name.text);
+        } catch (UnsupportedOperationException e) {
+            // Not expected.
+            env.error(st, "inner classes not supported in this scope");
+            return null;
         }
 
-        env().error(name, message);
+        if (local == null) {
+            env.error(st, "duplicate inner class definition");
+            return null;
+        }
+
+        st.clazz = local;
+        st.resolveClass(env);
+
+        if (st.code != null) {
+            for (Statement sub : st.code.items) {
+                if (sub instanceof ClassDefinitionStatement inner) {
+                    inner.prepareClass(env, local);
+                    inner.resolveClass(env);
+                }
+            }
+        }
+
+        return local;
     }
 
     /**

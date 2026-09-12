@@ -579,18 +579,21 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public Stream<? extends BaseClassTypeItem> innerClasses() {
-        return innerClassesMap().values().stream();
+        return innerClassesMap().values().stream().filter(c -> !(c instanceof NewLocalClass));
     }
 
     @Override
     public BaseClassTypeItem innerClass(String name) {
         BaseClassTypeItem clazz = innerClassesMap().get(name);
-        if (clazz == null) {
+        if (clazz == null || clazz instanceof NewLocalClass) {
             throw new NoSuchElementException();
         }
         return clazz;
     }
 
+    /**
+     * Returns all inner classes, even NewLocalClass instances.
+     */
     protected Map<String, BaseClassTypeItem> innerClassesMap() {
         return mInnerClassesMap;
     }
@@ -606,7 +609,9 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     {
         BaseClassTypeItem inner = innerClassesMap().get(name);
 
-        if (inner != null && (filter == null || filter.test(inner))) {
+        if (inner != null && !(inner instanceof NewLocalClass) &&
+            (filter == null || filter.test(inner)))
+        {
             return addItemToSet(set, inner);
         }
 

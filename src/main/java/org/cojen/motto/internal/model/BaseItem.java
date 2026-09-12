@@ -16,6 +16,9 @@
 
 package org.cojen.motto.internal.model;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import org.cojen.motto.model.Item;
 import org.cojen.motto.model.Type;
 
@@ -34,6 +37,8 @@ public abstract sealed class BaseItem implements Item
     permits BaseClassTypeItem, BaseCallableItem, BaseFieldItem, BaseScopeItem
 {
     private int mModifierBits;
+
+    private Map<String, NewLocalClass> mLocalInnerClasses;
 
     /**
      * @see Modifiers
@@ -152,5 +157,84 @@ public abstract sealed class BaseItem implements Item
         if ((modifiers & Modifiers.SYNTHETIC) != 0) {
             maker.synthetic();
         }
+    }
+
+    /**
+     * @param name pass null if class is anonymous
+     * @return null if an inner class with the same name exists
+     * @throws UnsupportedOperationException if not supported by this item
+     */
+    public final NewLocalClass tryAddLocalInnerClass(int modifierBits, final String name) {
+        String methodName = captureMethodName(this);
+
+        if (!(nearestClass() instanceof NewClass outer)) {
+            throw new UnsupportedOperationException();
+        }
+
+        Map<String, NewLocalClass> localMap = mLocalInnerClasses;
+
+        if (localMap == null) {
+            mLocalInnerClasses = localMap = new LinkedHashMap<>();
+        } else if (name != null && localMap.containsKey(name)) {
+            return null;
+        }
+
+        // Note: Don't use '$' separator, since it can be interpreted as a new scope.
+        String baseName = name == null ? methodName : (methodName + '_' + name);
+
+        Map<String, BaseClassTypeItem> outerMap = outer.innerClassesMap();
+
+        String actualName = baseName;
+        int num = 0;
+
+        if (outerMap.containsKey(actualName)) {
+            while (true) {
+                actualName = baseName + '_' + num;
+                if (!outerMap.containsKey(actualName)) {
+                    break;
+                }
+                num++;
+            }
+        }
+
+        NewLocalClass local;
+
+        while (true) {
+            local = new NewLocalClass(outer.env(), outer, modifierBits, outer.packagePath(),
+                                      outer.namePath().append(actualName), outer.origin());
+
+            if (outer.tryAddInnerClass(local)) {
+                break;
+            }
+
+            actualName = baseName + '_' + (++num);
+        }
+
+        if (name != null) {
+            localMap.put(name, local);
+        }
+
+        return local;
+    }
+
+    /**
+     * @throws UnsupportedOperationException if local inner classes aren't supported
+     */
+    private static final String captureMethodName(BaseItem item) {
+        while (true) {
+            if (item instanceof BaseCallableItem callable) {
+                return callable.signature().name();
+            }
+            if (item instanceof BaseScopeItem scope) {
+                item = scope.enclosingItem();
+            } else {
+                throw new UnsupportedOperationException();
+            }
+        }
+    }
+
+    public final NewLocalClass tryFindLocalInnerClass(String name) {
+        Map<String, NewLocalClass> localMap = mLocalInnerClasses;
+        return localMap == null ? null : localMap.get(name);
     }
 }

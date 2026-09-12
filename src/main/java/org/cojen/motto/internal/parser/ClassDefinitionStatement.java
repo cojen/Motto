@@ -86,7 +86,8 @@ public final class ClassDefinitionStatement extends DefinitionStatement {
     }
 
     /**
-     * This method should only be called if this is an inner class, not scoped in a method.
+     * This method should only be called if this is an inner class, not directly scoped in a
+     * method.
      *
      * @param outer required
      */
@@ -96,7 +97,7 @@ public final class ClassDefinitionStatement extends DefinitionStatement {
     }
 
     /**
-     * @param outer is null of this is a top-level class
+     * @param outer is null if this is a top-level class
      */
     private NewClass prepareClass(CompilationEnv env, BasePath packagePath, NewClass outer) {
         if (this.clazz != null) {

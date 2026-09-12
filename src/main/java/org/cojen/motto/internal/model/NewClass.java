@@ -49,7 +49,7 @@ import static org.cojen.motto.internal.model.Modifiers.*;
  *
  * @author Brian S. O'Neill
  */
-public final class NewClass extends BaseClassTypeItem {
+public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
     private final CompilationEnv mEnv;
     private final NewClass mOuterClass;
     private final Object mOrigin;
@@ -97,6 +97,10 @@ public final class NewClass extends BaseClassTypeItem {
     @Override
     public NewClass outerType() {
         return mOuterClass;
+    }
+
+    public Object origin() {
+        return mOrigin;
     }
 
     /**

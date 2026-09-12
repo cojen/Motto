@@ -16,35 +16,17 @@
 
 package org.cojen.motto.internal.model;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 /**
- * Represents a plain scope of code.
+ * 
  *
  * @author Brian S. O'Neill
  */
-public final class BaseScopeItem extends BaseItem {
-    private final BaseItem mEnclosing;
-
-    public BaseScopeItem(BaseItem enclosing) {
-        super(enclosing.modifierBits());
-        mEnclosing = enclosing;
-    }
-
-    @Override
-    public BaseType enclosingType() {
-        return mEnclosing.enclosingType();
-    }
-
-    @Override
-    public BaseType nearestType() {
-        return mEnclosing.nearestType();
-    }
-
-    @Override
-    public BaseClassTypeItem nearestClass() {
-        return mEnclosing.nearestClass();
-    }
-
-    public BaseItem enclosingItem() {
-        return mEnclosing;
+public final class NewLocalClass extends NewClass {
+    NewLocalClass(CompilationEnv env, NewClass outerClass,
+                  int modifierBits, BasePath packagePath, BasePath namePath, Object origin)
+    {
+        super(env, outerClass, modifierBits, packagePath, namePath, origin);
     }
 }

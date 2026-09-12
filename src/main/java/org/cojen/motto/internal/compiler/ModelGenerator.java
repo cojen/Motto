@@ -250,6 +250,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return clazz;
         }
 
+        // FIXME: Somehow merge with SimpleVarType.trySelectClass?
+
         clazz = tryFindLocalStaticClass(item, nameToken);
 
         if (clazz == null) {
@@ -338,13 +340,19 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
      * Checks if the given name matches a local class, searching outer classes if necessary.
      */
     private BaseClassTypeItem tryFindLocalStaticClass(BaseItem item, Token.Identifier nameToken) {
+        String name = nameToken.text;
+
+        BaseClassTypeItem local = item.tryFindLocalInnerClass(name);
+
+        if (local != null) {
+            return local;
+        }
+
         BaseClassTypeItem clazz = item.nearestClass();
 
         if (clazz == null) {
             return null;
         }
-
-        String name = nameToken.text;
 
         Set<BaseClassTypeItem> set = clazz.findInnerClass
             (name, c -> c.isStatic() && c.isAccessibleVia(mScope.item()));
@@ -622,6 +630,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         Set<CallableItem> set = methods.values().iterator().next();
 
         if (set.size() > 1) {
+            // FIXME: This error is reported even when a disambiguating path is used.
             // FIXME: list them all
             error(nameToken, "method call is ambiguous");
             return null;
@@ -685,6 +694,10 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
                 case DeclarationStatement ds -> {
                     newScope.addDeclaration(ds, null);
+                }
+
+                case ClassDefinitionStatement cds -> {
+                    newScope.addLocalInnerClass(cds);
                 }
 
                 // FIXME: MethodDefinitionStatement too
@@ -788,11 +801,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
     @Override
     public BaseBinding visit(ClassDefinitionStatement st) {
         // For a path-accessible class, the clazz field should have been assigned when
-        // ClassDefinitionStatement.prepareClass was called.
+        // ClassDefinitionStatement.prepareClass was called. For local inner classes, the clazz
+        // field should have been assigned when ModelScope.addLocalInnerClass was called.
         NewClass clazz = st.clazz;
 
         if (clazz == null) {
-            error(st, "method local inner classes not supported yet");
+            // Error state. Assume an error was already reported.
             return null;
         }
 
