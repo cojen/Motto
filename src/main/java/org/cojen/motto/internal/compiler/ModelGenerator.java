@@ -17,6 +17,7 @@
 package org.cojen.motto.internal.compiler;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -795,6 +796,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
+        checkForInheritanceCycle(st, null, clazz, clazz);
+
         enterScope(new ModelScope(this, mScope, clazz));
 
         boolean hasCtor = false;
@@ -841,6 +844,58 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         exitScope();
 
         return BaseBinding.Void.THE;
+    }
+
+    /**
+     * @return true if an error was reported
+     */
+    private boolean checkForInheritanceCycle(ClassDefinitionStatement st, Set<Object> seen,
+                                             NewClass newClass, BaseClassTypeItem check)
+    {
+        if (seen != null && !seen.add(check)) {
+            // If a cycle is observed which doesn't loop back to newClass, an error won't be
+            // reported here, but it should be reported against the offending class. Reporting
+            // an error here would disallow multiple inheritance of interfaces.
+            return false;
+        }
+
+        BaseClassTypeItem involving;
+
+        check: {
+            BaseClassTypeItem superType = check.superType();
+
+            while (superType != null) {
+                if (superType == newClass) {
+                    involving = superType;
+                    break check;
+                }
+                superType = superType.superType();
+            }
+
+            Set<? extends BaseClassTypeItem> interfaces = check.interfaces();
+
+            if (!interfaces.isEmpty()) {
+                if (seen == null) {
+                    seen = new HashSet<>();
+                }
+
+                for (BaseClassTypeItem iface : check.interfaces()) {
+                    if (iface == newClass) {
+                        involving = iface;
+                        break check;
+                    }
+                    if (checkForInheritanceCycle(st, seen, newClass, iface)) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        error(st, "cyclic inheritance involving " + involving.namePath().getLast());
+
+        return true;
     }
 
     @Override

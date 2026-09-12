@@ -176,8 +176,6 @@ public final class ClassDefinitionStatement extends DefinitionStatement {
      *   method or constructor will now exist.
      *
      * - Mark the NewClassItem as available.
-     *
-     * - Perform inheritance cycle detection.
      */
     public void resolveClass(CompilationEnv env) {
         if (clazz == null) {
@@ -245,8 +243,6 @@ public final class ClassDefinitionStatement extends DefinitionStatement {
         } finally {
             clazz.available();
         }
-
-        clazz.checkForInheritanceCycle();
     }
 
     @Override

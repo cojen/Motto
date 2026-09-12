@@ -61,8 +61,7 @@ public final class NewClass extends BaseClassTypeItem {
     private Map<String, Integer> mPreparedFields;  // field name to modifierBits
     private Map<String, Integer> mPreparedMethods; // method name to modifierBits
 
-    // 1: initially available, 2: supertype cycle detection has been performed (if necessary)
-    private int mAvailable;
+    private boolean mAvailable;
 
     private volatile ClassMaker mClassMaker;
 
@@ -358,27 +357,14 @@ public final class NewClass extends BaseClassTypeItem {
         mPreparedFields = null;
         mPreparedMethods = null;
 
-        mAvailable = Math.max(1, mAvailable);
+        mAvailable = true;
 
         notifyAll();
     }
 
-    private synchronized int waitUntilAvailable() throws InterruptedException {
-        int available;
-        while ((available = mAvailable) == 0) {
+    private synchronized void waitUntilAvailable() throws InterruptedException {
+        while (!mAvailable) {
             wait();
-        }
-        return available;
-    }
-
-    /**
-     * Check for a super type inheritance cycle if necessary, but don't report any errors. Save
-     * them for later.
-     */
-    public void checkForInheritanceCycle() {
-        // FIXME: checkForInheritanceCycle
-        synchronized (this) {
-            mAvailable = Math.max(2, mAvailable);
         }
     }
 
@@ -467,9 +453,7 @@ public final class NewClass extends BaseClassTypeItem {
 
     @Override // BaseClassTypeItem
     protected void init() throws InterruptedException {
-        if (waitUntilAvailable() < 2) {
-            checkForInheritanceCycle();
-        }
+        waitUntilAvailable();
     }
 
     @Override // BaseClassTypeItem
