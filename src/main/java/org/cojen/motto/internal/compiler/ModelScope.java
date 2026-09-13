@@ -30,7 +30,6 @@ import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
-import org.cojen.motto.internal.model.Modifiers;
 import org.cojen.motto.internal.model.NewClass;
 import org.cojen.motto.internal.model.NewLocalClass;
 
@@ -42,6 +41,8 @@ import org.cojen.motto.internal.parser.LabeledStatement;
 import org.cojen.motto.internal.parser.MethodDefinitionStatement;
 import org.cojen.motto.internal.parser.Statement;
 import org.cojen.motto.internal.parser.Token;
+
+import static org.cojen.motto.internal.model.Modifiers.*;
 
 /**
  * 
@@ -133,21 +134,29 @@ final class ModelScope {
      * @return false if an error was reported
      */
     boolean addDeclaration(DeclarationStatement ds, BaseType actualType) {
+        CompilationEnv env = env();
+
         ModelScope scope = this;
         BaseItem item = scope.mItem;
 
         if (item instanceof NewClass clazz) {
-            BaseFieldItem field = ds.addToClass(env(), clazz);
+            BaseFieldItem field = ds.addToClass(env, clazz);
             // If null, an error should have been reported already.
             return field != null;
         }
 
         // If this point is reached, then the declaration is a local variable.
 
+        int modifierBits = ds.modifierBits(env);
+
+        if ((modifierBits & STATIC) != 0) {
+            env.error(ds, "local variable cannot be static");
+        }
+
         String name = ds.name.text;
 
         if (item instanceof BaseCallableItem ci && ci.signature().inputType().fieldExists(name)) {
-            env().error(ds.name, "a variable with the same name is declared as a parameter");
+            env.error(ds.name, "a variable with the same name is declared as a parameter");
             return false;
         }
 
@@ -165,7 +174,7 @@ final class ModelScope {
         if (actualType != null) {
             type = actualType;
         } else {
-            type = ds.type().tryResolve(env(), mItem);
+            type = ds.type().tryResolve(env, mItem);
 
             if (type == null) {
                 // An error should have been reported already.
@@ -253,8 +262,11 @@ final class ModelScope {
         CompilationEnv env = env();
         int modifierBits = st.modifierBits(env);
 
-        modifierBits &= ~(Modifiers.PUBLIC | Modifiers.PROTECTED | Modifiers.STATIC);
-        modifierBits |= Modifiers.PRIVATE;
+        if ((modifierBits & STATIC) != 0) {
+            env.error(st, "local inner class cannot be static");
+        }
+
+        modifierBits = (modifierBits & ~(PUBLIC | PROTECTED | STATIC)) | PRIVATE;
 
         NewLocalClass local;
         try {
