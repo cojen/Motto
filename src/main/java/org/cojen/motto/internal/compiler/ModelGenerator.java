@@ -463,7 +463,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                     if (fieldSet.isEmpty()) {
                         String message;
                         if (autoThis) {
-                            message = "cannot find symbol";
+                            message = "cannot resolve symbol";
                         } else {
                             message = "instance field not found";
                         }
@@ -1346,7 +1346,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                         break tryStatic;
                     }
 
-                    error(st.path, "cannot resolve type");
+                    error(st.path, "cannot resolve symbol");
                     return null;
                 }
             }
@@ -1450,7 +1450,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 }
 
                 // FIXME: If a matching instance method exists, report a better error?
-                error(st.path, "cannot find symbol");
+                error(st.path, "cannot resolve symbol");
                 return null;
             }
 
@@ -1509,7 +1509,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                     }
 
                     if (result == null && numErrors == mEnv.numErrors()) {
-                        error(nameToken, "cannot find static method");
+                        error(nameToken, "cannot resolve static method");
                     }
 
                     return result;
@@ -1541,9 +1541,9 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         if (result == null && numErrors == mEnv.numErrors()) {
             String message;
             if (autoThis) {
-                message = "cannot find symbol";
+                message = "cannot resolve symbol";
             } else {
-                message = "cannot find instance method";
+                message = "cannot resolve instance method";
             }
             error(nameToken, message);
         }
