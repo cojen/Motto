@@ -22,9 +22,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
-
-import java.util.function.BiFunction;
 
 import org.cojen.motto.model.CallableItem;
 
@@ -772,11 +771,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                     return null;
                 }
 
-                // FIXME: Support widening conversion.
-                if (!(binding.type() instanceof BaseIntType)) {
-                    error(coordinate, "not an int type");
-                    return null;
-                }
+                // Note: Don't validate the binding type yet.
 
                 bindings.add(binding);
             }
@@ -945,19 +940,37 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        BaseBlock block = mScope.activeBlock(st);
+        return doVisit(st, new CoordinateHandler() {
+            @Override
+            public BaseBinding forArray(BaseBlock block, BaseBinding array, BaseBinding index) {
+                return block.arrayGet(array, index);
+            }
 
-        return doVisit(st, (array, index) -> block.arrayGet(array, index));
+            @Override
+            public BaseBinding forTuple(BaseBlock block, BaseBinding tuple, BaseBinding index) {
+                return block.tupleGet(tuple, index);
+            }
+
+            @Override
+            public BaseBinding forTuple(BaseBlock block, BaseBinding tuple, int index) {
+                return BaseBinding.TupleField.from(tuple, index);
+            }
+        });
+    }
+
+    static interface CoordinateHandler {
+        BaseBinding forArray(BaseBlock block, BaseBinding array, BaseBinding index);
+
+        BaseBinding forTuple(BaseBlock block, BaseBinding tuple, BaseBinding index);
+
+        BaseBinding forTuple(BaseBlock block, BaseBinding tuple, int index);
     }
 
     /**
-     * @param handler is called for the last coordinate item, and is passed the array binding
-     * and the index binding
+     * @param handler is called for the last coordinate item
      * @return the binding returned by the handler, or else null if an error was reported
      */
-    private BaseBinding doVisit(CoordinateLoadStatement st,
-                                BiFunction<BaseBinding, BaseBinding, BaseBinding> handler)
-    {
+    private BaseBinding doVisit(CoordinateLoadStatement st, CoordinateHandler handler) {
         BaseBinding binding = st.source.accept(this);
 
         if (binding == null) {
@@ -982,22 +995,72 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         for (Coordinate c : st.coordinates) {
             BaseType type = binding.type();
-
-            if (!type.isArray()) {
-                error(st.source, "not an array type");
-                return null;
-            }
-
-            BaseType elementType = type.arrayElementType();
-
             BaseBinding indexBinding = it.next();
+            BaseBlock block = mScope.activeBlock(st);
 
-            if (it.hasNext()) {
-                binding = mScope.activeBlock(st).arrayGet(binding, indexBinding);
-            } else {
-                binding = handler.apply(binding, indexBinding);
+            if (type.isArray()) {
+                BaseType elementType = type.arrayElementType();
+
+                if (it.hasNext()) {
+                    binding = block.arrayGet(binding, indexBinding);
+                    continue;
+                }
+
+                binding = handler.forArray(block, binding, indexBinding);
                 break;
             }
+
+            if (type instanceof BaseTupleType tt) {
+                isConstant: if (indexBinding instanceof BaseBinding.Constant constant) {
+                    long index;
+                    try {
+                        index = constant.longValueExact();
+                    } catch (ArithmeticException e) {
+                        if (constant.value() instanceof String label) {
+                            try {
+                                index = tt.fieldIndex(label);
+                            } catch (NoSuchElementException e2) {
+                                error(c, "tuple field not found");
+                                return null;
+                            } catch (UnsupportedOperationException e2) {
+                                break isConstant;
+                            }
+                        } else {
+                            break isConstant;
+                        }
+                    }
+
+                    if (index < 0) {
+                        error(c, "negative tuple field index");
+                        return null;
+                    }
+
+                    if (index >= tt.numFields()) {
+                        error(c, "tuple field index is out of bounds (must be less than "
+                              + tt.numFields() + ')');
+                        return null;
+                    }
+
+                    if (it.hasNext()) {
+                        BaseBinding.TupleField.from(binding, (int) index);
+                        continue;
+                    }
+
+                    binding = handler.forTuple(block, binding, (int) index);
+                    break;
+                }
+
+                if (it.hasNext()) {
+                    binding = block.tupleGet(binding, indexBinding);
+                    continue;
+                }
+
+                binding = handler.forTuple(block, binding, indexBinding);
+                break;
+            }
+
+            error(c, "not accessing an array or tuple type");
+            return null;
         }
 
         return binding;
@@ -1750,8 +1813,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        BaseBlock block = mScope.activeBlock(st);
-
         BaseBinding lvalue;
 
         switch (st.target) {
@@ -1764,9 +1825,30 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             }
 
             case CoordinateLoadStatement cload -> {
-                return doVisit(cload, (array, index) -> {
-                    block.arraySet(array, index, source);
-                    return source;
+                return doVisit(cload, new CoordinateHandler() {
+                    @Override
+                    public BaseBinding forArray(BaseBlock block, BaseBinding array,
+                                                BaseBinding index)
+                    {
+                        block.arraySet(array, index, source);
+                        return source;
+                    }
+
+                    @Override
+                    public BaseBinding forTuple(BaseBlock block, BaseBinding tuple,
+                                                BaseBinding index)
+                    {
+                        // FIXME: check if final or unmodifiable
+                        block.tupleSet(tuple, index, source);
+                        return source;
+                    }
+
+                    @Override
+                    public BaseBinding forTuple(BaseBlock block, BaseBinding tuple, int index) {
+                        // FIXME: check if final or unmodifiable
+                        block.tupleSet(tuple, index, source);
+                        return source;
+                    }
                 });
             }
 
@@ -1786,7 +1868,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             error(st.target, "unmodifiable assignment target");
         }
 
-        block.copy(lvalue, source);
+        mScope.activeBlock(st).copy(lvalue, source);
 
         return source;
     }

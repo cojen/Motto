@@ -16,6 +16,11 @@
 
 package org.cojen.motto.internal.model;
 
+import java.lang.runtime.ExactConversionsSupport;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
 import java.util.Map;
 import java.util.Objects;
 
@@ -122,6 +127,57 @@ public abstract sealed class BaseBinding implements Binding {
 
         public Object value() {
             return mValue;
+        }
+
+        /**
+         * @throws ArithmeticException
+         */
+        public long longValueExact() {
+            switch (mValue) {
+                case Byte n -> {
+                    return n;
+                }
+
+                case Short n -> {
+                    return n;
+                }
+
+                case Integer n -> {
+                    return n;
+                }
+
+                case Long n -> {
+                    return n;
+                }
+
+                case Float n -> {
+                    float v = n;
+                    if (ExactConversionsSupport.isFloatToLongExact(v)) {
+                        return (long) v;
+                    }
+                }
+
+                case Double n -> {
+                    double v = n;
+                    if (ExactConversionsSupport.isDoubleToLongExact(v)) {
+                        return (long) v;
+                    }
+                }
+
+                case BigDecimal n -> {
+                    return n.longValueExact();
+                }
+
+                case BigInteger n -> {
+                    return n.longValueExact();
+                }
+
+                default -> {
+                    break;
+                }
+            }
+
+            throw new ArithmeticException();
         }
 
         @Override

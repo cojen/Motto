@@ -206,12 +206,6 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     public Binding tupleGet(Binding tuple, int index);
 
     /**
-     * @return the result binding
-     * @throws TerminatedBlockException if this block is terminated
-     */
-    public Binding tupleGet(Binding tuple, String label);
-
-    /**
      * @param value a Binding or a constant
      * @throws TerminatedBlockException if this block is terminated
      */
@@ -222,12 +216,6 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
      * @throws TerminatedBlockException if this block is terminated
      */
     public void tupleSet(Binding tuple, int index, Object value);
-
-    /**
-     * @param value a Binding or a constant
-     * @throws TerminatedBlockException if this block is terminated
-     */
-    public void tupleSet(Binding tuple, String index, Object value);
 
     /**
      * @param input1 a Binding or a constant

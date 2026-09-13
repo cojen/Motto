@@ -493,12 +493,6 @@ public final class BaseBlock implements Block {
     }
 
     @Override
-    public BaseBinding tupleGet(Binding tuple, String label) {
-        // FIXME: Find index; throw IllegalArgumentException if not found.
-        throw null;
-    }
-
-    @Override
     public void tupleSet(Binding tuple, Binding index, Object value) {
         // FIXME: Check if binding is an int/long/String...
         throw null;
@@ -507,12 +501,6 @@ public final class BaseBlock implements Block {
     @Override
     public void tupleSet(Binding tuple, int index, Object value) {
         // FIXME: throw IndexOutOfBoundsException if index is wrong.
-        throw null;
-    }
-
-    @Override
-    public void tupleSet(Binding tuple, String index, Object value) {
-        // FIXME: Find index; throw IllegalArgumentException if not found.
         throw null;
     }
 
