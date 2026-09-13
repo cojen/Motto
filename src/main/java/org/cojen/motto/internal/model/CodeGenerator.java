@@ -193,8 +193,14 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
     @Override
     public BaseAction visit(BaseArrayAction.New action) {
-        // FIXME
-        throw null;
+        var params = new Object[action.numDimensions()];
+        for (int i=0; i<params.length; i++) {
+            params[i] = forLoad(action.dimension(i));
+        }
+
+        forStore(action.output()).set(mMethodMaker.new_(action.type().asMakerType(), params));
+
+        return action.next;
     }
 
     @Override

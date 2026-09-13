@@ -1640,8 +1640,47 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        BaseType type = st.elementType.tryResolve(mEnv, mScope.item());
+        var dimValuesList = new ArrayList<BaseBinding>(2);
+        Object[] dimValues = null;
+
+        for (Coordinate c : st.coordinates) {
+            if (c.dimensions() != 1) {
+                error(c, "illegal array declaration");
+                return null;
+            }
+
+            type = type.asArray();
+
+            Statement dimStatement = c.items.get(0);
+
+            if (dimValues != null) {
+                if (dimStatement != null) {
+                    error(c, "illegal array declaration");
+                    return null;
+                }
+            } else if (dimStatement == null) {
+                dimValues = dimValuesList.toArray();
+                dimValuesList = null;
+            } else {
+                dimValuesList.add(dimStatement.accept(this));
+            }
+        }
+
+        if (!(type instanceof BaseArrayType arrayType)) {
+            error(st.coordinates, "illegal array declaration");
+            return null;
+        }
+
+        if (dimValues == null) {
+            dimValues = dimValuesList.toArray();
+        }
+
+        if (dimValues.length == 0) {
+            error(st.coordinates, "illegal array declaration");
+        }
+
+        return mScope.activeBlock(st).arrayNew(arrayType, dimValues);
     }
 
     @Override
