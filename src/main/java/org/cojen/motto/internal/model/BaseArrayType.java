@@ -95,6 +95,24 @@ public final class BaseArrayType implements BaseObjectType, ArrayType, Encodable
     }
 
     @Override
+    public int canConvertTo(Type to) {
+        int code = BaseObjectType.super.canConvertTo(to);
+
+        if (code == Integer.MAX_VALUE && to instanceof BaseType toType) {
+            if (toType.isJavaLangObject()) {
+                code = 0;
+            } else {
+                BaseType elementType = mElementType;
+                if (!elementType.isPrimitive() && toType.isArray()) {
+                    code = elementType.canConvertTo(toType.arrayElementType());
+                }
+            }
+        }
+
+        return code;
+    }
+ 
+    @Override
     public boolean isAccessibleVia(Item via) {
         return mElementType.isAccessibleVia(via);
     }
