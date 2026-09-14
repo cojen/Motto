@@ -125,15 +125,12 @@ final class ModelScope {
     }
 
     /**
-     * Try to add a declared field or local variable. When given a null actualType, then the
-     * declared type is used. If the declared type is unspecified, then the declaration isn't
-     * added, but true is still returned if no errors. When an actualType is given, it always
-     * overrides the declared type.
+     * Try to add a declared field or local variable. If the type is unspecified, then
+     * tryFindLocalVariable returns null.
      *
-     * @param actualType pass null to use the declared type
      * @return false if an error was reported
      */
-    boolean addDeclaration(DeclarationStatement ds, BaseType actualType) {
+    boolean addDeclaration(DeclarationStatement ds) {
         CompilationEnv env = env();
 
         ModelScope scope = this;
@@ -169,22 +166,11 @@ final class ModelScope {
 
         // FIXME: check modifiers
 
-        BaseType type;
+        BaseType type = ds.type().tryResolve(env, mItem);
 
-        if (actualType != null) {
-            type = actualType;
-        } else {
-            type = ds.type().tryResolve(env, mItem);
-
-            if (type == null) {
-                // An error should have been reported already.
-                return false;
-            }
-
-            if (type == BaseUnspecifiedType.THE) {
-                // Don't add it.
-                return true;
-            }
+        if (type == null) {
+            // An error should have been reported already.
+            return false;
         }
 
         if (mLocals.isEmpty()) {
@@ -194,6 +180,22 @@ final class ModelScope {
         mLocals.put(name, BaseBinding.Named.from(type, name));
 
         return true;
+    }
+
+    /**
+     * Replace a local variable which had an unspecified type.
+     *
+     * @return null if the variable doesn't exist
+     */
+    BaseBinding.Local tryReplaceLocalDeclaration(BaseType type, String name) {
+        if (mLocals.isEmpty()) {
+            return null;
+        }
+        var local = BaseBinding.Named.from(type, name);
+        if (mLocals.replace(name, local) == null) {
+            return null;
+        }
+        return local;
     }
 
     private void dupError(Token.Identifier name, String message, ModelScope scope) {
@@ -398,7 +400,7 @@ final class ModelScope {
         while (true) {
             BaseBinding.Local local = scope.mLocals.get(name);
             if (local != null) {
-                return local;
+                return local.type() == BaseUnspecifiedType.THE ? null : local;
             }
             if (scope.mItem instanceof BaseCallableItem || ((scope = scope.mParent) == null)) {
                 return null;

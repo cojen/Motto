@@ -692,7 +692,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 }
 
                 case DeclarationStatement ds -> {
-                    newScope.addDeclaration(ds, null);
+                    newScope.addDeclaration(ds);
                 }
 
                 case ClassDefinitionStatement cds -> {
@@ -825,7 +825,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 }
 
                 case DeclarationStatement ds -> {
-                    if (mScope.addDeclaration(ds, null) && ds.source != null) {
+                    if (mScope.addDeclaration(ds) && ds.source != null) {
                         // FIXME: Code must be added to the constructor(s) or static initializer.
                         // If a simple final constant, then initialize the JVM field directly.
                         throw null;
@@ -1072,8 +1072,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        // The variable should have been defined earler by visitCode, unless the type is
-        // unspecified. The local might also be null if an error was been reported.
+        // The local variable is null if an error was reported when visitCode was called, or if
+        // the type was unspecified.
         BaseBinding.Local local = mScope.tryFindLocalVariable(st.name.text);
 
         if (st.source == null) {
@@ -1086,13 +1086,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         BaseBinding source = st.source.accept(this);
 
         if (source != null) {
-            if (local == null) {
-                if (st.type().isUnspecified()) {
-                    // Add the declaration now, even if the source type is unspecified (for
-                    // whatever reason).
-                    mScope.addDeclaration(st, source.type());
-                    local = mScope.tryFindLocalVariable(st.name.text);
-                }
+            if (local == null && st.type().isUnspecified()) {
+                local = mScope.tryReplaceLocalDeclaration(source.type(), st.name.text);
             }
 
             if (local != null) {
