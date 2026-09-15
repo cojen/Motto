@@ -237,7 +237,12 @@ public final class BaseBlock implements Block {
     }
 
     public BaseBinding.Anonymous var(BaseType type) {
-        return new BaseBinding.Anonymous(type);
+        if (type == BaseUnspecifiedType.THE) {
+            throw new IllegalArgumentException();
+        }
+        var local = new BaseBinding.Anonymous(type);
+        declare(local);
+        return local;
     }
 
     @Override
@@ -246,11 +251,12 @@ public final class BaseBlock implements Block {
     }
 
     public BaseBinding.Local var(BaseType type, String name) {
-        return name == null ? var(type) : BaseBinding.Named.from(type, name);
-    }
-
-    public void declare(Binding binding) {
-        declare((BaseBinding) binding);
+        if (type == BaseUnspecifiedType.THE) {
+            throw new IllegalArgumentException();
+        }
+        var local = name == null ? var(type) : BaseBinding.Named.from(type, name);
+        declare(local);
+        return local;
     }
 
     public void declare(BaseBinding binding) {

@@ -199,26 +199,29 @@ public abstract sealed class BaseBinding implements Binding {
      * @see BaseBlock#branch
      */
     public static final class Branch extends Unmodifiable {
-        private final BaseBinding mValue;
+        private final BaseBinding mBoolValue;
         private final BaseBlock mTruePath, mFalsePath, mMerge;
 
         /**
+         * @param boolValue must have a boolean type
          * @param truePath the block which will assign a true value
          * @param falsePath the block which will assign a false value
          * @param merge the block to jump to after assigning a value
          * @throws IllegalArgumentException if either path block is terminated
          */
-        public Branch(BaseBlock truePath, BaseBlock falsePath, BaseBlock merge) {
+        public Branch(BaseBinding boolValue,
+                      BaseBlock truePath, BaseBlock falsePath, BaseBlock merge)
+        {
             if (truePath.isTerminated() || falsePath.isTerminated()) {
                 throw new IllegalArgumentException();
             }
 
-            mValue = new BaseBinding.Anonymous(BaseBooleanType.THE);
+            mBoolValue = boolValue;
 
-            truePath.copy(mValue, true);
+            truePath.copy(boolValue, true);
             truePath.jump(merge);
 
-            falsePath.copy(mValue, false);
+            falsePath.copy(boolValue, false);
             falsePath.jump(merge);
 
             mTruePath = truePath;
@@ -229,21 +232,21 @@ public abstract sealed class BaseBinding implements Binding {
 
         @Override
         public BaseType type() {
-            return mValue.type();
+            return mBoolValue.type();
         }
 
         @Override
         void trackBlockLocalSource(Map<Anonymous, Boolean> map) {
-            mValue.trackBlockLocalSource(map);
+            mBoolValue.trackBlockLocalSource(map);
         }
 
         @Override
         void trackBlockLocalTarget(Map<Anonymous, Boolean> map) {
-            mValue.trackBlockLocalTarget(map);
+            mBoolValue.trackBlockLocalTarget(map);
         }
 
-        public BaseBinding value() {
-            return mValue;
+        public BaseBinding boolValue() {
+            return mBoolValue;
         }
 
         BaseBlock mergeBlock() {

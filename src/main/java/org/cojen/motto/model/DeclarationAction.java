@@ -19,7 +19,7 @@ package org.cojen.motto.model;
 import org.cojen.motto.internal.model.BaseDeclarationAction;
 
 /**
- * Defines a no-op action which simply declares a variable.
+ * Defines a no-op action which simply declares a local variable.
  *
  * @author Brian S. O'Neill
  */
