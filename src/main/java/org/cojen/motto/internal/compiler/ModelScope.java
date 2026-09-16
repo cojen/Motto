@@ -177,13 +177,7 @@ final class ModelScope {
             mLocals = new LinkedHashMap<>();
         }
 
-        var local = BaseBinding.Named.from(type, name);
-
-        mLocals.put(name, local);
-
-        if (type != BaseUnspecifiedType.THE) {
-            activeBlock(ds).declare(local);
-        }
+        mLocals.put(name, BaseBinding.Named.from(type, name));
 
         return true;
     }
@@ -193,22 +187,14 @@ final class ModelScope {
      *
      * @return null if the variable doesn't exist
      */
-    BaseBinding.Local tryReplaceLocalDeclaration(DeclarationStatement ds, BaseType type) {
+    BaseBinding.Local tryReplaceLocalDeclaration(BaseType type, String name) {
         if (mLocals.isEmpty()) {
             return null;
         }
-
-        String name = ds.name.text;
         var local = BaseBinding.Named.from(type, name);
-
         if (mLocals.replace(name, local) == null) {
             return null;
         }
-
-        if (type != BaseUnspecifiedType.THE) {
-            activeBlock(ds).declare(local);
-        }
-
         return local;
     }
 
@@ -420,6 +406,13 @@ final class ModelScope {
                 return null;
             }
         }
+    }
+
+    /**
+     * Return a new anonymous local variable binding.
+     */
+    public BaseBinding.Anonymous newVariable(BaseType type) {
+        return new BaseBinding.Anonymous(type);
     }
 
     /**

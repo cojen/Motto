@@ -52,21 +52,16 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     public Block merge();
 
     /**
-     * Declare an anonymous local variable in this block, which is visible to all actions
-     * within the code body.
-     *
-     * @throws IllegalArgumentException if the type is unspecified
-     * @throws TerminatedBlockException if this block is terminated
+     * Return a new anonymous local variable binding which is visible to all actions within the
+     * code body.
      */
     public Binding var(Type type);
 
     /**
-     * Declare a named or anonymous local variable in this block, which is visible to all
-     * actions within the code body.
+     * Return a named or new anonymous local variable binding which is visible to all actions
+     * within the code body.
      *
      * @param name can pass null to create an anonymous variable
-     * @throws IllegalArgumentException if the type is unspecified
-     * @throws TerminatedBlockException if this block is terminated
      */
     public Binding var(Type type, String name);
 

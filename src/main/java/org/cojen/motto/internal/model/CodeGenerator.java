@@ -708,7 +708,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     private Variable variableFor(BaseBinding.Branch binding) {
-        return variableFor(binding.boolValue());
+        return variableFor(binding.value());
     }
 
     private Variable variableFor(BaseBinding.StaticField binding) {

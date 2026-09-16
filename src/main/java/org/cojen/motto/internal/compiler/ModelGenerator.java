@@ -1087,7 +1087,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         if (source != null) {
             if (local == null && st.type().isUnspecified()) {
-                local = mScope.tryReplaceLocalDeclaration(st, source.type());
+                local = mScope.tryReplaceLocalDeclaration(source.type(), st.name.text);
             }
 
             if (local != null) {
@@ -1196,8 +1196,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         var stopBlock = new BaseBlock(); // short-circuit destination
         var contBlock = mScope.activeBlock(st); // destination to continue checking
 
-        BaseBinding boolValue = contBlock.var(BaseBooleanType.THE);
-
         for (Statement sub : new Statement[] {st.left, st.right}) {
             mScope.setActiveBlock(contBlock);
             BaseBinding result = sub.accept(this);
@@ -1229,9 +1227,9 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         BaseBinding result;
 
         if (opType == T_LAND) {
-            result = new BaseBinding.Branch(boolValue, contBlock, stopBlock, endBlock);
+            result = new BaseBinding.Branch(contBlock, stopBlock, endBlock);
         } else {
-            result = new BaseBinding.Branch(boolValue, stopBlock, contBlock, endBlock);
+            result = new BaseBinding.Branch(stopBlock, contBlock, endBlock);
         }
 
         return result;
