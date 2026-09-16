@@ -438,11 +438,6 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     @Override
-    public BaseAction visit(BaseDeclarationAction action) {
-        return action.next;
-    }
-
-    @Override
     public BaseAction visit(BaseJumpAction action) {
         BaseBlock block = action.destination();
 

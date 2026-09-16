@@ -23,7 +23,7 @@ package org.cojen.motto.internal.model;
  */
 public abstract sealed class FlowAction extends BaseAction
     permits BaseArrayAction, BaseCallAction, BaseCastAction, BaseConvertAction, BaseCopyAction,
-        BaseDeclarationAction, BaseTupleAction
+        BaseTupleAction
 {
     public BaseAction next;
 

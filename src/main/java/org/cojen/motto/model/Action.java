@@ -24,7 +24,7 @@ import org.cojen.motto.internal.model.BaseAction;
  * @author Brian S. O'Neill
  */
 public sealed interface Action
-    permits ArrayAction, CallAction, CastAction, ConvertAction, CopyAction, DeclarationAction,
+    permits ArrayAction, CallAction, CastAction, ConvertAction, CopyAction,
             TerminalAction, TupleAction, BaseAction
 {
     /**

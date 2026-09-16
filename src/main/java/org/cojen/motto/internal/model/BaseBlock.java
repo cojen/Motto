@@ -249,14 +249,6 @@ public final class BaseBlock implements Block {
         return name == null ? var(type) : BaseBinding.Named.from(type, name);
     }
 
-    public void declare(Binding binding) {
-        declare((BaseBinding) binding);
-    }
-
-    public void declare(BaseBinding binding) {
-        addAction(new BaseDeclarationAction(mPosition, binding));
-    }
-
     @Override
     public void copy(Binding target, Object source) {
         copy((BaseBinding) target, toBinding(source));

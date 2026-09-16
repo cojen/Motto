@@ -409,13 +409,6 @@ final class ModelScope {
     }
 
     /**
-     * Return a new anonymous local variable binding.
-     */
-    public BaseBinding.Anonymous newVariable(BaseType type) {
-        return new BaseBinding.Anonymous(type);
-    }
-
-    /**
      * Returns the block for adding new actions to.
      *
      * @param element provides the source code position

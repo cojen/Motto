@@ -42,8 +42,6 @@ public interface ActionVisitor<R> {
 
     public R visit(BaseCopyAction action);
 
-    public R visit(BaseDeclarationAction action);
-
     public R visit(BaseJumpAction action);
 
     public R visit(BaseReturnAction action);
