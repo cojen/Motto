@@ -196,8 +196,9 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
     }
 
     private BaseBinding.Parameter tryAccessThis() {
-        BaseBinding.Local local = mScope.tryFindLocalVariable("this");
-        return (local instanceof BaseBinding.Parameter p && p.index() == 0) ? p : null;
+        return (!mScope.item().isStatic()
+                && mScope.tryFindLocalVariable("this") instanceof BaseBinding.Parameter p
+                && p.index() == 0) ? p : null;
     }
 
     /**
@@ -318,6 +319,24 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         }
 
         return null;
+    }
+
+    private boolean hasAccessibleInstanceField(BaseItem item, String name) {
+        BaseClassTypeItem clazz = item.nearestClass();
+
+        while (clazz != null) {
+            // The findField method also returns inherited fields.
+            Set<BaseFieldItem> set = clazz.findField
+                (name, f -> !f.isStatic() && f.isAccessibleVia(mScope.item()));
+
+            if (!set.isEmpty()) {
+                return true;
+            }
+
+            clazz = clazz.outerType();
+        }
+
+        return false;
     }
 
     /**
@@ -1389,7 +1408,14 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                         break tryStatic;
                     }
 
-                    error(st.path, "cannot resolve symbol");
+                    String message;
+                    if (hasAccessibleInstanceField(mScope.item(), nameToken.text)) {
+                        message = "cannot access instance field from a static context";
+                    } else {
+                        message = "cannot resolve symbol";
+                    }
+
+                    error(st.path, message);
                     return null;
                 }
             }
@@ -1492,7 +1518,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                     break tryStatic;
                 }
 
-                // FIXME: If a matching instance method exists, report a better error?
+                // FIXME: If a matching instance method exists, report a better error.
                 error(st.path, "cannot resolve symbol");
                 return null;
             }
