@@ -1375,17 +1375,17 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 type = BasePrimitiveType.trySelectByName(nameToken.text);
 
                 if (type == null) {
-                    BaseBinding thisBinding = tryAccessThis();
-
-                    if (thisBinding != null) {
-                        instanceBinding = thisBinding;
-                        autoThis = true;
-                        break tryStatic;
-                    }
-
                     instanceBinding = tryMatchKeywordBinding(nameToken);
 
                     if (instanceBinding != null) {
+                        break tryStatic;
+                    }
+
+                    instanceBinding = tryAccessThis();
+
+                    if (instanceBinding != null) {
+                        pathIt.previous();
+                        autoThis = true;
                         break tryStatic;
                     }
 
