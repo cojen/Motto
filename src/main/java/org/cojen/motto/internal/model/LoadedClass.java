@@ -58,6 +58,8 @@ public final class LoadedClass extends BaseClassTypeItem {
 
     private final Class<?> mClass;
 
+    private volatile LoadedClass mOuterClass;
+
     // bit 0: init, bit 1: initFields, bit 2: initMethods, bit 3: initConstructors 
     private int mInitState;
 
@@ -94,8 +96,14 @@ public final class LoadedClass extends BaseClassTypeItem {
 
     @Override
     public LoadedClass outerType() {
-        // FIXME: outerType
-        throw null;
+        LoadedClass outer = mOuterClass;
+
+        if (outer == null) {
+            Class<?> enclosing = mClass.getEnclosingClass();
+            mOuterClass = outer = enclosing == null ? this : classFrom(enclosing);
+        }
+
+        return outer == this ? null : outer;
     }
 
     @Override
