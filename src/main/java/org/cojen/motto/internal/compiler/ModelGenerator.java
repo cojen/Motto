@@ -196,23 +196,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
     }
 
     private BaseBinding.Parameter tryAccessThis() {
-        for (ModelScope scope = mScope; scope != null; scope = scope.parent()) {
-            BaseItem item = scope.item();
-
-            if (item instanceof BaseClassTypeItem) {
-                break;
-            }
-
-            if (item instanceof BaseCallableItem callable) {
-                if (callable.isStatic()) {
-                    break;
-                }
-                BaseType thisType = callable.signature().inputType().fieldType(0);
-                return BaseBinding.Parameter.from(thisType, "this", 0);
-            }
-        }
-
-        return null;
+        BaseBinding.Local local = mScope.tryFindLocalVariable("this");
+        return (local instanceof BaseBinding.Parameter p && p.index() == 0) ? p : null;
     }
 
     /**
@@ -369,7 +354,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         }
 
         do {
-            if (clazz.namePath().getLast().equals(name)) {
+            if (clazz.simpleName().equals(name)) {
                 return clazz;
             }
             clazz = clazz.outerType();
@@ -902,7 +887,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return false;
         }
 
-        error(st, "cyclic inheritance involving " + involving.namePath().getLast());
+        error(st, "cyclic inheritance involving " + involving.simpleName());
 
         return true;
     }

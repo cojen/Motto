@@ -127,14 +127,19 @@ public final class TupleVarType implements VarType {
                 name = named.name().text;
 
                 if (nameSet != null && !nameSet.add(name)) {
+                    error = true;
                     env.error(named.name(), "duplicate name");
                     name = null;
                 }
 
-                if (offset == 0 && hasThis && type != BaseUnspecifiedType.THE &&
-                    !type.equals(insertThis))
-                {
-                    env.error(named.type(), "invalid `this` type");
+                if (hasThis) {
+                    if (offset == 0 && !type.equals(insertThis)) {
+                        error = true;
+                        env.error(named.type(), "invalid `this` type");
+                    }
+                } else if (insertThis != null && "this".equals(name)) {
+                    error = true;
+                    env.error(named.name(), "`this` must be first");
                 }
             } else {
                 name = null;

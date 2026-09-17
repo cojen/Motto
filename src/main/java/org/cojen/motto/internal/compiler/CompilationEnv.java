@@ -446,7 +446,7 @@ public final class CompilationEnv {
                     {
                         continue;
                     }
-                } else if (!clazz.namePath().getLast().equals(text)) {
+                } else if (!clazz.simpleName().equals(text)) {
                     continue;
                 }
             }

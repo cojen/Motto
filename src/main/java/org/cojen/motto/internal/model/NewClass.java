@@ -223,6 +223,7 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
             if (outer == null) {
                 cm = ClassMaker.beginExternal(fullMangledName());
             } else {
+                // Note: Don't use the simple name of NewLocalClass.
                 cm = outer.classMaker().addInnerClass(Maker.mangle(namePath().getLast()));
             }
 

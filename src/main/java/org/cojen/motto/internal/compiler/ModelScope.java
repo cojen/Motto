@@ -118,7 +118,7 @@ final class ModelScope {
             }
             // Duplicates should have been checked when the tuple was created. Also, no named
             // local variables should be defined yet.
-            if (mLocals.putIfAbsent(name, param) != null) {
+            if (name != null && mLocals.putIfAbsent(name, param) != null) {
                 throw new AssertionError();
             }
         }
@@ -402,7 +402,7 @@ final class ModelScope {
             if (local != null) {
                 return local.type() == BaseUnspecifiedType.THE ? null : local;
             }
-            if (scope.mItem instanceof BaseCallableItem || ((scope = scope.mParent) == null)) {
+            if (!(scope.mItem instanceof BaseScopeItem) || ((scope = scope.mParent) == null)) {
                 return null;
             }
         }

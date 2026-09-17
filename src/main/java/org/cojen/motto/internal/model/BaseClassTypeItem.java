@@ -140,6 +140,15 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         return mNamePath;
     }
 
+    /**
+     * Returns a simple name, which is usually the last element of the name path.
+     *
+     * @see NewLocalClass
+     */
+    public String simpleName() {
+        return namePath().getLast();
+    }
+
     public final int fullPathSize() {
         return packagePath().size() + namePath().size();
     }
@@ -649,6 +658,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
             mInnerClassesMap = map = new ConcurrentHashMap<>();
         }
 
+        // Note: Don't use the simple name of NewLocalClass.
         return map.putIfAbsent(inner.namePath().getLast(), inner) == null;
     }
 

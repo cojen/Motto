@@ -24,9 +24,18 @@ import org.cojen.motto.internal.compiler.CompilationEnv;
  * @author Brian S. O'Neill
  */
 public final class NewLocalClass extends NewClass {
+    private final String mSimpleName;
+
     NewLocalClass(CompilationEnv env, NewClass outerClass,
-                  int modifierBits, BasePath packagePath, BasePath namePath, Object origin)
+                  int modifierBits, BasePath packagePath, BasePath namePath, Object origin,
+                  String simpleName)
     {
         super(env, outerClass, modifierBits, packagePath, namePath, origin);
+        mSimpleName = simpleName;
+    }
+
+    @Override
+    public String simpleName() {
+        return mSimpleName;
     }
 }

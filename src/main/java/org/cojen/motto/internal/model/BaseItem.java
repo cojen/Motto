@@ -201,7 +201,7 @@ public abstract sealed class BaseItem implements Item
 
         while (true) {
             local = new NewLocalClass(outer.env(), outer, modifierBits, outer.packagePath(),
-                                      outer.namePath().append(actualName), outer.origin());
+                                      outer.namePath().append(actualName), outer.origin(), name);
 
             if (outer.tryAddInnerClass(local)) {
                 break;
