@@ -19,7 +19,7 @@ package org.cojen.motto.internal.model;
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
 /**
- * 
+ * Defines an inner class which is local to a method.
  *
  * @author Brian S. O'Neill
  */

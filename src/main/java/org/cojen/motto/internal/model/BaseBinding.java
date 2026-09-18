@@ -678,34 +678,39 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     /**
-     * Defines a binding which refers to a captured local variable.
+     * Defines a binding which refers to a captured local variable, used by a local inner class.
      */
     public static final class Captured extends BaseBinding {
+        private final BaseCallableItem mCallable;
+        private final BaseType mType;
+        private final String mName;
+
+        /**
+           shared:       binding is shared by multiple threads
+           non-escaping: binding doesn't escape the current thread
+           copied:       binding value is copied into the local inner class (implies non-escaping)
+         */
+        public static final int MODE_SHARED = 0, MODE_NON_ESCAPING = 1, MODE_COPIED = 2;
+
+        private int mAccessMode;
+
         /**
          * @param callable declares the local variable
          */
-        public static Captured from(BaseCallableItem callable, String name) {
-            return InternSet.apply(new Captured(callable, name));
-        }
-
-        private final BaseCallableItem mCallable;
-        private final String mName;
-
-        private Captured(BaseCallableItem callable, String name) {
+        Captured(BaseCallableItem callable, BaseType type, String name) {
             mCallable = Objects.requireNonNull(callable);
+            mType = Objects.requireNonNull(type);
             mName = Objects.requireNonNull(name);
         }
 
         @Override
         public BaseType type() {
-            // FIXME: must be registered in the callable
-            throw null;
+            return mType;
         }
 
         @Override
         public boolean isStable() {
-            // FIXME: depends on how it's shared
-            return false;
+            return mAccessMode != MODE_SHARED;
         }
 
         @Override

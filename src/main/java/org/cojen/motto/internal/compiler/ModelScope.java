@@ -439,7 +439,7 @@ final class ModelScope {
 
         // Any accessible fields in the local inner class will shadow a variable declared by
         // the enclosing method. If a field is found, then return null. The caller will look
-        // for the field if necessary, in the correct sequence.
+        // for the field if necessary, when it's the right time.
 
         if (!localClass.findField(name, localClass).isEmpty()) {
             return null;
@@ -449,8 +449,7 @@ final class ModelScope {
 
         if (captured != null) {
             if (captured instanceof BaseBinding.Named n) {
-                // FIXME: register it in the BaseCallableItem (at most once)
-                return BaseBinding.Captured.from(enclosing, n.name());
+                return enclosing.capture(n.type(), name, localClass);
             } else if (captured instanceof BaseBinding.Captured c) {
                 return c;
             }

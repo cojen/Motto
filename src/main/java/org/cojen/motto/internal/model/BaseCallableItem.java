@@ -40,6 +40,8 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
     private final BaseClassTypeItem mEnclosingClass;
     private final BaseCallSignature mSignature;
 
+    private CapturedSet mCapturedSet;
+
     private BaseBlock mCode;
 
     /**
@@ -84,6 +86,21 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
      */
     public BaseCallSignature macroSignature() {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Capture a local variable of the given type and name.
+     *
+     * @throws IllegalStateException if already captured and the type doesn't match
+     */
+    public final BaseBinding.Captured capture(BaseType type, String name, NewLocalClass usedBy) {
+        var cs = mCapturedSet;
+
+        if (cs == null) {
+            mCapturedSet = cs = new CapturedSet(this);
+        }
+
+        return cs.capture(type, name, usedBy);
     }
 
     public final void assignCode(BaseBlock code) {
