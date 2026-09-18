@@ -678,6 +678,62 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     /**
+     * Defines a binding which refers to a captured local variable.
+     */
+    public static final class Captured extends BaseBinding {
+        /**
+         * @param callable declares the local variable
+         */
+        public static Captured from(BaseCallableItem callable, String name) {
+            return InternSet.apply(new Captured(callable, name));
+        }
+
+        private final BaseCallableItem mCallable;
+        private final String mName;
+
+        private Captured(BaseCallableItem callable, String name) {
+            mCallable = Objects.requireNonNull(callable);
+            mName = Objects.requireNonNull(name);
+        }
+
+        @Override
+        public BaseType type() {
+            // FIXME: must be registered in the callable
+            throw null;
+        }
+
+        @Override
+        public boolean isStable() {
+            // FIXME: depends on how it's shared
+            return false;
+        }
+
+        @Override
+        public boolean isModifiable() {
+            return true;
+        }
+
+        public BaseCallableItem callable() {
+            return mCallable;
+        }
+
+        public String name() {
+            return mName;
+        }
+
+        @Override
+        public int hashCode() {
+            return mCallable.hashCode() * 31 + mName.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return this == obj || obj instanceof Captured other
+                && mCallable.equals(other.mCallable) && mName.equals(other.mName);
+        }
+    }
+
+    /**
      * Defines a binding which refers to code which can be passed to a macro call.
      */
     public static final class Code extends Unmodifiable {

@@ -172,8 +172,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
     /**
      * Examines the first path element to determine if it matches a local variable.
      */
-    private BaseBinding.Local tryFindLocalVariable(ListIterator<Token.Identifier> pathIt) {
-        BaseBinding.Local local = mScope.tryFindLocalVariable(pathIt.next().text);
+    private BaseBinding tryFindLocalVariable(ListIterator<Token.Identifier> pathIt) {
+        BaseBinding local = mScope.tryFindLocalVariable(pathIt.next().text);
 
         if (local == null) {
             // Back up.
@@ -1066,7 +1066,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         // The local variable is null if an error was reported when visitCode was called, or if
         // the type was unspecified.
-        BaseBinding.Local local = mScope.tryFindLocalVariable(st.name.text);
+        BaseBinding local = mScope.tryFindLocalVariable(st.name.text);
 
         if (st.source == null) {
             if (local == null && st.type().isUnspecified()) {

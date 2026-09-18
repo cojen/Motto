@@ -593,6 +593,11 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
                 return variableFor(b);
             }
 
+            case BaseBinding.Captured b -> {
+                // FIXME: captured
+                throw null;
+            }
+
             case BaseBinding.Code b -> {
                 throw new IllegalArgumentException();
             }
@@ -684,6 +689,11 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
             case BaseBinding.Local b -> {
                 return variableFor(b);
+            }
+
+            case BaseBinding.Captured b -> {
+                // FIXME: captured
+                throw null;
             }
 
             default -> {

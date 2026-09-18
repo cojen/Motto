@@ -392,20 +392,71 @@ final class ModelScope {
     }
 
     /**
-     * Tries to find a find a named local variable or parameter.
+     * Tries to find a find a named local variable, parameter, or a captured variable from an
+     * enclosing method.
      */
-    public BaseBinding.Local tryFindLocalVariable(String name) {
+    public BaseBinding tryFindLocalVariable(String name) {
         ModelScope scope = this;
+
+        ModelScope parent;
+        BaseItem item;
 
         while (true) {
             BaseBinding.Local local = scope.mLocals.get(name);
+
             if (local != null) {
                 return local.type() == BaseUnspecifiedType.THE ? null : local;
             }
-            if (!(scope.mItem instanceof BaseScopeItem) || ((scope = scope.mParent) == null)) {
+
+            parent = scope.mParent;
+
+            if (parent == null) {
                 return null;
             }
+
+            item = scope.mItem;
+
+            if (item instanceof BaseScopeItem) {
+                scope = parent;
+            } else {
+                break;
+            }
         }
+
+        // Try to capture a variable from an enclosing method.
+
+        if (!(item instanceof BaseCallableItem callable) ||
+            !(parent.mItem instanceof NewLocalClass localClass))
+        {
+            return null;
+        }
+
+        parent = parent.mParent;
+
+        if (parent == null || !(parent.mItem instanceof BaseCallableItem enclosing)) {
+            return null;
+        }
+
+        // Any accessible fields in the local inner class will shadow a variable declared by
+        // the enclosing method. If a field is found, then return null. The caller will look
+        // for the field if necessary, in the correct sequence.
+
+        if (!localClass.findField(name, localClass).isEmpty()) {
+            return null;
+        }
+
+        BaseBinding captured = parent.tryFindLocalVariable(name);
+
+        if (captured != null) {
+            if (captured instanceof BaseBinding.Named n) {
+                // FIXME: register it in the BaseCallableItem (at most once)
+                return BaseBinding.Captured.from(enclosing, n.name());
+            } else if (captured instanceof BaseBinding.Captured c) {
+                return c;
+            }
+        }
+
+        return null;
     }
 
     /**
