@@ -469,7 +469,17 @@ public final class Parser implements Closeable {
                 }
 
                 case T_ARROW -> {
-                    st = new LambdaStatement(st.asVarType(this), parseStatement("lambda"));
+                    Statement body = parseStatement("lambda");
+
+                    List<Statement> items;
+
+                    if (body instanceof TupleStatement tuple && tuple.isUnevaluated()) {
+                        items = codeScopeItems(tuple.items);
+                    } else {
+                        items = codeScopeItems(List.of(body));
+                    }
+
+                    st = new LambdaStatement(st.asVarType(this), body, items);
                 }
 
                 case T_INC, T_DEC -> {
@@ -1705,11 +1715,21 @@ public final class Parser implements Closeable {
      * @return a CodeScopeStatement which doesn't have any top-level SequenceStatements
      */
     private CodeScopeStatement toCodeScope(TupleStatement tuple) {
-        List<Statement> items = tuple.items;
+        return new CodeScopeStatement(tuple.open, codeScopeItems(tuple.items), tuple.close);
+    }
+
+    /**
+     * Return a list of items which have been processed by the codeScopeItem method. All
+     * directly referenced unevaluated tuples are converted to CodeScopeStatements,
+     * recursively.
+     *
+     * @return a list of statements which doesn't have any top-level SequenceStatements
+     */
+    private List<Statement> codeScopeItems(List<Statement> items) {
         int size = items.size();
 
         if (size == 0) {
-            return new CodeScopeStatement(tuple.open, items, tuple.close);
+            return items;
         }
 
         Statement item = items.getFirst();
@@ -1727,7 +1747,7 @@ public final class Parser implements Closeable {
             items = List.of(item);
         }
 
-        return new CodeScopeStatement(tuple.open, items, tuple.close);
+        return items;
     }
 
     /**

@@ -24,7 +24,7 @@ import java.util.List;
  * @author Brian S. O'Neill
  */
 public abstract sealed class StatementList implements Element
-    permits EnclosedStatementList, SequenceStatement
+    permits EnclosedStatementList, LambdaStatement, SequenceStatement
 {
     public final List<Statement> items;
 

@@ -16,16 +16,22 @@
 
 package org.cojen.motto.internal.parser;
 
+import java.util.List;
+
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public final class LambdaStatement implements Statement {
+public final class LambdaStatement extends StatementList implements Statement {
     public final VarType inputType;
     public final Statement body;
 
-    LambdaStatement(VarType inputType, Statement body) {
+    /**
+     * @param items code scope items extracted from the body
+     */
+    LambdaStatement(VarType inputType, Statement body, List<Statement> items) {
+        super(items);
         this.inputType = inputType;
         this.body = body;
     }
