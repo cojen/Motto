@@ -125,4 +125,15 @@ public final class BaseFunctionType extends GeneratedType
     public BaseType inputType() {
         return mInputType;
     }
+
+    @Override
+    public int hashCode() {
+        return mOutputType.hashCode() * 31 + mInputType.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return this == obj || obj instanceof BaseFunctionType other
+            && mOutputType.equals(other.mOutputType) && mInputType.equals(other.mInputType);
+    }
 }
