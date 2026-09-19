@@ -88,7 +88,18 @@ public final class BaseUnspecifiedType implements BaseType, UnspecifiedType {
     }
 
     @Override
+    public int typeCode() {
+        return T_UNSPECIFIED;
+    }
+
+    @Override
     public void encode(TypeEncoder encoder) {
         encoder.encodeByte(EncodableType.T_UNSPECIFIED);
+    }
+
+    @Override
+    public int doCompare(EncodableType other) {
+        // Nothing more to compare.
+        return 0;
     }
 }

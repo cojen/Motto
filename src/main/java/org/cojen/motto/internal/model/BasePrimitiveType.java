@@ -114,6 +114,12 @@ public abstract sealed class BasePrimitiveType implements BaseType, PrimitiveTyp
         return Integer.MAX_VALUE;
     }
 
+    @Override
+    public int doCompare(EncodableType other) {
+        // Nothing more to compare.
+        return 0;
+    }
+
     /**
      * @param name cannot be null
      */

@@ -70,6 +70,11 @@ public final class BaseCharType extends BasePrimitiveType implements CharType {
     }
 
     @Override
+    public int typeCode() {
+        return T_CHAR;
+    }
+
+    @Override
     public void encode(TypeEncoder encoder) {
         encoder.encodeByte(EncodableType.T_CHAR);
     }

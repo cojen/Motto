@@ -45,6 +45,11 @@ public abstract sealed class DecodedType implements EncodableType {
         }
 
         @Override
+        public int typeCode() {
+            return mType.typeCode();
+        }
+
+        @Override
         public DecodedType noFieldNames() {
             return mType.noFieldNames();
         }
@@ -65,6 +70,11 @@ public abstract sealed class DecodedType implements EncodableType {
         }
 
         @Override
+        public int doCompare(EncodableType other) {
+            return mType.doCompare(other);
+        }
+
+        @Override
         public ClassDesc asClassDesc() {
             return mType.asClassDesc();
         }
@@ -78,6 +88,11 @@ public abstract sealed class DecodedType implements EncodableType {
         }
 
         @Override
+        public int typeCode() {
+            return mCode;
+        }
+
+        @Override
         public DecodedType noFieldNames() {
             return this;
         }
@@ -85,6 +100,12 @@ public abstract sealed class DecodedType implements EncodableType {
         @Override
         public void encode(TypeEncoder encoder) {
             encoder.encodeByte(mCode);
+        }
+
+        @Override
+        public int doCompare(EncodableType other) {
+            // Nothing more to compare.
+            return 0;
         }
 
         @Override
@@ -182,6 +203,29 @@ public abstract sealed class DecodedType implements EncodableType {
                 mClassDesc = super.asClassDesc();
             }
             return mClassDesc;
+        }
+    }
+
+    public final static class CompositeT extends GeneratedT implements EncodableType.CompositeT {
+        private final List<DecodedType> mTypes;
+
+        CompositeT(List<DecodedType> types) {
+            mTypes = types;
+        }
+
+        @Override
+        public DecodedType noFieldNames() {
+            return this;
+        }
+
+        @Override
+        public int numFields() {
+            return mTypes.size();
+        }
+
+        @Override
+        public DecodedType fieldType(int index) {
+            return mTypes.get(index);
         }
     }
 

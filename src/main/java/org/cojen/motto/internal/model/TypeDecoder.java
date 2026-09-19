@@ -200,6 +200,23 @@ public final class TypeDecoder {
                 return new DecodedType.ClassT(decodePath(), decodePath());
             }
 
+            case EncodableType.T_COMPOSITE -> {
+                int numElements = decodeUnsignedVarInt();
+
+                List<DecodedType> types;
+
+                if (numElements == 0) {
+                    types = List.of();
+                } else {
+                    types = new ArrayList<DecodedType>(numElements);
+                    for (int i=0; i<numElements; i++) {
+                        types.add(decodeType());
+                    }
+                }
+
+                return new DecodedType.CompositeT(types);
+            }
+
             case EncodableType.T_TUPLE -> {
                 int numElements = decodeUnsignedVarInt();
 

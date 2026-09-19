@@ -100,7 +100,18 @@ public final class BaseNullType implements BaseObjectType, NullType {
     }
 
     @Override
+    public int typeCode() {
+        return T_NULL;
+    }
+
+    @Override
     public void encode(TypeEncoder encoder) {
         encoder.encodeByte(EncodableType.T_NULL);
+    }
+
+    @Override
+    public int doCompare(EncodableType other) {
+        // Nothing more to compare.
+        return 0;
     }
 }

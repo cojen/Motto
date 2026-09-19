@@ -54,6 +54,11 @@ public final class BaseBooleanType extends BasePrimitiveType implements BooleanT
     }
 
     @Override
+    public int typeCode() {
+        return T_BOOLEAN;
+    }
+
+    @Override
     public void encode(TypeEncoder encoder) {
         encoder.encodeByte(EncodableType.T_BOOLEAN);
     }

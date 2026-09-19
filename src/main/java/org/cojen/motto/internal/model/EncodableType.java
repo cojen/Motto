@@ -22,27 +22,28 @@ import java.util.List;
 
 import org.cojen.maker.Maker;
 
+import org.cojen.motto.internal.util.Utils;
+
 /**
  * @author Brian S. O'Neill
  * @see TypeEncoder
  */
-public interface EncodableType {
+public interface EncodableType extends Comparable<EncodableType> {
     public static final int T_UNSPECIFIED = 0, T_NULL = 1, T_VOID = 2, T_BOOLEAN = 3, T_CHAR = 4,
         T_BYTE = 5, T_SHORT = 6, T_INT = 7, T_LONG = 8, T_FLOAT = 9, T_DOUBLE = 10,
-        T_STRING = 11, T_ARRAY = 12, T_CLASS = 13, T_TUPLE = 14, T_FUNCTION = 15,
+        T_STRING = 11, T_ARRAY = 12, T_CLASS = 13, T_COMPOSITE = 14, T_TUPLE = 15, T_FUNCTION = 16,
 
-        // 16..19: reserved for future use
-
-        // FIXME: Define T_REFERENCE which is a simple wrapper around a collection of public
-        // anonymous fields. It's to be used for supporting inner functions which need to
-        // access variables in the outer lexical scope. Only use references when the variable
-        // isn't effectively final. Can this create confusing side-effects? Perhaps require a
-        // `reference` modifier.
+        // 17..19: reserved for future use
 
         T_INDEXED = 20; // not a real type code; real type codes must have a lower value
 
     // Generated classes are in the "motto" package.
     public static final String GENERATED_PREFIX = "motto";
+
+    /**
+     * @return T_* code
+     */
+    public int typeCode();
 
     /**
      * Returns this type without any field names, recursively.
@@ -69,6 +70,22 @@ public interface EncodableType {
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public default int compareTo(EncodableType other) {
+        int cmp = Integer.compare(typeCode(), other.typeCode());
+
+        if (cmp == 0) {
+            cmp = doCompare(other);
+        }
+
+        return cmp;
+    }
+
+    /**
+     * @param other should be the same type as this
+     */
+    public int doCompare(EncodableType other);
+
     private static void encodeIndexed(EncodableType type, TypeEncoder encoder) {
         int index = encoder.lookup(type);
         if (index >= 0) {
@@ -79,6 +96,11 @@ public interface EncodableType {
     }
 
     public static interface ArrayT extends EncodableType {
+        @Override
+        public default int typeCode() {
+            return T_ARRAY;
+        }
+
         @Override
         public default ClassDesc asClassDesc() {
             return arrayElementType().asClassDesc().arrayType();
@@ -102,10 +124,20 @@ public interface EncodableType {
             arrayElementType().encode(encoder);
         }
 
+        @Override
+        public default int doCompare(EncodableType other) {
+            return arrayElementType().compareTo(((ArrayT) other).arrayElementType());
+        }
+
         public EncodableType arrayElementType();
     }
 
     public static interface ClassT extends EncodableType {
+        @Override
+        public default int typeCode() {
+            return T_CLASS;
+        }
+
         @Override
         public default ClassDesc asClassDesc() {
             List<String> packagePath = packagePath();
@@ -169,6 +201,19 @@ public interface EncodableType {
             }
         }
 
+        @Override
+        public default int doCompare(EncodableType other) {
+            var otherClass = (ClassT) other;
+
+            int cmp = Utils.compare(packagePath(), otherClass.packagePath());
+
+            if (cmp == 0) {
+                cmp = Utils.compare(namePath(), otherClass.namePath());
+            }
+
+            return cmp;
+        }
+
         public List<String> packagePath();
 
         public List<String> namePath();
@@ -176,7 +221,64 @@ public interface EncodableType {
         public boolean isStringType();
     }
 
+    public static interface CompositeT extends EncodableType {
+        @Override
+        public default int typeCode() {
+            return T_COMPOSITE;
+        }
+
+        @Override
+        public default void encodePrepare(TypeEncoder encoder) {
+            if (encoder.prepare(this)) {
+                int numFields = numFields();
+                for (int i=0; i<numFields; i++) {
+                    fieldType(i).encodePrepare(encoder);
+                }
+            }
+        }
+
+        @Override
+        public default void encode(TypeEncoder encoder) {
+            encodeIndexed(this, encoder);
+        }
+
+        @Override
+        public default void doEncode(TypeEncoder encoder) {
+            encoder.encodeByte(T_COMPOSITE);
+            int numFields = numFields();
+            encoder.encodeUnsignedVarInt(numFields);
+            for (int i=0; i<numFields; i++) {
+                fieldType(i).encode(encoder);
+            }
+        }
+
+        @Override
+        public default int doCompare(EncodableType other) {
+            var otherComposite = (CompositeT) other;
+
+            int num = Math.min(numFields(), otherComposite.numFields());
+
+            for (int i=0; i<num; i++) {
+                int cmp = fieldType(i).compareTo(otherComposite.fieldType(i));
+                if (cmp != 0) {
+                    return cmp;
+                }
+            }
+
+            return Integer.compare(numFields(), otherComposite.numFields());
+        }
+
+        public int numFields();
+
+        public EncodableType fieldType(int index);
+    }
+
     public static interface TupleT extends EncodableType {
+        @Override
+        public default int typeCode() {
+            return T_TUPLE;
+        }
+
         @Override
         public default void encodePrepare(TypeEncoder encoder) {
             if (encoder.prepare(this)) {
@@ -205,6 +307,37 @@ public interface EncodableType {
                 fieldType(i).encode(encoder);
                 encoder.encodeString(fieldName(i));
             }
+        }
+
+        @Override
+        public default int doCompare(EncodableType other) {
+            var otherTuple = (TupleT) other;
+
+            int num = Math.min(numFields(), otherTuple.numFields());
+
+            for (int i=0; i<num; i++) {
+                int cmp = fieldType(i).compareTo(otherTuple.fieldType(i));
+                if (cmp != 0) {
+                    return cmp;
+                }
+
+                String thisName = fieldName(i);
+                String otherName = otherTuple.fieldName(i);
+
+                // Nulls ordered first.
+                if (thisName == null) {
+                    return otherName == null ? 0 : -1;
+                } else if (otherName == null) {
+                    return 1;
+                }
+
+                cmp = thisName.compareTo(otherName);
+                if (cmp != 0) {
+                    return cmp;
+                }
+            }
+
+            return Integer.compare(numFields(), otherTuple.numFields());
         }
 
         public int numFields();
@@ -244,6 +377,11 @@ public interface EncodableType {
 
     public static interface FunctionT extends EncodableType {
         @Override
+        public default int typeCode() {
+            return T_FUNCTION;
+        }
+
+        @Override
         public default void encodePrepare(TypeEncoder encoder) {
             if (encoder.prepare(this)) {
                 inputType().noFieldNames().encodePrepare(encoder);
@@ -261,6 +399,21 @@ public interface EncodableType {
             encoder.encodeByte(T_FUNCTION);
             outputType().noFieldNames().encode(encoder);
             inputType().noFieldNames().encode(encoder);
+        }
+
+        @Override
+        public default int doCompare(EncodableType other) {
+            var otherFunction = (FunctionT) other;
+
+            int cmp = outputType().noFieldNames()
+                .compareTo(otherFunction.outputType().noFieldNames());
+
+            if (cmp == 0) {
+                cmp = inputType().noFieldNames()
+                    .compareTo(otherFunction.inputType().noFieldNames());
+            }
+
+            return cmp;
         }
 
         public EncodableType outputType();

@@ -71,6 +71,11 @@ public final class BaseIntType extends BasePrimitiveType implements IntType {
     }
 
     @Override
+    public int typeCode() {
+        return T_INT;
+    }
+
+    @Override
     public void encode(TypeEncoder encoder) {
         encoder.encodeByte(EncodableType.T_INT);
     }

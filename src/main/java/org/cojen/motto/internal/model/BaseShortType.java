@@ -75,6 +75,11 @@ public final class BaseShortType extends BasePrimitiveType implements ShortType 
     }
 
     @Override
+    public int typeCode() {
+        return T_SHORT;
+    }
+
+    @Override
     public void encode(TypeEncoder encoder) {
         encoder.encodeByte(EncodableType.T_SHORT);
     }

@@ -59,6 +59,11 @@ public final class BaseDoubleType extends BasePrimitiveType implements DoubleTyp
     }
 
     @Override
+    public int typeCode() {
+        return T_DOUBLE;
+    }
+
+    @Override
     public void encode(TypeEncoder encoder) {
         encoder.encodeByte(EncodableType.T_DOUBLE);
     }

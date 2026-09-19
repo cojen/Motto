@@ -69,6 +69,11 @@ public final class BaseFloatType extends BasePrimitiveType implements FloatType 
     }
 
     @Override
+    public int typeCode() {
+        return T_FLOAT;
+    }
+
+    @Override
     public void encode(TypeEncoder encoder) {
         encoder.encodeByte(EncodableType.T_FLOAT);
     }

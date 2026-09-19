@@ -67,6 +67,9 @@ public final class TypeGenerator {
             byte[] bytes;
 
             switch (type) {
+                case DecodedType.CompositeT st -> {
+                    bytes = makeCompositeClass(className, st);
+                }
                 case DecodedType.TupleT tt -> {
                     bytes = makeTupleClass(className, tt);
                 }
@@ -93,6 +96,19 @@ public final class TypeGenerator {
             error.initCause(e);
             throw error;
         }
+    }
+
+    private static byte[] makeCompositeClass(String className, DecodedType.CompositeT type) {
+        ClassMaker cm = ClassMaker.beginExternal(className).public_().final_().synthetic();
+        cm.addConstructor().public_();
+
+        int num = type.numFields();
+
+        for (int i=0; i<num; i++) {
+            cm.addField(type.fieldType(i).asClassDesc(), String.valueOf(i)).public_();
+        }
+
+        return cm.finishBytes();
     }
 
     private static byte[] makeTupleClass(String className, DecodedType.TupleT type) {

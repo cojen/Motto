@@ -77,6 +77,11 @@ public final class BaseByteType extends BasePrimitiveType implements ByteType {
     }
 
     @Override
+    public int typeCode() {
+        return T_BYTE;
+    }
+
+    @Override
     public void encode(TypeEncoder encoder) {
         encoder.encodeByte(EncodableType.T_BYTE);
     }

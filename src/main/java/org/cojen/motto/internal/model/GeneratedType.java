@@ -24,7 +24,7 @@ import motto.TypeGenerator;
  * @author Brian S. O'Neill
  */
 abstract sealed class GeneratedType implements BaseType, EncodableType
-    permits BaseTupleType, BaseFunctionType
+    permits BaseCompositeType, BaseTupleType, BaseFunctionType
 {
     // Is used by NewClass such that calling asMakerType calls back into NewClass.generateType,
     // no matter where asMakerType is being called from.

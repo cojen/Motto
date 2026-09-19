@@ -59,6 +59,11 @@ public final class BaseLongType extends BasePrimitiveType implements LongType {
     }
 
     @Override
+    public int typeCode() {
+        return T_LONG;
+    }
+
+    @Override
     public void encode(TypeEncoder encoder) {
         encoder.encodeByte(EncodableType.T_LONG);
     }

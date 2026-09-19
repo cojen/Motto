@@ -54,6 +54,11 @@ public final class BaseVoidType extends BasePrimitiveType implements VoidType {
     }
 
     @Override
+    public int typeCode() {
+        return T_VOID;
+    }
+
+    @Override
     public void encode(TypeEncoder encoder) {
         encoder.encodeByte(EncodableType.T_VOID);
     }
