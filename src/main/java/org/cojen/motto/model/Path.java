@@ -21,12 +21,14 @@ import java.util.RandomAccess;
 
 import org.cojen.motto.internal.model.BasePath;
 
+import org.cojen.motto.internal.util.Utils;
+
 /**
  * Defines an immutable path of strings.
  *
  * @author Brian S. O'Neill
  */
-public sealed interface Path extends List<String>, RandomAccess permits BasePath {
+public sealed interface Path extends List<String>, RandomAccess, Comparable<Path> permits BasePath {
     /**
      * Returns a canonical empty path.
      */
@@ -71,6 +73,11 @@ public sealed interface Path extends List<String>, RandomAccess permits BasePath
      * Returns a Path over a range of elements.
      */
     public Path slice(int start, int size);
+
+    @Override
+    public default int compareTo(Path other) {
+        return Utils.compare(this, other);
+    }
 
     /**
      * Returns the path elements concatenated with '.' separators.
