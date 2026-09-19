@@ -108,6 +108,17 @@ public final class BaseFunctionType extends GeneratedType
     }
 
     @Override
+    public int canConvertTo(Type to) {
+        int code = super.canConvertTo(to);
+
+        if (code == Integer.MAX_VALUE && BaseType.isJavaLangObject(to)) {
+            code = 0;
+        }
+
+        return code;
+    }
+
+    @Override
     public int bindCompare(Type aParam, Type bParam) {
         if (aParam instanceof BaseFunctionType aft && bParam instanceof BaseFunctionType bft) {
             return inputType().bindCompare(aft.inputType(), bft.inputType());
