@@ -159,13 +159,15 @@ public abstract sealed class DecodedType implements EncodableType {
 
         @Override
         public boolean isStringType() {
-            return asClassDesc().descriptorString().equals("Ljava/lang/String;");
+            return mPackagePath.size() == 2 && mNamePath.size() == 1
+                && mNamePath.get(0).equals("String")
+                && mPackagePath.get(0).equals("java") && mPackagePath.get(1).equals("lang");
         }
 
         @Override
         public ClassDesc asClassDesc() {
             if (mClassDesc == null) {
-                mClassDesc = super.asClassDesc();
+                mClassDesc = EncodableType.ClassT.super.asClassDesc();
             }
             return mClassDesc;
         }
