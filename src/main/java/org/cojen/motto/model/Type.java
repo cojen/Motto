@@ -45,7 +45,7 @@ import org.cojen.motto.internal.model.BaseVoidType;
  * @author Brian S. O'Neill
  */
 public sealed interface Type
-    permits BaseType, UnspecifiedType, PrimitiveType, ObjectType, FunctionType
+    permits BaseType, UnspecifiedType, PrimitiveType, ObjectType
 {
     public static UnspecifiedType unspecified() {
         return BaseUnspecifiedType.THE;

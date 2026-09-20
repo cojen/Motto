@@ -17,6 +17,7 @@
 package org.cojen.motto.internal.model;
 
 import java.util.Objects;
+import java.util.Set;
 
 import org.cojen.motto.model.FunctionType;
 import org.cojen.motto.model.Item;
@@ -30,7 +31,7 @@ import org.cojen.motto.internal.util.InternSet;
  * @author Brian S. O'Neill
  */
 public final class BaseFunctionType extends GeneratedType
-    implements FunctionType, EncodableType.FunctionT
+    implements BaseObjectType, FunctionType, EncodableType.FunctionT
 {
     public static BaseFunctionType from(BaseType outputType, BaseType inputType) {
         return InternSet.apply(new BaseFunctionType(outputType, inputType));
@@ -54,23 +55,23 @@ public final class BaseFunctionType extends GeneratedType
     }
 
     @Override
-    public boolean isPrimitive() {
-        return false;
-    }
-
-    @Override
-    public boolean isObject() {
-        return false;
-    }
-
-    @Override
     public boolean isInterface() {
-        return false;
+        return true;
     }
 
     @Override
     public boolean isArray() {
         return false;
+    }
+
+    @Override
+    public BaseClassTypeItem superType() {
+        return LoadedClass.classFrom(Object.class);
+    }
+
+    @Override
+    public Set<BaseClassTypeItem> interfaces() {
+        return Set.of();
     }
 
     @Override

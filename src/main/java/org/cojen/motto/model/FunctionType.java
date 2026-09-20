@@ -23,7 +23,7 @@ import org.cojen.motto.internal.model.BaseFunctionType;
  *
  * @author Brian S. O'Neill
  */
-public sealed interface FunctionType extends Type permits BaseFunctionType {
+public sealed interface FunctionType extends ObjectType permits BaseFunctionType {
     public Type outputType();
 
     public Type inputType();

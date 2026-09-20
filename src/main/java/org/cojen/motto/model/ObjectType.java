@@ -26,7 +26,7 @@ import org.cojen.motto.internal.model.BaseObjectType;
  * @author Brian S. O'Neill
  */
 public sealed interface ObjectType extends Type
-    permits BaseObjectType, NullType, ArrayType, ClassTypeItem, TupleType
+    permits BaseObjectType, NullType, ArrayType, ClassTypeItem, TupleType, FunctionType
 {
     /**
      * Returns the superclass of this type, which should only be null if this type is
