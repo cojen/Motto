@@ -33,6 +33,13 @@ public interface ClassFinder {
     public BaseClassTypeItem findClass(BasePath packagePath, String className) throws IOException;
 
     /**
+     * Tries to find a class by package name and class name.
+     *
+     * @return null if not found
+     */
+    public BaseClassTypeItem findClass(BasePath packagePath, BasePath namePath) throws IOException;
+
+    /**
      * Tries to loads class bytes by package name and class name.
      *
      * @param className outer or inner class name, no package name, no dots (usually '$' instead)

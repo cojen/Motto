@@ -269,18 +269,16 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
                                              BasePath packagePath, String className)
         throws IOException
     {
-        return findClass(this, el, null, packagePath, BasePath.parse(className, '$'));
+        return findClass(this, el, packagePath, BasePath.parse(className, '$'));
     }
 
     /**
      * @param root first instance in the call stack
-     * @param outer is null for outer classes
      * @param packagePath required
      * @param namePath required (first element is the outer class name)
      * @return null if not found
      */
     abstract BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                         BaseClassTypeItem outer,
                                          BasePath packagePath, BasePath namePath)
         throws IOException;
 
@@ -308,6 +306,14 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
     @Override // ClassFinder
     public BaseClassTypeItem findClass(BasePath packagePath, String className) throws IOException {
         return findClass(null, packagePath, className);
+    }
+
+    /**
+     * @return null if not found
+     */
+    @Override // ClassFinder
+    public BaseClassTypeItem findClass(BasePath packagePath, BasePath namePath) throws IOException {
+        return findClass(this, null, packagePath, namePath);
     }
 
     /**
@@ -363,13 +369,7 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
             .append(className).append(".class").toString();
     }
 
-    private BaseClassTypeItem registerExternalClass(BaseClassTypeItem outer,
-                                                    BasePath packagePath, BasePath namePath)
-    {
-        if (outer != null) {
-            // FIXME: Do something with the outer param.
-            throw null;
-        }
+    private BaseClassTypeItem registerExternalClass(BasePath packagePath, BasePath namePath) {
         var clazz = new ExternalClass(packagePath, namePath, this);
         return register(packagePath, namePath, clazz);
     }
@@ -454,11 +454,10 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
-            return source().findClass(root, el, outer, packagePath, namePath);
+            return source().findClass(root, el, packagePath, namePath);
         }
 
         @Override
@@ -511,7 +510,6 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer,
                                     BasePath packagePath, BasePath namePath)
         {
             return null;
@@ -546,7 +544,6 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
@@ -611,7 +608,6 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
@@ -620,7 +616,7 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
             if (item == null) {
                 // If found, the method should have called registerExternalClass, which in turn
                 // will call the register method of this class to cache the item.
-                item = mSource.findClass(root, el, outer, packagePath, namePath);
+                item = mSource.findClass(root, el, packagePath, namePath);
             }
 
             return item;
@@ -749,12 +745,11 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
             for (ClassRegistry source : mSources) {
-                BaseClassTypeItem item = source.findClass(root, el, outer, packagePath, namePath);
+                BaseClassTypeItem item = source.findClass(root, el, packagePath, namePath);
                 if (item != null) {
                     return item;
                 }
@@ -816,7 +811,6 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
         @Override
         @SuppressWarnings("unchecked")
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
@@ -825,7 +819,7 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
             for (int i=0; i<tasks.length; i++) {
                 ClassRegistry source = mSources[i];
                 tasks[i] = mExecutor.submit
-                    (() -> source.findClass(root, el, outer, packagePath, namePath));
+                    (() -> source.findClass(root, el, packagePath, namePath));
             }
 
             BaseClassTypeItem result = null;
@@ -912,14 +906,13 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
             File file = new File(expandDir(packagePath), fileName(namePath));
 
             if (exists(file)) {
-                return root.registerExternalClass(outer, packagePath, namePath);
+                return root.registerExternalClass(packagePath, namePath);
             }
 
             return null;
@@ -982,7 +975,6 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
@@ -992,7 +984,7 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
                 return null;
             }
 
-            return root.registerExternalClass(outer, packagePath, namePath);
+            return root.registerExternalClass(packagePath, namePath);
         }
 
         @Override
@@ -1036,7 +1028,6 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
@@ -1053,7 +1044,7 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
                 if (Files.isSymbolicLink(p) && Files.isDirectory(p)) {
                     java.nio.file.Path fullPath = p.resolve(filePath);
                     if (Files.exists(fullPath)) {
-                        return root.registerExternalClass(outer, packagePath, namePath);
+                        return root.registerExternalClass(packagePath, namePath);
                     }
                 }
             }
@@ -1116,7 +1107,6 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
 
         @Override
         BaseClassTypeItem findClass(ClassRegistry root, ErrorListener el,
-                                    BaseClassTypeItem outer,
                                     BasePath packagePath, BasePath namePath)
             throws IOException
         {
@@ -1126,7 +1116,7 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
                 return null;
             }
 
-            return root.registerExternalClass(outer, packagePath, namePath);
+            return root.registerExternalClass(packagePath, namePath);
         }
 
         @Override

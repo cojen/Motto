@@ -47,6 +47,8 @@ import org.cojen.maker.MethodMaker;
 
 import org.cojen.motto.model.CallSignature;
 
+import org.cojen.motto.internal.compiler.CompileException;
+
 /**
  * Access to a class which isn't loaded into the JVM as a Class object.
  *
@@ -57,6 +59,8 @@ public final class ExternalClass extends BaseClassTypeItem
     implements org.cojen.maker.Type.Provider
 {
     private final ClassFinder mFinder;
+
+    private volatile BaseClassTypeItem mOuterClass;
 
     /**
      * @param finder loads the class bytes by package name and class name; can return null if
@@ -70,22 +74,37 @@ public final class ExternalClass extends BaseClassTypeItem
     /**
      * Force this class to be loaded if not done so already.
      */
-    public void load() throws NoClassDefFoundError {
+    public void load() {
         if ((super.modifierBits() & Modifiers.LOADED) == 0) {
             try {
                 doLoad();
             } catch (IOException e) {
-                var ex = new NoClassDefFoundError(displayName());
-                ex.initCause(e);
-                throw ex;
+                throw new CompileException(displayName(), e);
             }
         }
     }
 
     @Override
-    public ExternalClass outerType() {
-        // FIXME: outerType
-        throw null;
+    public BaseClassTypeItem outerType() {
+        BaseClassTypeItem outer = mOuterClass;
+
+        if (outer == null) {
+            BasePath namePath = namePath();
+
+            if (namePath.size() <= 1) {
+                outer = this;
+            } else {
+                try {
+                    outer = mFinder.findClass(packagePath(), namePath.trimLastNonCanonical());
+                } catch (IOException e) {
+                    new CompileException(displayName(), e);
+                }
+            }
+
+            mOuterClass = outer;
+        }
+
+        return outer == this ? null : outer;
     }
 
     @Override
