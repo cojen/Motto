@@ -17,6 +17,7 @@
 package org.cojen.motto.internal.model;
 
 import java.util.Arrays;
+import java.util.Set;
 
 import org.cojen.motto.model.Item;
 import org.cojen.motto.model.Type;
@@ -28,7 +29,9 @@ import org.cojen.motto.internal.util.InternSet;
  *
  * @author Brian S. O'Neill
  */
-public final class BaseCompositeType extends GeneratedType implements EncodableType.CompositeT {
+public final class BaseCompositeType extends GeneratedType implements
+    BaseObjectType, EncodableType.CompositeT
+{
     /**
      * @param fieldTypes should be sorted to reduce the amount of generated composite types
      */
@@ -59,16 +62,6 @@ public final class BaseCompositeType extends GeneratedType implements EncodableT
     }
 
     @Override
-    public boolean isPrimitive() {
-        return false;
-    }
-
-    @Override
-    public boolean isObject() {
-        return false;
-    }
-
-    @Override
     public boolean isInterface() {
         return false;
     }
@@ -76,6 +69,16 @@ public final class BaseCompositeType extends GeneratedType implements EncodableT
     @Override
     public boolean isArray() {
         return false;
+    }
+
+    @Override
+    public BaseClassTypeItem superType() {
+        return LoadedClass.classFrom(Object.class);
+    }
+
+    @Override
+    public Set<BaseClassTypeItem> interfaces() {
+        return Set.of();
     }
 
     @Override
