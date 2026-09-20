@@ -49,7 +49,6 @@ import java.util.jar.JarFile;
 
 import org.cojen.motto.internal.model.BaseClassTypeItem;
 import org.cojen.motto.internal.model.BasePath;
-import org.cojen.motto.internal.model.ClassFinder;
 import org.cojen.motto.internal.model.ExternalClass;
 import org.cojen.motto.internal.model.NewClass;
 
@@ -59,7 +58,7 @@ import org.cojen.motto.internal.model.NewClass;
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
+public abstract sealed class ClassRegistry implements Closeable {
     /**
      * Returns an instance which first looks for external classes in the Java runtime (JRT),
      * then the boot modules, and then looks in the given directories and jar files.
@@ -246,7 +245,9 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
     /**
      * @return the given class if registered, or else an existing class
      */
-    BaseClassTypeItem register(BasePath packagePath, BasePath namePath, BaseClassTypeItem clazz) {
+    public <C extends BaseClassTypeItem> C register(BasePath packagePath, BasePath namePath,
+                                                    C clazz)
+    {
         // Only expected to be implemented by the Cached class.
         throw new UnsupportedOperationException();
     }
@@ -256,6 +257,14 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
      * registered NewClass instances which are currently being compiled.
      */
     public abstract boolean packageExists(BasePath packagePath) throws IOException;
+
+    /**
+     * @param className outer or inner class name, no package name, no dots (usually '$' instead)
+     * @return null if not found
+     */
+    public BaseClassTypeItem findClass(BasePath packagePath, String className) throws IOException {
+        return findClass(null, packagePath, className);
+    }
 
     /**
      * Tries to find an outer or inner class by its package and name. Searches the class path,
@@ -283,6 +292,13 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
         throws IOException;
 
     /**
+     * @param className outer or inner class name, no package name, no dots (usually '$' instead)
+     * @return null if not found
+     */
+    public abstract byte[] loadClassBytes(BasePath packagePath, String className)
+        throws IOException;
+
+    /**
      * Returns a new ClassLoader which finds existing classes, but it never finds newly
      * registered NewClass instances.
      */
@@ -298,31 +314,6 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
      * @return null if nothing is loaded
      */
     abstract ClassRegistry forExternal();
-
-    /**
-     * @param className outer or inner class name, no package name, no dots (usually '$' instead)
-     * @return null if not found
-     */
-    @Override // ClassFinder
-    public BaseClassTypeItem findClass(BasePath packagePath, String className) throws IOException {
-        return findClass(null, packagePath, className);
-    }
-
-    /**
-     * @return null if not found
-     */
-    @Override // ClassFinder
-    public BaseClassTypeItem findClass(BasePath packagePath, BasePath namePath) throws IOException {
-        return findClass(this, null, packagePath, namePath);
-    }
-
-    /**
-     * @param className outer or inner class name, no package name, no dots (usually '$' instead)
-     * @return null if not found
-     */
-    @Override // ClassFinder
-    public abstract byte[] loadClassBytes(BasePath packagePath, String className)
-        throws IOException;
 
     /**
      * Returns a String like so: "Map.class"
@@ -369,7 +360,7 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
             .append(className).append(".class").toString();
     }
 
-    private BaseClassTypeItem registerExternalClass(BasePath packagePath, BasePath namePath) {
+    private ExternalClass registerExternalClass(BasePath packagePath, BasePath namePath) {
         var clazz = new ExternalClass(packagePath, namePath, this);
         return register(packagePath, namePath, clazz);
     }
@@ -582,8 +573,9 @@ public abstract sealed class ClassRegistry implements Closeable, ClassFinder {
          * @return the given class if registered, or else an existing class
          */
         @Override
-        BaseClassTypeItem register(BasePath packagePath, BasePath namePath,
-                                   BaseClassTypeItem clazz)
+        @SuppressWarnings("unchecked")
+        public BaseClassTypeItem register(BasePath packagePath, BasePath namePath,
+                                          BaseClassTypeItem clazz)
         {
             ConcurrentHashMap<BasePath, BaseClassTypeItem> byClass = byClass(packagePath);
             BaseClassTypeItem existing = byClass.putIfAbsent(namePath.canonical(), clazz);

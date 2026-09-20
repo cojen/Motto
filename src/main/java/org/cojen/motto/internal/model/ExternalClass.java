@@ -47,6 +47,7 @@ import org.cojen.maker.MethodMaker;
 
 import org.cojen.motto.model.CallSignature;
 
+import org.cojen.motto.internal.compiler.ClassRegistry;
 import org.cojen.motto.internal.compiler.CompileException;
 
 /**
@@ -58,17 +59,25 @@ import org.cojen.motto.internal.compiler.CompileException;
 public final class ExternalClass extends BaseClassTypeItem
     implements org.cojen.maker.Type.Provider
 {
-    private final ClassFinder mFinder;
+    private final ClassRegistry mRegistry;
 
     private volatile BaseClassTypeItem mOuterClass;
 
     /**
-     * @param finder loads the class bytes by package name and class name; can return null if
+     * @param registry loads the class bytes by package name and class name; can return null if
      * not found
      */
-    public ExternalClass(BasePath packagePath, BasePath namePath, ClassFinder finder) {
+    public ExternalClass(BasePath packagePath, BasePath namePath, ClassRegistry registry) {
         super(0, packagePath.demangle(), namePath.demangle());
-        mFinder = Objects.requireNonNull(finder);
+        mRegistry = Objects.requireNonNull(registry);
+    }
+
+    /**
+     * Construct an outer class.
+     */
+    private ExternalClass(ExternalClass inner) {
+        super(0, inner.packagePath(), inner.namePath().trimLast());
+        mRegistry = inner.mRegistry;
     }
 
     /**
@@ -94,12 +103,9 @@ public final class ExternalClass extends BaseClassTypeItem
             if (namePath.size() <= 1) {
                 outer = this;
             } else {
-                try {
-                    outer = mFinder.findClass
-                        (packagePath(), namePath.trimLastNonCanonical().mangle());
-                } catch (IOException e) {
-                    new CompileException(displayName(), e);
-                }
+                outer = new ExternalClass(this);
+                outer = mRegistry.register
+                    (outer.packagePath().mangle(), outer.namePath().mangle(), outer);
             }
 
             mOuterClass = outer;
@@ -180,7 +186,7 @@ public final class ExternalClass extends BaseClassTypeItem
         // Set LOADED early in case the load fails, so as not to try loading again.
         setModifierBits(super.modifierBits() | Modifiers.LOADED);
 
-        byte[] classBytes = mFinder.loadClassBytes(packagePath(), mangledName());
+        byte[] classBytes = mRegistry.loadClassBytes(packagePath(), mangledName());
 
         if (classBytes == null) {
             throw new NoClassDefFoundError(displayName());
@@ -268,7 +274,9 @@ public final class ExternalClass extends BaseClassTypeItem
                         ClassDesc innerDesc = info.innerClass().asSymbol();
                         if (thisPackage.equals(innerDesc.packageName())) {
                             BasePath namePath = outerNamePath.append(innerName.stringValue());
-                            tryAddInnerClass(new ExternalClass(packagePath, namePath, mFinder));
+                            var inner = new ExternalClass(packagePath, namePath, mRegistry);
+                            inner = mRegistry.register(packagePath, namePath, inner);
+                            tryAddInnerClass(inner);
                         }
                     }
                 }
@@ -281,7 +289,7 @@ public final class ExternalClass extends BaseClassTypeItem
     }
 
     private BaseClassTypeItem toClassTypeItem(ClassDesc desc) throws IOException {
-        return mFinder.findClass(BasePath.parse(desc.packageName(), '.'), desc.displayName());
+        return mRegistry.findClass(BasePath.parse(desc.packageName(), '.'), desc.displayName());
     }
 
     private BaseType toType(ClassDesc desc) throws IOException {
