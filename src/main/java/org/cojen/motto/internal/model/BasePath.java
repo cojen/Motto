@@ -182,6 +182,8 @@ public abstract sealed class BasePath extends AbstractList<String> implements Pa
         return this;
     }
 
+    public abstract BasePath mangle();
+
     public abstract BasePath demangle();
 
     /**
@@ -278,6 +280,12 @@ public abstract sealed class BasePath extends AbstractList<String> implements Pa
         }
 
         @Override
+        public BasePath mangle() {
+            return this;
+        }
+
+
+        @Override
         public BasePath demangle() {
             return this;
         }
@@ -336,6 +344,12 @@ public abstract sealed class BasePath extends AbstractList<String> implements Pa
         }
 
         @Override
+        public BasePath mangle() {
+            String element = Maker.mangle(mElement);
+            return element.equals(mElement) ? this : from(element);
+        }
+
+        @Override
         public BasePath demangle() {
             String element = Maker.demangle(mElement);
             return element.equals(mElement) ? this : from(element);
@@ -391,6 +405,24 @@ public abstract sealed class BasePath extends AbstractList<String> implements Pa
             } else {
                 return size == 0 ? Empty.THE : new Single(mElements[start]);
             }
+        }
+
+        @Override
+        public BasePath mangle() {
+            String[] elements = mElements;
+
+            for (int i=0; i<elements.length; i++) {
+                String element = elements[i];
+                String mangled = Maker.mangle(element);
+                if (!mangled.equals(element)) {
+                    if (elements == mElements) {
+                        elements = mElements.clone();
+                    }
+                    elements[i] = mangled;
+                }
+            }
+
+            return elements == mElements ? this : InternSet.apply(new Multi(elements));
         }
 
         @Override
@@ -470,6 +502,24 @@ public abstract sealed class BasePath extends AbstractList<String> implements Pa
         public Multi canonical() {
             return InternSet.apply
                 (new Multi(Arrays.copyOfRange(mElements, mStart, mStart + mLength)));
+        }
+
+        @Override
+        public BasePath mangle() {
+            String[] elements = null;
+
+            for (int i=mStart; i<mLength; i++) {
+                String element = mElements[i];
+                String mangled = Maker.mangle(element);
+                if (!mangled.equals(element)) {
+                    if (elements == null) {
+                        elements = Arrays.copyOfRange(mElements, mStart, mStart + mLength);
+                    }
+                    elements[i - mStart] = mangled;
+                }
+            }
+
+            return elements == null ? this : InternSet.apply(new Multi(elements));
         }
 
         @Override

@@ -95,7 +95,8 @@ public final class ExternalClass extends BaseClassTypeItem
                 outer = this;
             } else {
                 try {
-                    outer = mFinder.findClass(packagePath(), namePath.trimLastNonCanonical());
+                    outer = mFinder.findClass
+                        (packagePath(), namePath.trimLastNonCanonical().mangle());
                 } catch (IOException e) {
                     new CompileException(displayName(), e);
                 }
