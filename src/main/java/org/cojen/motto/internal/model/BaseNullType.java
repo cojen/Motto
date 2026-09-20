@@ -16,6 +16,8 @@
 
 package org.cojen.motto.internal.model;
 
+import java.util.Set;
+
 import org.cojen.motto.model.Item;
 import org.cojen.motto.model.NullType;
 import org.cojen.motto.model.ObjectType;
@@ -75,6 +77,11 @@ public final class BaseNullType implements BaseObjectType, NullType {
     @Override
     public BaseClassTypeItem superType() {
         return null;
+    }
+
+    @Override
+    public Set<BaseClassTypeItem> interfaces() {
+        return Set.of();
     }
 
     @Override

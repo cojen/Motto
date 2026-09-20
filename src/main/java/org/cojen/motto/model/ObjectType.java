@@ -16,6 +16,8 @@
 
 package org.cojen.motto.model;
 
+import java.util.Set;
+
 import org.cojen.motto.internal.model.BaseObjectType;
 
 /**
@@ -31,4 +33,9 @@ public sealed interface ObjectType extends Type
      * java.lang.Object or the null type.
      */
     public ClassTypeItem superType();
+
+    /**
+     * Returns the non-null set of interfaces that this object implements.
+     */
+    public Set<? extends ClassTypeItem> interfaces();
 }

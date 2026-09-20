@@ -16,8 +16,6 @@
 
 package org.cojen.motto.model;
 
-import java.util.Set;
-
 import org.cojen.motto.internal.model.BaseClassTypeItem;
 
 /**
@@ -40,11 +38,6 @@ public sealed interface ClassTypeItem extends ObjectType, Item permits BaseClass
     public default ClassTypeItem nearestClass() {
         return this;
     }
-
-    /**
-     * Returns the non-null set of interfaces that this class implements.
-     */
-    public Set<? extends ClassTypeItem> interfaces();
 
     /**
      * Returns the package path for this type.

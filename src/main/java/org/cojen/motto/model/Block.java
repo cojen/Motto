@@ -124,7 +124,7 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
      * Terminate a block and retuen a value, possibly void. A return exits the current context,
      * which might be a method, a constructor, or a macro. Returning from a macro doesn't exit
      * the calling method or constructor. Like a method, it returns control to the point after
-     * the macro call.
+     * the invocation.
      *
      * @param result a Binding or a constant
      * @throws TerminatedBlockException if this block is terminated

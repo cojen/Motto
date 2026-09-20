@@ -17,6 +17,7 @@
 package org.cojen.motto.internal.model;
 
 import java.util.Objects;
+import java.util.Set;
 
 import org.cojen.motto.model.ArrayType;
 import org.cojen.motto.model.Item;
@@ -120,6 +121,11 @@ public final class BaseArrayType implements BaseObjectType, ArrayType, Encodable
     @Override
     public BaseClassTypeItem superType() {
         return LoadedClass.classFrom(Object.class);
+    }
+
+    @Override
+    public Set<BaseClassTypeItem> interfaces() {
+        return Set.of();
     }
 
     @Override

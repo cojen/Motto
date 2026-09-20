@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Set;
 
 import java.util.function.Supplier;
 
@@ -169,6 +170,11 @@ public sealed abstract class BaseTupleType extends GeneratedType
     @Override
     public BaseClassTypeItem superType() {
         return LoadedClass.classFrom(Object.class);
+    }
+
+    @Override
+    public Set<BaseClassTypeItem> interfaces() {
+        return Set.of();
     }
 
     @Override
