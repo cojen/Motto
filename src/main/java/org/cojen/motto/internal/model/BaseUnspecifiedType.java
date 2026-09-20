@@ -62,12 +62,7 @@ public final class BaseUnspecifiedType implements BaseType, UnspecifiedType {
     }
 
     @Override
-    public BaseType box() {
-        return this;
-    }
-
-    @Override
-    public final boolean isEquivalentTo(Type other) {
+    public boolean isEquivalentTo(Type other) {
         // BaseUnspecifiedType is a singleton.
         return this == other;
     }
