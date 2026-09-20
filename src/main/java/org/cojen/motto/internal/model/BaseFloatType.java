@@ -49,7 +49,8 @@ public final class BaseFloatType extends BasePrimitiveType implements FloatType 
         return switch (other.typeCode()) {
             case T_CHAR, T_BYTE, T_SHORT -> this;
             case T_DOUBLE -> other;
-            case T_INT, T_LONG -> LoadedClass.classFrom(Number.class);
+            case T_INT -> BaseDoubleType.THE;
+            case T_LONG -> LoadedClass.classFrom(Number.class);
             default -> LoadedClass.forObject();
         };
     }

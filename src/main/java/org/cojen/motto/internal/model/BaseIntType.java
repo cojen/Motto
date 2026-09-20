@@ -50,7 +50,7 @@ public final class BaseIntType extends BasePrimitiveType implements IntType {
         return switch (other.typeCode()) {
             case T_CHAR, T_BYTE, T_SHORT -> this;
             case T_LONG, T_DOUBLE -> other;
-            case T_FLOAT -> LoadedClass.classFrom(Number.class);
+            case T_FLOAT -> BaseDoubleType.THE;
             default -> LoadedClass.forObject();
         };
     }
