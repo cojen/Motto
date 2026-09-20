@@ -42,8 +42,17 @@ public final class BaseIntType extends BasePrimitiveType implements IntType {
 
     @Override
     public BaseClassTypeItem box() {
-        // FIXME: box
-        throw null;
+        return LoadedClass.classFrom(Integer.class);
+    }
+
+    @Override
+    BaseType doInferredType(BasePrimitiveType other) {
+        return switch (other.typeCode()) {
+            case T_CHAR, T_BYTE, T_SHORT -> this;
+            case T_LONG, T_DOUBLE -> other;
+            case T_FLOAT -> LoadedClass.classFrom(Number.class);
+            default -> LoadedClass.forObject();
+        };
     }
 
     @Override

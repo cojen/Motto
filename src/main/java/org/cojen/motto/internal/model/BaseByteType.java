@@ -45,8 +45,15 @@ public final class BaseByteType extends BasePrimitiveType implements ByteType {
 
     @Override
     public BaseClassTypeItem box() {
-        // FIXME: box
-        throw null;
+        return LoadedClass.classFrom(Byte.class);
+    }
+
+    @Override
+    BaseType doInferredType(BasePrimitiveType other) {
+        return switch (other.typeCode()) {
+            case T_SHORT, T_INT, T_LONG, T_FLOAT, T_DOUBLE -> other;
+            default -> LoadedClass.forObject();
+        };
     }
 
     @Override

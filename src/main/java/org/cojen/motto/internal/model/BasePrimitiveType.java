@@ -71,6 +71,24 @@ public abstract sealed class BasePrimitiveType implements BaseType, PrimitiveTyp
     }
 
     @Override
+    public BaseType inferredType(BaseType other) {
+        if (equals(other) || other == BaseUnspecifiedType.THE) {
+            return this;
+        }
+
+        if (!(other instanceof BasePrimitiveType otherPrim)) {
+            return box().inferredType(other.box());
+        }
+
+        return doInferredType(otherPrim);
+    }
+
+    /**
+     * @param other not the same as this type
+     */
+    abstract BaseType doInferredType(BasePrimitiveType other);
+
+    @Override
     public final int canConvertTo(Type to) {
         int code = BaseType.super.canConvertTo(to);
 

@@ -39,8 +39,12 @@ public final class BaseBooleanType extends BasePrimitiveType implements BooleanT
 
     @Override
     public BaseClassTypeItem box() {
-        // FIXME: box
-        throw null;
+        return LoadedClass.classFrom(Boolean.class);
+    }
+
+    @Override
+    BaseType doInferredType(BasePrimitiveType other) {
+        return LoadedClass.forObject();
     }
 
     @Override

@@ -248,6 +248,16 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     /**
+     * Compares this type to another and returns a common type which can represent either. The
+     * returned type shouldn't require any conversion other than boxing. For example, the
+     * inferred type for double and long is Number.
+     *
+     * <p>If a common type doesn't exist, null is returned. This happens when one type is void
+     * and the other isn't.
+     */
+    public BaseType inferredType(BaseType other);
+
+    /**
      * Checks if a type can be converted without losing information. Lower codes have a cheaper
      * conversion cost.
      *

@@ -39,8 +39,16 @@ public final class BaseLongType extends BasePrimitiveType implements LongType {
 
     @Override
     public BaseClassTypeItem box() {
-        // FIXME: box
-        throw null;
+        return LoadedClass.classFrom(Long.class);
+    }
+
+    @Override
+    BaseType doInferredType(BasePrimitiveType other) {
+        return switch (other.typeCode()) {
+            case T_CHAR, T_BYTE, T_SHORT, T_INT -> this;
+            case T_FLOAT, T_DOUBLE -> LoadedClass.classFrom(Number.class);
+            default -> LoadedClass.forObject();
+        };
     }
 
     @Override

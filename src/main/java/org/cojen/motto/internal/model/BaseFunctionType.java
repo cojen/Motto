@@ -66,7 +66,7 @@ public final class BaseFunctionType extends GeneratedType
 
     @Override
     public BaseClassTypeItem superType() {
-        return LoadedClass.classFrom(Object.class);
+        return LoadedClass.forObject();
     }
 
     @Override

@@ -38,9 +38,20 @@ public final class BaseVoidType extends BasePrimitiveType implements VoidType {
     }
 
     @Override
+    public BaseType inferredType(BaseType other) {
+        // BaseVoidType is a singleton.
+        return (this == other || other == BaseUnspecifiedType.THE) ? this : null;
+    }
+
+    // Not expected to be called because inferredType is overridden.
+    @Override
+    BaseType doInferredType(BasePrimitiveType other) {
+        return inferredType(other);
+    }
+
+    @Override
     public BaseClassTypeItem box() {
-        // FIXME: box
-        throw null;
+        return LoadedClass.classFrom(Void.class);
     }
 
     @Override

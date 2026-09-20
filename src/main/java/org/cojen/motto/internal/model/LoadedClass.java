@@ -56,6 +56,10 @@ public final class LoadedClass extends BaseClassTypeItem {
         return CACHE.computeIfAbsent(clazz, k -> new LoadedClass(clazz));
     }
 
+    public static LoadedClass forObject() {
+        return classFrom(Object.class);
+    }
+
     private final Class<?> mClass;
 
     private volatile LoadedClass mOuterClass;

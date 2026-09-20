@@ -44,8 +44,16 @@ public final class BaseShortType extends BasePrimitiveType implements ShortType 
 
     @Override
     public BaseClassTypeItem box() {
-        // FIXME: box
-        throw null;
+        return LoadedClass.classFrom(Short.class);
+    }
+
+    @Override
+    BaseType doInferredType(BasePrimitiveType other) {
+        return switch (other.typeCode()) {
+            case T_BYTE -> this;
+            case T_INT, T_LONG, T_FLOAT, T_DOUBLE -> other;
+            default -> LoadedClass.forObject();
+        };
     }
 
     @Override

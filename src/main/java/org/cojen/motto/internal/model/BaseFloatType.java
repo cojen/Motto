@@ -41,8 +41,17 @@ public final class BaseFloatType extends BasePrimitiveType implements FloatType 
 
     @Override
     public BaseClassTypeItem box() {
-        // FIXME: box
-        throw null;
+        return LoadedClass.classFrom(Float.class);
+    }
+
+    @Override
+    BaseType doInferredType(BasePrimitiveType other) {
+        return switch (other.typeCode()) {
+            case T_CHAR, T_BYTE, T_SHORT -> this;
+            case T_DOUBLE -> other;
+            case T_INT, T_LONG -> LoadedClass.classFrom(Number.class);
+            default -> LoadedClass.forObject();
+        };
     }
 
     @Override

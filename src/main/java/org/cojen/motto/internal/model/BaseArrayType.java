@@ -120,7 +120,7 @@ public final class BaseArrayType implements BaseObjectType, ArrayType, Encodable
 
     @Override
     public BaseClassTypeItem superType() {
-        return LoadedClass.classFrom(Object.class);
+        return LoadedClass.forObject();
     }
 
     @Override

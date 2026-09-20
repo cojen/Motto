@@ -39,8 +39,16 @@ public final class BaseDoubleType extends BasePrimitiveType implements DoubleTyp
 
     @Override
     public BaseClassTypeItem box() {
-        // FIXME: box
-        throw null;
+        return LoadedClass.classFrom(Double.class);
+    }
+
+    @Override
+    BaseType doInferredType(BasePrimitiveType other) {
+        return switch (other.typeCode()) {
+            case T_CHAR, T_BYTE, T_SHORT, T_INT, T_FLOAT -> this;
+            case T_LONG -> LoadedClass.classFrom(Number.class);
+            default -> LoadedClass.forObject();
+        };
     }
 
     @Override

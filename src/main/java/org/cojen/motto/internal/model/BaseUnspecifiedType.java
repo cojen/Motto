@@ -83,6 +83,11 @@ public final class BaseUnspecifiedType implements BaseType, UnspecifiedType {
     }
 
     @Override
+    public BaseType inferredType(BaseType other) {
+        return other;
+    }
+
+    @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.from(Object.class);
     }
