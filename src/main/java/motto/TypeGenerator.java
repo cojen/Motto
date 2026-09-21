@@ -26,6 +26,10 @@ import org.cojen.motto.internal.model.TheTypeGenerator;
  * @author Brian S. O'Neill
  */
 public final class TypeGenerator {
+    static {
+        TheTypeGenerator.register(MethodHandles.lookup());
+    }
+
     private TypeGenerator() {
     }
 
@@ -33,6 +37,6 @@ public final class TypeGenerator {
      * @param name generated class name with a slash separator
      */
     public static Class<?> generate(String name) {
-        return TheTypeGenerator.generateFromName(MethodHandles.lookup(), name);
+        return TheTypeGenerator.generateFromName(name);
     }
 }

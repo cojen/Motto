@@ -29,25 +29,47 @@ import org.cojen.maker.MethodMaker;
  * @see motto.TypeGenerator
  */
 public final class TheTypeGenerator {
+    // A lookup object in the "motto" package.
+    private static volatile MethodHandles.Lookup LOOKUP;
+
+    static {
+        try {
+            // Force the TypeGenerator class to call the register method.
+            MethodHandles.lookup().ensureInitialized(motto.TypeGenerator.class);
+        } catch (IllegalAccessException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
     private TheTypeGenerator() {
+    }
+
+    // Called by TypeGenerator.
+    public static void register(MethodHandles.Lookup lookup) {
+        if (lookup.lookupClass() != motto.TypeGenerator.class) {
+            throw new IllegalArgumentException();
+        }
+        LOOKUP = lookup;
     }
 
     /**
      * @param name generated class name with a slash separator
      */
-    public static Class<?> generateFromName(MethodHandles.Lookup lookup, String name) {
+    public static Class<?> generateFromName(String name) {
         String prefix = EncodableType.GENERATED_PREFIX;
         if (!name.startsWith(prefix + '/')) {
             throw new IllegalArgumentException();
         }
-        return generateFromEncoded(lookup, name.substring(prefix.length() + 1));
+        return generateFromEncoded(name.substring(prefix.length() + 1));
     }
 
     /**
      * @param encoded base-64 string created by TypeEncoder
      */
-    public static Class<?> generateFromEncoded(MethodHandles.Lookup lookup, String encoded) {
+    public static Class<?> generateFromEncoded(String encoded) {
         String className = EncodableType.GENERATED_PREFIX + '.' + encoded;
+
+        MethodHandles.Lookup lookup = LOOKUP;
 
         try {
             try {
