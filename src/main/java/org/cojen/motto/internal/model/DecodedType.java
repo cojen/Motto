@@ -112,7 +112,7 @@ public abstract sealed class DecodedType implements EncodableType {
         public ClassDesc asClassDesc() {
             return switch (mCode) {
                 case T_UNSPECIFIED, T_NULL -> super.asClassDesc();
-                case T_VOID -> ConstantDescs.CD_Void;
+                case T_VOID -> ConstantDescs.CD_void;
                 case T_BOOLEAN -> ConstantDescs.CD_boolean;
                 case T_CHAR -> ConstantDescs.CD_char;
                 case T_BYTE -> ConstantDescs.CD_byte;
