@@ -28,6 +28,10 @@ import java.util.List;
  * @author Brian S. O'Neill
  */
 public abstract sealed class DecodedType implements EncodableType {
+    /**
+     * Returns this type without any field names, recursively. Any tuple types which consist of
+     * one field are unwrapped.
+     */
     @Override
     public abstract DecodedType noFieldNames();
 

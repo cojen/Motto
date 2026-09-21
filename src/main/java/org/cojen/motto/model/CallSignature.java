@@ -28,7 +28,7 @@ public sealed interface CallSignature permits BaseCallSignature {
 
     public String name();
 
-    public TupleType inputType();
+    public Type inputType();
 
     /**
      * Returns true if all inputs are eagerly evaluated, which is true for a normal call.
@@ -38,12 +38,6 @@ public sealed interface CallSignature permits BaseCallSignature {
     public int numSegments();
 
     public Segment segment(int index);
-
-    /**
-     * Returns a version of this signature in which the output and input types don't have any
-     * names.
-     */
-    public CallSignature noFieldNames();
 
     /**
      * Returns a signature in which evaluated inputs become {@link Binding Bindings},
@@ -80,7 +74,7 @@ public sealed interface CallSignature permits BaseCallSignature {
 
         public String name();
 
-        public TupleType inputType();
+        public Type inputType();
 
         /**
          * Returns true if all inputs are eagerly evaluated.

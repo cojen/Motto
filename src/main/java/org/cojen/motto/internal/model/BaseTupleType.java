@@ -109,7 +109,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
         return InternSet.apply(new NoNames(fieldTypes));
     }
 
-    private volatile BaseTupleType mNoFieldNames, mTrimmed;
+    private volatile BaseType mNoFieldNames, mTrimmed;
 
     BaseTupleType() {
     }
@@ -178,31 +178,36 @@ public sealed abstract class BaseTupleType extends GeneratedType
     }
 
     @Override
-    public final BaseTupleType noFieldNames() {
-        BaseTupleType noFieldNames = mNoFieldNames;
+    public final BaseType noFieldNames() {
+        BaseType noFieldNames = mNoFieldNames;
 
         if (noFieldNames == null) {
-            BaseType[] newFieldTypes = null;
             int numFields = numFields();
 
-            for (int i=0; i<numFields; i++) {
-                BaseType t = fieldType(i);
-                BaseType nt = t.noFieldNames();
-                if (!t.equals(nt)) {
-                    if (newFieldTypes == null) {
-                        newFieldTypes = new BaseType[numFields];
-                        for (int j=0; j<numFields; j++) {
-                            newFieldTypes[j] = fieldType(j);
-                        }
-                    }
-                    newFieldTypes[i] = nt;
-                }
-            }
-
-            if (newFieldTypes == null) {
-                noFieldNames = withoutNames();
+            if (numFields == 1) {
+                noFieldNames = fieldType(0).noFieldNames();
             } else {
-                noFieldNames = InternSet.apply(new NoNames(newFieldTypes));
+                BaseType[] newFieldTypes = null;
+
+                for (int i=0; i<numFields; i++) {
+                    BaseType t = fieldType(i);
+                    BaseType nt = t.noFieldNames();
+                    if (!t.equals(nt)) {
+                        if (newFieldTypes == null) {
+                            newFieldTypes = new BaseType[numFields];
+                            for (int j=0; j<numFields; j++) {
+                                newFieldTypes[j] = fieldType(j);
+                            }
+                        }
+                        newFieldTypes[i] = nt;
+                    }
+                }
+
+                if (newFieldTypes == null) {
+                    noFieldNames = withoutNames();
+                } else {
+                    noFieldNames = InternSet.apply(new NoNames(newFieldTypes));
+                }
             }
 
             mNoFieldNames = noFieldNames;
@@ -212,10 +217,11 @@ public sealed abstract class BaseTupleType extends GeneratedType
     }
 
     /**
-     * Returns this tuple type with the first field removed.
+     * Returns this tuple type with the first field removed. If only one field remains, and it
+     * has no name, then just that field is returned.
      */
-    final BaseTupleType trimFirst() {
-        BaseTupleType trimmed = mTrimmed;
+    final BaseType trimFirst() {
+        BaseType trimmed = mTrimmed;
 
         if (trimmed == null) {
             mTrimmed = trimmed = numFields() == 1 ? EMPTY : InternSet.apply(doTrimFirst());
@@ -224,7 +230,10 @@ public sealed abstract class BaseTupleType extends GeneratedType
         return trimmed;
     }
 
-    protected abstract BaseTupleType doTrimFirst();
+    /**
+     * Is only called if there's at least two fields.
+     */
+    protected abstract BaseType doTrimFirst();
 
     @Override
     public final boolean isEquivalentTo(Type other) {
@@ -457,7 +466,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
         }
 
         @Override
-        public FieldItem field(String name) {
+        public BaseFieldItem field(String name) {
             throw new NoSuchElementException();
         }
 
@@ -483,8 +492,13 @@ public sealed abstract class BaseTupleType extends GeneratedType
         }
 
         @Override
-        protected NoNames doTrimFirst() {
-            return new NoNames(Arrays.copyOfRange(mFieldTypes, 1, mFieldTypes.length));
+        protected BaseType doTrimFirst() {
+            BaseType[] fieldTypes = mFieldTypes;
+            if (fieldTypes.length == 2) {
+                return fieldTypes[1];
+            } else {
+                return new NoNames(Arrays.copyOfRange(fieldTypes, 1, fieldTypes.length));
+            }
         }
 
         @Override
@@ -494,7 +508,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
 
         @Override
         protected NoNames doWithFirstType(BaseType type) {
-            var fieldTypes = mFieldTypes.clone();
+            BaseType[] fieldTypes = mFieldTypes.clone();
             fieldTypes[0] = type;
             return new NoNames(fieldTypes);
         }
@@ -573,10 +587,15 @@ public sealed abstract class BaseTupleType extends GeneratedType
         }
 
         @Override
-        protected BaseTupleType doTrimFirst() {
-            TupleFieldItem[] fields = Arrays.copyOfRange(mFields, 1, mFields.length);
-            Map<String, Integer> nameMap = buildNameMap(fields, null);
-            return nameMap.isEmpty() ? doWithoutNames(fields) : new WithNames(fields, nameMap);
+        protected BaseType doTrimFirst() {
+            TupleFieldItem[] fields = mFields;
+            if (fields.length == 2 && fields[1].name() == null) {
+                return fields[1].type();
+            } else {
+                fields = Arrays.copyOfRange(fields, 1, fields.length);
+                Map<String, Integer> nameMap = buildNameMap(fields, null);
+                return nameMap.isEmpty() ? doWithoutNames(fields) : new WithNames(fields, nameMap);
+            }
         }
 
         @Override

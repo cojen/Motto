@@ -268,13 +268,13 @@ public abstract sealed class BaseBinding implements Binding {
      * Defines a binding which refers to a static field.
      */
     public static final class StaticField extends BaseBinding {
-        public static StaticField from(BaseFieldItem field) {
+        public static StaticField from(ClassFieldItem field) {
             return InternSet.apply(new StaticField(field));
         }
 
-        private final BaseFieldItem mField;
+        private final ClassFieldItem mField;
 
-        private StaticField(BaseFieldItem field) {
+        private StaticField(ClassFieldItem field) {
             mField = Objects.requireNonNull(field);
         }
 
@@ -293,7 +293,7 @@ public abstract sealed class BaseBinding implements Binding {
             return !mField.isFinal();
         }
 
-        public BaseFieldItem field() {
+        public ClassFieldItem field() {
             return mField;
         }
 
@@ -313,14 +313,14 @@ public abstract sealed class BaseBinding implements Binding {
      * Defines a binding which refers to an instance field.
      */
     public static final class InstanceField extends BaseBinding {
-        public static InstanceField from(BaseBinding instance, BaseFieldItem field) {
+        public static InstanceField from(BaseBinding instance, ClassFieldItem field) {
             return InternSet.apply(new InstanceField(instance, field));
         }
 
         private final BaseBinding mInstance;
-        private final BaseFieldItem mField;
+        private final ClassFieldItem mField;
 
-        private InstanceField(BaseBinding instance, BaseFieldItem field) {
+        private InstanceField(BaseBinding instance, ClassFieldItem field) {
             mInstance = Objects.requireNonNull(instance);
             mField = Objects.requireNonNull(field);
         }
@@ -344,7 +344,7 @@ public abstract sealed class BaseBinding implements Binding {
             return mInstance;
         }
 
-        public BaseFieldItem field() {
+        public ClassFieldItem field() {
             return mField;
         }
 

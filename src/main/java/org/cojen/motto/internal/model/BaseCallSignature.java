@@ -45,7 +45,7 @@ public final class BaseCallSignature implements CallSignature {
      * @param evaluated when false, the inputType elements have been converted to function
      * types, except for "this"
      */
-    public static BaseCallSignature from(BaseType outputType, String name, BaseTupleType inputType,
+    public static BaseCallSignature from(BaseType outputType, String name, BaseType inputType,
                                          boolean evaluated)
     {
         return from(outputType, name, inputType, evaluated, (BaseSegment[]) null);
@@ -58,7 +58,7 @@ public final class BaseCallSignature implements CallSignature {
      * @param evaluated when false, the inputType elements have been converted to function
      * types, except for "this"
      */
-    public static BaseCallSignature from(BaseType outputType, String name, BaseTupleType inputType,
+    public static BaseCallSignature from(BaseType outputType, String name, BaseType inputType,
                                          boolean evaluated,
                                          BaseSegment... segments)
     {
@@ -80,13 +80,13 @@ public final class BaseCallSignature implements CallSignature {
 
     private final BaseType mOutputType;
     private final String mName;
-    private final BaseTupleType mInputType;
+    private final BaseType mInputType;
     private final int mFlags;
     private final BaseSegment[] mSegments;
 
     private volatile BaseCallSignature mNoFieldNames, mFlattened, mTrimmed;
 
-    private BaseCallSignature(BaseType outputType, String name, BaseTupleType inputType,
+    private BaseCallSignature(BaseType outputType, String name, BaseType inputType,
                               int flags, BaseSegment... segments)
     {
         mOutputType = outputType;
@@ -110,7 +110,7 @@ public final class BaseCallSignature implements CallSignature {
     }
 
     @Override
-    public BaseTupleType inputType() {
+    public BaseType inputType() {
         return mInputType;
     }
 
@@ -134,7 +134,6 @@ public final class BaseCallSignature implements CallSignature {
         return segments[index];
     }
 
-    @Override
     public BaseCallSignature noFieldNames() {
         BaseCallSignature noFieldNames = mNoFieldNames;
 
@@ -169,13 +168,13 @@ public final class BaseCallSignature implements CallSignature {
         BaseType bindingType = BaseType.from(Binding.class);
         BaseType blockType = BaseType.from(Block.class);
 
-        BaseTupleType inputType = mInputType;
+        BaseType inputType = mInputType;
 
         int num = inputType.numFields();
         if (num != 0) {
             var types = new BaseType[num];
             Arrays.fill(types, isInputEvaluated() ? bindingType : blockType);
-            inputType = inputType.withTypes(types);
+            inputType = withInputTypes(inputType, types);
         }
 
         BaseSegment[] segments = null;
@@ -224,7 +223,7 @@ public final class BaseCallSignature implements CallSignature {
 
         // First fill with normal parameters.
         {
-            BaseTupleType inputType = mInputType;
+            BaseType inputType = mInputType;
             int num = inputType.numFields();
 
             for (int i=0; i<num; i++) {
@@ -303,8 +302,13 @@ public final class BaseCallSignature implements CallSignature {
         BaseCallSignature trimmed = mTrimmed;
 
         if (trimmed == null) {
-            trimmed = new BaseCallSignature
-                (mOutputType, mName, mInputType.trimFirst(), mFlags, mSegments);
+            BaseType inputType = mInputType;
+            if (inputType instanceof BaseTupleType tt) {
+                inputType = tt.trimFirst();
+            } else {
+                inputType = BaseTupleType.EMPTY;
+            }
+            trimmed = new BaseCallSignature(mOutputType, mName, inputType, mFlags, mSegments);
             mTrimmed = trimmed = InternSet.apply(trimmed);
         }
 
@@ -317,12 +321,30 @@ public final class BaseCallSignature implements CallSignature {
      * @throws IllegalStateException if the input type has no elements
      */
     BaseCallSignature withFirstInputType(BaseType type) {
-        BaseTupleType newInputType = mInputType.withFirstType(type);
+        BaseType newInputType = withFirstInputType(mInputType, type);
         if (newInputType.equals(mInputType)) {
             return this;
         }
         return InternSet.apply
             (new BaseCallSignature(mOutputType, mName, newInputType, mFlags, mSegments));
+    }
+
+    private static BaseType withFirstInputType(BaseType inputType, BaseType fieldType) {
+        if (inputType instanceof BaseTupleType tt) {
+            return tt.withFirstType(fieldType);
+        } else {
+            return fieldType;
+        }
+    }
+
+    private static BaseType withInputTypes(BaseType inputType, BaseType[] fieldTypes) {
+        if (inputType instanceof BaseTupleType tt) {
+            return tt.withTypes(fieldTypes);
+        } else if (fieldTypes.length == 1) {
+            return fieldTypes[0];
+        } else {
+            throw new IllegalStateException();
+        }
     }
 
     /**
@@ -459,7 +481,7 @@ public final class BaseCallSignature implements CallSignature {
          * types
          */
         public static BaseSegment from(int repetition, String name,
-                                       BaseTupleType inputType, boolean evaluated)
+                                       BaseType inputType, boolean evaluated)
         {
             Objects.requireNonNull(name);
             Objects.requireNonNull(inputType);
@@ -467,18 +489,18 @@ public final class BaseCallSignature implements CallSignature {
         }
 
         private final String mName;
-        private final BaseTupleType mInputType;
+        private final BaseType mInputType;
         private final int mFlags;
 
         private volatile BaseSegment mNoFieldNames;
 
         private BaseSegment(int repetition, String name,
-                            BaseTupleType inputType, boolean evaluated)
+                            BaseType inputType, boolean evaluated)
         {
             this(name, inputType, (repetition & 0b11) | (evaluated ? EVALUATED : 0));
         }
 
-        private BaseSegment(String name, BaseTupleType inputType, int flags) {
+        private BaseSegment(String name, BaseType inputType, int flags) {
             mName = name;
             mInputType = inputType;
             mFlags = flags;
@@ -507,7 +529,7 @@ public final class BaseCallSignature implements CallSignature {
         }
 
         @Override
-        public BaseTupleType inputType() {
+        public BaseType inputType() {
             return mInputType;
         }
 
@@ -521,8 +543,8 @@ public final class BaseCallSignature implements CallSignature {
             BaseSegment noFieldNames = mNoFieldNames;
 
             if (noFieldNames == null) {
-                BaseTupleType in = mInputType;
-                BaseTupleType newIn;
+                BaseType in = mInputType;
+                BaseType newIn;
                 if (in == null || (newIn = in.noFieldNames()) == in) {
                     noFieldNames = this;
                 } else {
@@ -535,33 +557,31 @@ public final class BaseCallSignature implements CallSignature {
         }
 
         private BaseSegment forMacro(BaseType bindingType, BaseType blockType) {
-            BaseTupleType inputType = mInputType;
+            BaseType inputType = mInputType;
 
             int num = inputType.numFields();
             if (num != 0) {
                 var types = new BaseType[num];
                 Arrays.fill(types, isInputEvaluated() ? bindingType : blockType);
-                inputType = inputType.withTypes(types);
+                inputType = withInputTypes(inputType, types);
             }
 
             return InternSet.apply(new BaseSegment(mName, inputType, mFlags | EVALUATED));
         }
 
         private void doFlatten(LinkedHashMap<Object, Object> map) {
-            BaseTupleType inputTupleType = mInputType;
+            BaseType inputType = mInputType;
 
             if (!isInputEvaluated()) {
                 // Convert inputs to functions.
-                int num = inputTupleType.numFields();
+                int num = inputType.numFields();
                 var types = new BaseType[num];
                 for (int i=0; i<num; i++) {
-                    BaseType type = inputTupleType.fieldType(i);
+                    BaseType type = inputType.fieldType(i);
                     types[i] = BaseFunctionType.from(type, BaseTupleType.EMPTY);
                 }
-                inputTupleType = inputTupleType.withTypes(types);
+                inputType = withInputTypes(inputType, types);
             }
-
-            BaseType inputType = inputTupleType;
 
             if (hasRepetition()) {
                 inputType = BaseArrayType.from(inputType);

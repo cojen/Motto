@@ -408,12 +408,6 @@ public sealed interface Type
     public ArrayType asArray();
 
     /**
-     * Returns this type without any field names, recursively. If the type cannot have field
-     * names removed, then they'll remain.
-     */
-    public Type noFieldNames();
-
-    /**
      * If this is a primitive type, a wrapper class type is returned. Otherwise, the same type
      * returned.
      */

@@ -46,7 +46,8 @@ public interface EncodableType extends Comparable<EncodableType> {
     public int typeCode();
 
     /**
-     * Returns this type without any field names, recursively.
+     * Returns this type without any field names, recursively. Any tuple types which consist of
+     * one field are unwrapped.
      */
     public EncodableType noFieldNames();
 

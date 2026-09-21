@@ -23,13 +23,11 @@ import java.util.Objects;
 import org.cojen.motto.internal.model.BaseBinding;
 import org.cojen.motto.internal.model.BaseBlock;
 import org.cojen.motto.internal.model.BaseCallableItem;
-import org.cojen.motto.internal.model.BaseFieldItem;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseScopeItem;
-import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
-import org.cojen.motto.internal.model.BaseVoidType;
+import org.cojen.motto.internal.model.ClassFieldItem;
 import org.cojen.motto.internal.model.NewClass;
 import org.cojen.motto.internal.model.NewLocalClass;
 
@@ -125,7 +123,7 @@ final class ModelScope {
      * Add parameters before adding any named local variables.
      */
     void addParameters(BaseCallableItem callable) {
-        BaseTupleType inputType = callable.signature().inputType();
+        BaseType inputType = callable.signature().inputType();
         int num = inputType.numFields();
 
         for (int i=0; i<num; i++) {
@@ -156,7 +154,7 @@ final class ModelScope {
         BaseItem item = scope.mItem;
 
         if (item instanceof NewClass clazz) {
-            BaseFieldItem field = ds.addToClass(env, clazz);
+            ClassFieldItem field = ds.addToClass(env, clazz);
             // If null, an error should have been reported already.
             return field != null;
         }
@@ -255,7 +253,7 @@ final class ModelScope {
             return null;
         }
 
-        BaseTupleType inputType = callable.signature().inputType();
+        BaseType inputType = callable.signature().inputType();
         int num = inputType.numFields();
 
         for (int i=0; i<num; i++) {
