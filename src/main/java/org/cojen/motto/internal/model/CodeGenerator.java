@@ -773,7 +773,15 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
                     return mMethodMaker.param(index);
                 }
 
-                var v = mMethodMaker.var(binding.type().asMakerType());
+                BaseType type = binding.type();
+
+                Variable v;
+                if (type == BaseVoidType.THE) {
+                    // For storing Void.TYPE, which is a Class.
+                    v = mMethodMaker.var(Class.class);
+                } else {
+                    v = mMethodMaker.var(type.asMakerType());
+                }
 
                 String name = binding.name();
                 if (name != null) {
