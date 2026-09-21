@@ -16,44 +16,46 @@
 
 package org.cojen.motto.internal.model;
 
-import motto.TypeGenerator;
-
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-abstract sealed class GeneratedType implements BaseType, EncodableType
+public abstract sealed class GeneratedType implements BaseType, EncodableType
     permits BaseCompositeType, BaseTupleType, BaseFunctionType
 {
     // Is used by NewClass such that calling asMakerType calls back into NewClass.generateType,
     // no matter where asMakerType is being called from.
     static final ScopedValue<NewClass> FOR_NEW_CLASS = ScopedValue.newInstance();
 
-    private volatile String mGeneratedName;
     private volatile org.cojen.maker.Type mMakerType;
+    private volatile LoadedClass mClassType;
+    private volatile String mGeneratedName;
 
     @Override
     public org.cojen.maker.Type asMakerType() {
-        return asMakerType(true);
-    }
-
-    /**
-     * @param generateType when false, never call NewClass.generateType
-     */
-    org.cojen.maker.Type asMakerType(boolean generateType) {
         var type = mMakerType;
 
         if (type == null) {
-            Class<?> clazz = TypeGenerator.generate(generatedName());
-            mMakerType = type = org.cojen.maker.Type.from(clazz);
+            mMakerType = type = classType().asMakerType();
         }
 
-        if (generateType && FOR_NEW_CLASS.isBound()) {
+        if (FOR_NEW_CLASS.isBound()) {
             FOR_NEW_CLASS.get().generateType(generatedName());
         }
 
         return type;
+    }
+
+    public BaseClassTypeItem classType() {
+        LoadedClass classType = mClassType;
+
+        if (classType == null) {
+            Class<?> clazz = TheTypeGenerator.generateFromName(generatedName());
+            mClassType = classType = LoadedClass.classFrom(clazz);
+        }
+
+        return classType;
     }
 
     String generatedName() {

@@ -48,6 +48,7 @@ import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
+import org.cojen.motto.internal.model.GeneratedType;
 import org.cojen.motto.internal.model.LoadedClass;
 import org.cojen.motto.internal.model.NewClass;
 import org.cojen.motto.internal.model.NewLocalClass;
@@ -519,8 +520,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                     item = LoadedClass.classFrom(Object.class);
                 }
 
+                case GeneratedType generated -> {
+                    item = generated.classType();
+                }
+
                 default -> {
-                    // FIXME: If a non-void primitive type, try boxing. Also check if a tuple.
+                    // FIXME: If a non-void primitive type, try boxing.
                     error(st, "not invoking an object instance");
                     return null;
                 }
@@ -1375,8 +1380,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             // Error state.
             return null;
         }
-
-        lambda.setSuperTypes(false, LoadedClass.forObject(), Set.of());
 
         var deferredOutputType = new BaseDeferredType();
         var inputType = st.inputType.tryResolve(mEnv, lambda);

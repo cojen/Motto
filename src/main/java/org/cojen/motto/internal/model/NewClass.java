@@ -40,8 +40,6 @@ import org.cojen.motto.internal.compiler.CompilationEnv;
 import org.cojen.motto.model.CallableItem;
 import org.cojen.motto.model.CallSignature;
 
-import motto.TypeGenerator;
-
 import static org.cojen.motto.internal.model.Modifiers.*;
 
 /**
@@ -162,7 +160,7 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
             // Code for generated types must be placed in the clinit method before any
             // user-provided static initializers, ensuring that the generated types are
             // available to the static initializers.
-            var tgVar = cm.addClinit().var(TypeGenerator.class);
+            var tgVar = cm.addClinit().var(motto.TypeGenerator.class);
             for (String typeName : mGeneratedTypeNames) {
                 tgVar.invoke("generate", typeName);
             }
@@ -386,7 +384,9 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
             cm.extend(superType.asMakerType());
         }
 
-        addInterfaces(cm);
+        for (BaseObjectType iface : interfaces()) {
+            cm.implement(iface.asMakerType());
+        }
 
         fields().forEach(field -> {
             FieldMaker fm = cm.addField(field.type().asMakerType(), Maker.mangle(field.name()));
@@ -438,12 +438,6 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
                 mCodeGenerators = generators = new ArrayList<>();
             }
             generators.add(new CodeGenerator(this, mm, item));
-        }
-    }
-
-    protected void addInterfaces(ClassMaker cm) {
-        for (BaseObjectType iface : interfaces()) {
-            cm.implement(iface.asMakerType());
         }
     }
 
