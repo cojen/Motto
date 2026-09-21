@@ -164,7 +164,7 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
             // available to the static initializers.
             var tgVar = cm.addClinit().var(TypeGenerator.class);
             for (String typeName : mGeneratedTypeNames) {
-                tgVar.invoke("generateFromName", typeName);
+                tgVar.invoke("generate", typeName);
             }
         }
 

@@ -45,7 +45,7 @@ abstract sealed class GeneratedType implements BaseType, EncodableType
         var type = mMakerType;
 
         if (type == null) {
-            Class<?> clazz = TypeGenerator.generateFromName(generatedName());
+            Class<?> clazz = TypeGenerator.generate(generatedName());
             mMakerType = type = org.cojen.maker.Type.from(clazz);
         }
 
