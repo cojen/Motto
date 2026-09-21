@@ -34,7 +34,9 @@ import org.cojen.motto.internal.model.BaseBooleanType;
 import org.cojen.motto.internal.model.BaseCallSignature;
 import org.cojen.motto.internal.model.BaseCallableItem;
 import org.cojen.motto.internal.model.BaseClassTypeItem;
+import org.cojen.motto.internal.model.BaseDeferredType;
 import org.cojen.motto.internal.model.BaseFieldItem;
+import org.cojen.motto.internal.model.BaseFunctionType;
 import org.cojen.motto.internal.model.BaseIntType;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseNullType;
@@ -47,8 +49,8 @@ import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
 import org.cojen.motto.internal.model.LoadedClass;
-import org.cojen.motto.internal.model.Modifiers;
 import org.cojen.motto.internal.model.NewClass;
+import org.cojen.motto.internal.model.NewLocalClass;
 
 import org.cojen.motto.internal.parser.AsStatement;
 import org.cojen.motto.internal.parser.ClassDefinitionStatement;
@@ -88,6 +90,8 @@ import org.cojen.motto.internal.parser.TupleStatement;
 import org.cojen.motto.internal.parser.UpdateStatement;
 import org.cojen.motto.internal.parser.VarType;
 import org.cojen.motto.internal.parser.YieldStatement;
+
+import static org.cojen.motto.internal.model.Modifiers.*;
 
 import static org.cojen.motto.internal.parser.Token.*;
 
@@ -361,7 +365,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         }
 
         do {
-            if (clazz.simpleName().equals(name)) {
+            if (name.equals(clazz.simpleName())) {
                 return clazz;
             }
             clazz = clazz.outerType();
@@ -654,15 +658,24 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
      * @param callable can pass null if code isn't directly referenced by a callable (the code
      * is enclosed within a plain scope)
      */
-    private void visitCode(CodeScopeStatement code, BaseCallableItem callable) {
+    private void visitCode(CodeScopeStatement css, BaseCallableItem callable) {
+        visitCode(css, callable, css.items);
+    }
+
+    /**
+     * @param css can pass null if items are for a LambdaStatement
+     * @param callable can pass null if code isn't directly referenced by a callable (the code
+     * is enclosed within a plain scope)
+     */
+    private void visitCode(CodeScopeStatement css, BaseCallableItem callable,
+                           List<Statement> items)
+    {
         var newScope = new ModelScope(this, mScope, callable);
 
         if (callable != null) {
             // Parameters must be added before named local variables.
             newScope.addParameters(callable);
         }
-
-        List<Statement> items = code.items;
 
         // Add all the symbols first, allowing them to be accessed in any order. The exception
         // is for declarations with an unspecified type. They cannot be accessed until the
@@ -703,18 +716,30 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         enterScope(newScope);
 
         try {
+            BaseBinding lastResult = null;
+
             for (Statement st : items) {
-                st.accept(this);
+                lastResult = st.accept(this);
             }
 
             LabeledStatement ls = mScope.checkLabelReachability();
 
             if (ls != null) {
                 error(ls, "unreachable");
+            } else if (css == null) {
+                // If necessary, specialize the output type of a LambdaStatement.
+                if (items.size() == 1) {
+                    Statement first = items.getFirst();
+                    if (!(first instanceof ReturnStatement)) {
+                        BaseType type = lastResult.type();
+                        ((BaseDeferredType) callable.signature().outputType()).specialize(type);
+                        mScope.activeBlock(first).return_(lastResult);
+                    }
+                }
             } else if (callable != null && mScope.isReachable()) {
                 // The scope must end with a return statement.
                 if (callable.isMacro() || callable.signature().outputType() != BaseVoidType.THE) {
-                    error(code.end(), "missing return statement");
+                    error(css.end(), "missing return statement");
                 }
             }
         } finally {
@@ -813,7 +838,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
                 case DefinitionStatement def -> {
                     def.accept(this);
-                    hasInstanceMembers |= (def.modifierBits(mEnv) & Modifiers.STATIC) == 0;
+                    hasInstanceMembers |= (def.modifierBits(mEnv) & STATIC) == 0;
                 }
 
                 case DeclarationStatement ds -> {
@@ -822,7 +847,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                         // If a simple final constant, then initialize the JVM field directly.
                         throw null;
                     }
-                    hasInstanceMembers |= (ds.modifierBits(mEnv) & Modifiers.STATIC) == 0;
+                    hasInstanceMembers |= (ds.modifierBits(mEnv) & STATIC) == 0;
                 }
 
                 case StaticInitStatement init -> {
@@ -894,7 +919,13 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return false;
         }
 
-        error(st, "cyclic inheritance involving " + involving.simpleName());
+        String name = involving.simpleName();
+
+        if (name == null) {
+            name = involving.displayName();
+        }
+
+        error(st, "cyclic inheritance involving " + name);
 
         return true;
     }
@@ -1338,8 +1369,51 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        NewLocalClass lambda = mScope.addLambdaClass(st);
+
+        if (lambda == null) {
+            // Error state.
+            return null;
+        }
+
+        lambda.setSuperTypes(false, LoadedClass.forObject(), Set.of());
+
+        var deferredOutputType = new BaseDeferredType();
+        var inputType = st.inputType.tryResolve(mEnv, lambda);
+        var callInputType = st.inputType.tryResolve(mEnv, lambda, lambda);
+
+        var sig = BaseCallSignature.from(deferredOutputType, "apply", callInputType, true);
+        var callable = BaseCallableItem.from(PUBLIC | FINAL, lambda, sig);
+
+        visitCode(null, callable, st.items);
+
+        BaseBlock code = callable.code();
+
+        BaseType outputType = deferredOutputType.current();
+
+        if (outputType == BaseUnspecifiedType.THE) {
+            outputType = BaseVoidType.THE;
+        }
+
+        // Now that the output type is known, the correct method signature and function type
+        // interface can be specified.
+
+        var functionType = BaseFunctionType.from(outputType, inputType);
+
+        // This causes the lambda class to implement the function type interface.
+        lambda.setFunctionType(functionType);
+
+        sig = BaseCallSignature.from(outputType, "apply", callInputType, true);
+        callable = lambda.tryAddMethod(PUBLIC | FINAL, sig);
+
+        callable.assignCode(code);
+
+        // Construct and return a new lambda instance.
+
+        BaseCallableItem ctor = lambda.tryAddConstructor
+            (PRIVATE, BaseTupleType.from(lambda).withNames("this"), true);
+
+        return mScope.activeBlock(st).callNew(ctor);
     }
 
     @Override
@@ -1795,6 +1869,19 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         BaseBinding result = st.source == null ? BaseBinding.Void.THE : st.source.accept(this);
 
+        BaseCallableItem item = mScope.callableItem();
+
+        if (item != null) {
+            BaseType outputType = item.signature().outputType();
+            if (outputType instanceof BaseDeferredType deferred) {
+                BaseType conflict = deferred.specialize(result.type());
+                if (conflict != null) {
+                    error(st, "return type of " + result.type().displayName() +
+                          " conflicts with earlier return type of " + conflict.displayName());
+                }
+            }
+        }
+
         mScope.activeBlock(st).return_(result);
 
         return BaseBinding.Void.THE;
@@ -1822,7 +1909,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             CodeScopeStatement code = st.code;
             if (code != null && !code.items.isEmpty()) {
                 var sig = BaseCallSignature.from(BaseVoidType.THE, "", BaseTupleType.EMPTY, true);
-                var clinit = BaseCallableItem.from(Modifiers.STATIC, clazz, sig);
+                var clinit = BaseCallableItem.from(STATIC, clazz, sig);
                 clazz.addClinit(clinit);
                 visitCode(code, clinit);
             }

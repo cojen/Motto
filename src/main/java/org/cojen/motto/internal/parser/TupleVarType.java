@@ -83,11 +83,16 @@ public final class TupleVarType implements VarType {
      * @param insertThis optional
      * @return null if cannot resolve and an error was reported
      */
+    @Override
     public BaseTupleType tryResolve(CompilationEnv env, BaseItem scope,
                                     BaseClassTypeItem insertThis)
     {
-        List<VarType> fieldTypes = mFieldTypes;
+        return tryResolve(env, scope, insertThis, mFieldTypes);
+    }
 
+    static BaseTupleType tryResolve(CompilationEnv env, BaseItem scope,
+                                    BaseClassTypeItem insertThis, List<VarType> fieldTypes)
+    {
         // Check if a required "this" item is already defined.
         boolean hasThis = insertThis != null && !fieldTypes.isEmpty()
             && fieldTypes.getFirst() instanceof NamedVarType named

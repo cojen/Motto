@@ -446,7 +446,7 @@ public final class CompilationEnv {
                     {
                         continue;
                     }
-                } else if (!clazz.simpleName().equals(text)) {
+                } else if (!text.equals(clazz.simpleName())) {
                     continue;
                 }
             }

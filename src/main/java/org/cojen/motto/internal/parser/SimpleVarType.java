@@ -99,7 +99,7 @@ public sealed interface SimpleVarType extends VarType permits LoadStatement {
         BaseClassTypeItem clazz = scope.nearestClass();
 
         while (clazz != null) {
-            if (clazz.simpleName().equals(firstText)) { 
+            if (firstText.equals(clazz.simpleName())) {
                 return clazz;
             }
 

@@ -112,7 +112,8 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
     }
  
     /**
-     * @param explicitSuperType true when the superType was explicitly specified
+     * @param explicitSuperType true when the superType was explicitly specified (it affects
+     * the behavior or the addAutoConstructor method)
      * @param superType optional (only for java.lang.Object)
      * @param interfaces optional
      */
@@ -385,9 +386,7 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
             cm.extend(superType.asMakerType());
         }
 
-        for (BaseObjectType iface : interfaces()) {
-            cm.implement(iface.asMakerType());
-        }
+        addInterfaces(cm);
 
         fields().forEach(field -> {
             FieldMaker fm = cm.addField(field.type().asMakerType(), Maker.mangle(field.name()));
@@ -439,6 +438,12 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
                 mCodeGenerators = generators = new ArrayList<>();
             }
             generators.add(new CodeGenerator(this, mm, item));
+        }
+    }
+
+    protected void addInterfaces(ClassMaker cm) {
+        for (BaseObjectType iface : interfaces()) {
+            cm.implement(iface.asMakerType());
         }
     }
 

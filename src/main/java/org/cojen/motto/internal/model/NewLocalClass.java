@@ -16,6 +16,8 @@
 
 package org.cojen.motto.internal.model;
 
+import org.cojen.maker.ClassMaker;
+
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
 /**
@@ -26,6 +28,8 @@ import org.cojen.motto.internal.compiler.CompilationEnv;
 public final class NewLocalClass extends NewClass {
     private final String mSimpleName;
 
+    private BaseFunctionType mFunctionType;
+
     NewLocalClass(CompilationEnv env, NewClass outerClass,
                   int modifierBits, BasePath packagePath, BasePath namePath, Object origin,
                   String simpleName)
@@ -34,8 +38,38 @@ public final class NewLocalClass extends NewClass {
         mSimpleName = simpleName;
     }
 
+    public void setFunctionType(BaseFunctionType functionType) {
+        mFunctionType = functionType;
+    }
+
     @Override
     public String simpleName() {
         return mSimpleName;
+    }
+
+    @Override
+    protected void addInterfaces(ClassMaker cm) {
+        super.addInterfaces(cm);
+
+        BaseFunctionType functionType = mFunctionType;
+
+        if (functionType != null) {
+            // Don't call NewClass.generateType because the functionType is an implemented
+            // interface, and it's too late for a static initializer to generate it.
+            cm.implement(functionType.asMakerType(false));
+        }
+    }
+
+    @Override
+    public org.cojen.maker.Type asMakerType() {
+        BaseFunctionType functionType = mFunctionType;
+
+        if (functionType != null) {
+            // Classes which reference the functionType should attempt to generate it from the
+            // static initializer.
+            functionType.asMakerType();
+        }
+
+        return super.asMakerType();
     }
 }

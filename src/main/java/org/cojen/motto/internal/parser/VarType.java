@@ -16,9 +16,13 @@
 
 package org.cojen.motto.internal.parser;
 
+import java.util.List;
+
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
+import org.cojen.motto.internal.model.BaseClassTypeItem;
 import org.cojen.motto.internal.model.BaseItem;
+import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 
 
@@ -41,4 +45,19 @@ public sealed interface VarType extends Element
      * @return null if cannot resolve and an error was reported
      */
     public BaseType tryResolve(CompilationEnv env, BaseItem scope);
+
+    /**
+     * Tries to resolve the type as a tuple and optionally insert a "this" element as the first
+     * one. If the first element exists and is named "this", an error is reported if the type
+     * doesn't match what was given, unless the existing type is unspecified.
+     *
+     * @param insertThis optional
+     * @return null if cannot resolve and an error was reported
+     */
+    // Note: TupleVarType must override this method.
+    public default BaseTupleType tryResolve(CompilationEnv env, BaseItem scope,
+                                            BaseClassTypeItem insertThis)
+    {
+        return TupleVarType.tryResolve(env, scope, insertThis, List.of(this));
+    }
 }

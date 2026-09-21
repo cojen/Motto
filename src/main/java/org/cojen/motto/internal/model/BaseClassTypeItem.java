@@ -141,7 +141,8 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     /**
-     * Returns a simple name, which is usually the last element of the name path.
+     * Returns a simple name, which is usually the last element of the name path, but it might
+     * also be null.
      *
      * @see NewLocalClass
      */

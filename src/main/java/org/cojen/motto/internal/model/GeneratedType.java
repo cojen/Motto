@@ -35,6 +35,13 @@ abstract sealed class GeneratedType implements BaseType, EncodableType
 
     @Override
     public org.cojen.maker.Type asMakerType() {
+        return asMakerType(true);
+    }
+
+    /**
+     * @param generateType when false, never call NewClass.generateType
+     */
+    org.cojen.maker.Type asMakerType(boolean generateType) {
         var type = mMakerType;
 
         if (type == null) {
@@ -42,7 +49,7 @@ abstract sealed class GeneratedType implements BaseType, EncodableType
             mMakerType = type = org.cojen.maker.Type.from(clazz);
         }
 
-        if (FOR_NEW_CLASS.isBound()) {
+        if (generateType && FOR_NEW_CLASS.isBound()) {
             FOR_NEW_CLASS.get().generateType(generatedName());
         }
 

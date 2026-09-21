@@ -38,6 +38,7 @@ import org.cojen.motto.internal.parser.ConstructorDefinitionStatement;
 import org.cojen.motto.internal.parser.DeclarationStatement;
 import org.cojen.motto.internal.parser.Element;
 import org.cojen.motto.internal.parser.LabeledStatement;
+import org.cojen.motto.internal.parser.LambdaStatement;
 import org.cojen.motto.internal.parser.MethodDefinitionStatement;
 import org.cojen.motto.internal.parser.Statement;
 import org.cojen.motto.internal.parser.Token;
@@ -96,6 +97,24 @@ final class ModelScope {
 
     BaseItem item() {
         return mItem;
+    }
+
+    /**
+     * Returns the nearest enclosing callable, which is null if enclosed by something other
+     * than a callable or a plain scope.
+     */
+    BaseCallableItem callableItem() {
+        BaseItem item = mItem;
+        while (true) {
+            if (item instanceof BaseCallableItem callable) {
+                return callable;
+            }
+            if (item instanceof BaseScopeItem scopeItem) {
+                item = scopeItem.enclosingItem();
+            } else {
+                return null;
+            }
+        }
     }
 
     private CompilationEnv env() {
@@ -297,6 +316,28 @@ final class ModelScope {
         }
 
         return local;
+    }
+
+    /**
+     * Adds a local inner class for a lambda. The returned class won't have any super types or
+     * members defined yet.
+     *
+     * Returns null if no class was added and an error was reported.
+     */
+    NewLocalClass addLambdaClass(LambdaStatement st) {
+        NewLocalClass clazz;
+
+        try {
+            clazz = mItem.tryAddLocalInnerClass(PRIVATE | FINAL | CLASS, null);
+        } catch (UnsupportedOperationException e) {
+            // Not expected.
+            env().error(st, "lambda classes not supported in this scope");
+            return null;
+        }
+
+        clazz.available();
+
+        return clazz;
     }
 
     /**
