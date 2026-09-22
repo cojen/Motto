@@ -16,6 +16,10 @@
 
 package org.cojen.motto.internal.model;
 
+import java.util.Objects;
+
+import org.cojen.maker.FieldMaker;
+
 import org.cojen.motto.model.FieldItem;
 
 /**
@@ -23,12 +27,57 @@ import org.cojen.motto.model.FieldItem;
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed interface BaseFieldItem extends FieldItem
-    permits ClassFieldItem, TupleFieldItem
-{
+public final class BaseFieldItem extends BaseItem implements FieldItem {
+    private final BaseClassTypeItem mEnclosingClass;
+    private final BaseType mType;
+    private final String mName;
+
     /**
-     * Returns a non-null field type.
+     * @see Modifiers
      */
+    BaseFieldItem(int modifierBits, BaseClassTypeItem enclosingClass, BaseType type, String name) {
+        super(modifierBits);
+        mEnclosingClass = Objects.requireNonNull(enclosingClass);
+        mType = Objects.requireNonNull(type);
+        mName = Objects.requireNonNull(name);
+    }
+
     @Override
-    public BaseType type();
+    public BaseClassTypeItem enclosingType() {
+        return mEnclosingClass;
+    }
+
+    @Override
+    public BaseClassTypeItem nearestType() {
+        return mEnclosingClass;
+    }
+
+    @Override
+    public BaseClassTypeItem nearestClass() {
+        return mEnclosingClass;
+    }
+
+    @Override
+    public BaseType type() {
+        return mType;
+    }
+
+    @Override
+    public String name() {
+        return mName;
+    }
+
+    void applyModifiers(FieldMaker fm) {
+        super.applyModifiers(fm);
+
+        int modifiers = modifierBits();
+
+        if ((modifiers & Modifiers.VOLATILE) != 0) {
+            fm.volatile_();
+        }
+
+        if ((modifiers & Modifiers.TRANSIENT) != 0) {
+            fm.transient_();
+        }
+    }
 }

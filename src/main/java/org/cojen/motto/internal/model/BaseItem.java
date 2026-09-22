@@ -34,7 +34,7 @@ import static org.cojen.motto.internal.model.Modifiers.*;
  * @author Brian S. O'Neill
  */
 public abstract sealed class BaseItem implements Item
-    permits BaseClassTypeItem, BaseCallableItem, ClassFieldItem, BaseScopeItem
+    permits BaseClassTypeItem, BaseCallableItem, BaseFieldItem, BaseScopeItem
 {
     private int mModifierBits;
 

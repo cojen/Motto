@@ -18,6 +18,7 @@ package org.cojen.motto.internal.model;
 
 import java.util.Objects;
 
+import org.cojen.motto.model.FieldItem;
 import org.cojen.motto.model.Item;
 
 /**
@@ -25,7 +26,7 @@ import org.cojen.motto.model.Item;
  *
  * @author Brian S. O'Neill
  */
-public sealed class TupleFieldItem implements BaseFieldItem {
+public sealed class TupleFieldItem implements FieldItem {
     final BaseTupleType mTuple;
     final BaseType mType;
 

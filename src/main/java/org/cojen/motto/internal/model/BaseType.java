@@ -16,8 +16,15 @@
 
 package org.cojen.motto.internal.model;
 
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDesc;
+import java.lang.constant.ConstantDescs;
+import java.lang.constant.DirectMethodHandleDesc;
+import java.lang.constant.DynamicConstantDesc;
+
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Set;
 
 import java.util.function.Predicate;
@@ -31,6 +38,8 @@ import org.cojen.motto.model.FieldItem;
 import org.cojen.motto.model.Item;
 import org.cojen.motto.model.TupleType;
 import org.cojen.motto.model.Type;
+
+import org.cojen.motto.runtime.ConstantBootstraps;
 
 /**
  * 
@@ -60,12 +69,12 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
-    public default BaseFieldItem field(String name) {
+    public default FieldItem field(String name) {
         throw new NoSuchElementException();
     }
 
     @Override
-    public default BaseFieldItem field(int index) {
+    public default FieldItem field(int index) {
         throw new UnsupportedOperationException();
     }
 
@@ -75,22 +84,12 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     @Override
-    public default BaseType fieldType(String name) {
-        return field(name).type();
-    }
-
-    @Override
-    public default BaseType fieldType(int index) {
-        return field(index).type();
-    }
-
-    @Override
-    public default Set<ClassFieldItem> findField(String name, Item via) {
+    public default Set<BaseFieldItem> findField(String name, Item via) {
         return findField(name, f -> f.isAccessibleVia(via));
     }
 
     @Override
-    public default Set<ClassFieldItem> findField(String name, Predicate<FieldItem> filter) {
+    public default Set<BaseFieldItem> findField(String name, Predicate<FieldItem> filter) {
         return Set.of();
     }
 
@@ -227,10 +226,6 @@ public sealed interface BaseType extends Type, EncodableType
         return BaseArrayType.from(this);
     }
 
-    /**
-     * Returns this type without any field names, recursively. Any tuple types which consist of
-     * one field are unwrapped.
-     */
     @Override
     public BaseType noFieldNames();
 

@@ -46,6 +46,7 @@ import org.cojen.motto.model.FieldItem;
 import org.cojen.motto.model.Item;
 import org.cojen.motto.model.ObjectType;
 import org.cojen.motto.model.PrimitiveType;
+import org.cojen.motto.model.TupleType;
 import org.cojen.motto.model.Type;
 
 import static org.cojen.motto.internal.model.Modifiers.*;
@@ -66,7 +67,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     private BaseClassTypeItem mSuperType;
     private Set<BaseClassTypeItem> mSuperInterfaces;
 
-    private Map<String, ClassFieldItem> mFieldMap;
+    private Map<String, BaseFieldItem> mFieldMap;
     private Map<String, Map<BaseCallSignature, BaseCallableItem>> mMethodMap;
     private Map<BaseCallSignature, BaseCallableItem> mConstructorMap;
     private volatile Map<String, BaseClassTypeItem> mInnerClassesMap;
@@ -246,20 +247,20 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public final Stream<? extends ClassFieldItem> fields() {
+    public final Stream<? extends BaseFieldItem> fields() {
         return fieldMap().values().stream();
     }
 
     @Override
-    public final ClassFieldItem field(String name) {
-        ClassFieldItem field = fieldMap().get(name);
+    public final BaseFieldItem field(String name) {
+        BaseFieldItem field = fieldMap().get(name);
         if (field == null) {
             throw new NoSuchElementException();
         }
         return field;
     }
 
-    private Map<String, ClassFieldItem> fieldMap() {
+    private Map<String, BaseFieldItem> fieldMap() {
         try {
             initFields();
         } catch (InterruptedException e) {
@@ -270,7 +271,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public final ClassFieldItem field(int index) {
+    public final BaseFieldItem field(int index) {
         throw new UnsupportedOperationException();
     }
 
@@ -284,10 +285,10 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      *
      * @return null if a conflicting field definition already exists
      */
-    public final ClassFieldItem tryAddField(int modifierBits, BaseType type, String name) {
-        var field = new ClassFieldItem(modifierBits, this, type, name);
+    public final BaseFieldItem tryAddField(int modifierBits, BaseType type, String name) {
+        var field = new BaseFieldItem(modifierBits, this, type, name);
 
-        Map<String, ClassFieldItem> map = mFieldMap;
+        Map<String, BaseFieldItem> map = mFieldMap;
 
         if (map.isEmpty()) {
             mFieldMap = map = new LinkedHashMap<>();
@@ -299,15 +300,15 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public Set<ClassFieldItem> findField(String name, Predicate<FieldItem> filter) {
+    public Set<BaseFieldItem> findField(String name, Predicate<FieldItem> filter) {
         return doFindField(Set.of(), name, filter, new HashSet<>());
     }
 
-    private Set<ClassFieldItem> doFindField(Set<ClassFieldItem> set, String name,
-                                            Predicate<FieldItem> filter,
-                                            Set<BaseClassTypeItem> seen)
+    private Set<BaseFieldItem> doFindField(Set<BaseFieldItem> set, String name,
+                                           Predicate<FieldItem> filter,
+                                           Set<BaseClassTypeItem> seen)
     {
-        ClassFieldItem field = fieldMap().get(name);
+        BaseFieldItem field = fieldMap().get(name);
         if (field != null && (filter == null || filter.test(field))) {
             set = addItemToSet(set, field);
         }
@@ -331,7 +332,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      * Returns the modifiers for the given field name, or else returns -1 if not found.
      */
     public int findFieldForImport(String name) {
-        ClassFieldItem field = fieldMap().get(name);
+        BaseFieldItem field = fieldMap().get(name);
         if (field == null) {
             return -1;
         }
@@ -357,10 +358,6 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public final BaseCallableItem method(CallSignature sig) {
-        return method((BaseCallSignature) sig);
-    }
-
-    public final BaseCallableItem method(BaseCallSignature sig) {
         Map<BaseCallSignature, BaseCallableItem> byName = methodMap().get(sig.name());
         BaseCallableItem item;
         if (byName == null || (item = byName.get(sig.noFieldNames())) == null) {
@@ -793,7 +790,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      * @throws IllegalArgumentException if the first input element isn't "this", of the same
      * type as the this
      */
-    private final BaseType validateThis(BaseType inputType) {
+    private final BaseTupleType validateThis(BaseTupleType inputType) {
         if (inputType.numFields() == 0 || !inputType.fieldType(0).equals(this) ||
             !"this".equals(inputType.fieldName(0)))
         {
@@ -807,7 +804,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     static Object[] makerParamsFor(BaseCallableItem item, BaseCallSignature sig) {
-        BaseType inputType = sig.inputType();
+        BaseTupleType inputType = sig.inputType();
         int numFields = inputType.numFields();
 
         Object[] params;
@@ -834,7 +831,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     static void applyParamNames(MethodMaker mm, BaseCallableItem item, BaseCallSignature sig) {
-        BaseType inputType = sig.inputType();
+        BaseTupleType inputType = sig.inputType();
         int numFields = inputType.numFields();
 
         int offset = item.isStatic() ? 0 : 1; // Drop the implicit "this" parameter.

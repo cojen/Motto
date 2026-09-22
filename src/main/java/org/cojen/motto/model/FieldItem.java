@@ -17,13 +17,14 @@
 package org.cojen.motto.model;
 
 import org.cojen.motto.internal.model.BaseFieldItem;
+import org.cojen.motto.internal.model.TupleFieldItem;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface FieldItem extends Item permits BaseFieldItem {
+public sealed interface FieldItem extends Item permits BaseFieldItem, TupleFieldItem {
     /**
      * Returns a non-null field type.
      */
