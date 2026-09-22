@@ -281,7 +281,10 @@ public interface EncodableType extends Comparable<EncodableType> {
 
         @Override
         public default void encodePrepare(TypeEncoder encoder) {
-            if (encoder.prepare(this)) {
+            EncodableType unwrapped = tryUnwrap();
+            if (unwrapped != null) {
+                unwrapped.encodePrepare(encoder);
+            } else if (encoder.prepare(this)) {
                 int numFields = numFields();
                 for (int i=0; i<numFields; i++) {
                     fieldType(i).encodePrepare(encoder);
@@ -295,7 +298,12 @@ public interface EncodableType extends Comparable<EncodableType> {
 
         @Override
         public default void encode(TypeEncoder encoder) {
-            encodeIndexed(this, encoder);
+            EncodableType unwrapped = tryUnwrap();
+            if (unwrapped != null) {
+                unwrapped.encode(encoder);
+            } else {
+                encodeIndexed(this, encoder);
+            }
         }
 
         @Override
@@ -372,6 +380,10 @@ public interface EncodableType extends Comparable<EncodableType> {
             }
 
             return Maker.mangle(name);
+        }
+
+        private EncodableType tryUnwrap() {
+            return (numFields() == 1 && fieldName(0) == null) ? fieldType(0) : null;
         }
     }
 
