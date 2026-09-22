@@ -20,8 +20,8 @@ import java.util.List;
 
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
-import org.cojen.motto.internal.model.BaseFieldItem;
 import org.cojen.motto.internal.model.BaseType;
+import org.cojen.motto.internal.model.ClassFieldItem;
 import org.cojen.motto.internal.model.NewClass;
 
 import static org.cojen.motto.internal.model.Modifiers.*;
@@ -41,7 +41,7 @@ public final class DeclarationStatement implements Statement, NamedVarType {
 
     // These are assigned when addToClass is called.
     private NewClass mClass;
-    private BaseFieldItem mItem;
+    private ClassFieldItem mItem;
 
     /**
      * @param modifiers required; might be empty
@@ -112,7 +112,7 @@ public final class DeclarationStatement implements Statement, NamedVarType {
     }
 
     @Override
-    public BaseFieldItem addToClass(CompilationEnv env, NewClass clazz) {
+    public ClassFieldItem addToClass(CompilationEnv env, NewClass clazz) {
         if (mClass != null) {
             return mItem;
         }

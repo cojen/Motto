@@ -67,7 +67,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     private BaseClassTypeItem mSuperType;
     private Set<BaseClassTypeItem> mSuperInterfaces;
 
-    private Map<String, BaseFieldItem> mFieldMap;
+    private Map<String, ClassFieldItem> mFieldMap;
     private Map<String, Map<BaseCallSignature, BaseCallableItem>> mMethodMap;
     private Map<BaseCallSignature, BaseCallableItem> mConstructorMap;
     private volatile Map<String, BaseClassTypeItem> mInnerClassesMap;
@@ -247,20 +247,20 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public final Stream<? extends BaseFieldItem> fields() {
+    public final Stream<? extends ClassFieldItem> fields() {
         return fieldMap().values().stream();
     }
 
     @Override
-    public final BaseFieldItem field(String name) {
-        BaseFieldItem field = fieldMap().get(name);
+    public final ClassFieldItem field(String name) {
+        ClassFieldItem field = fieldMap().get(name);
         if (field == null) {
             throw new NoSuchElementException();
         }
         return field;
     }
 
-    private Map<String, BaseFieldItem> fieldMap() {
+    private Map<String, ClassFieldItem> fieldMap() {
         try {
             initFields();
         } catch (InterruptedException e) {
@@ -271,7 +271,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public final BaseFieldItem field(int index) {
+    public final ClassFieldItem field(int index) {
         throw new UnsupportedOperationException();
     }
 
@@ -285,10 +285,10 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      *
      * @return null if a conflicting field definition already exists
      */
-    public final BaseFieldItem tryAddField(int modifierBits, BaseType type, String name) {
-        var field = new BaseFieldItem(modifierBits, this, type, name);
+    public final ClassFieldItem tryAddField(int modifierBits, BaseType type, String name) {
+        var field = new ClassFieldItem(modifierBits, this, type, name);
 
-        Map<String, BaseFieldItem> map = mFieldMap;
+        Map<String, ClassFieldItem> map = mFieldMap;
 
         if (map.isEmpty()) {
             mFieldMap = map = new LinkedHashMap<>();
@@ -300,15 +300,15 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public Set<BaseFieldItem> findField(String name, Predicate<FieldItem> filter) {
+    public Set<ClassFieldItem> findField(String name, Predicate<FieldItem> filter) {
         return doFindField(Set.of(), name, filter, new HashSet<>());
     }
 
-    private Set<BaseFieldItem> doFindField(Set<BaseFieldItem> set, String name,
-                                           Predicate<FieldItem> filter,
-                                           Set<BaseClassTypeItem> seen)
+    private Set<ClassFieldItem> doFindField(Set<ClassFieldItem> set, String name,
+                                            Predicate<FieldItem> filter,
+                                            Set<BaseClassTypeItem> seen)
     {
-        BaseFieldItem field = fieldMap().get(name);
+        ClassFieldItem field = fieldMap().get(name);
         if (field != null && (filter == null || filter.test(field))) {
             set = addItemToSet(set, field);
         }
@@ -332,7 +332,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      * Returns the modifiers for the given field name, or else returns -1 if not found.
      */
     public int findFieldForImport(String name) {
-        BaseFieldItem field = fieldMap().get(name);
+        ClassFieldItem field = fieldMap().get(name);
         if (field == null) {
             return -1;
         }
@@ -358,6 +358,10 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public final BaseCallableItem method(CallSignature sig) {
+        return method((BaseCallSignature) sig);
+    }
+
+    public final BaseCallableItem method(BaseCallSignature sig) {
         Map<BaseCallSignature, BaseCallableItem> byName = methodMap().get(sig.name());
         BaseCallableItem item;
         if (byName == null || (item = byName.get(sig.noFieldNames())) == null) {

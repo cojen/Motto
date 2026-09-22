@@ -35,12 +35,9 @@ import org.cojen.motto.internal.model.BaseCallSignature;
 import org.cojen.motto.internal.model.BaseCallableItem;
 import org.cojen.motto.internal.model.BaseClassTypeItem;
 import org.cojen.motto.internal.model.BaseDeferredType;
-import org.cojen.motto.internal.model.BaseFieldItem;
 import org.cojen.motto.internal.model.BaseFunctionType;
-import org.cojen.motto.internal.model.BaseIntType;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseNullType;
-import org.cojen.motto.internal.model.BaseObjectType;
 import org.cojen.motto.internal.model.BasePath;
 import org.cojen.motto.internal.model.BasePrimitiveType;
 import org.cojen.motto.internal.model.BaseSegmentArgument;
@@ -48,6 +45,7 @@ import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
+import org.cojen.motto.internal.model.ClassFieldItem;
 import org.cojen.motto.internal.model.GeneratedType;
 import org.cojen.motto.internal.model.LoadedClass;
 import org.cojen.motto.internal.model.NewClass;
@@ -77,7 +75,6 @@ import org.cojen.motto.internal.parser.NewArrayStatement;
 import org.cojen.motto.internal.parser.NewClassDefinitionStatement;
 import org.cojen.motto.internal.parser.NewStatement;
 import org.cojen.motto.internal.parser.ParseVisitor;
-import org.cojen.motto.internal.parser.PathStatement;
 import org.cojen.motto.internal.parser.PostfixStatement;
 import org.cojen.motto.internal.parser.PrefixStatement;
 import org.cojen.motto.internal.parser.ReturnStatement;
@@ -301,7 +298,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         while (clazz != null) {
             // The findField method also returns inherited fields.
-            Set<BaseFieldItem> set = clazz.findField
+            Set<ClassFieldItem> set = clazz.findField
                 (name, f -> f.isStatic() && f.isAccessibleVia(mScope.item()));
 
             if (!set.isEmpty()) {
@@ -319,7 +316,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         while (clazz != null) {
             // The findField method also returns inherited fields.
-            Set<BaseFieldItem> set = clazz.findField
+            Set<ClassFieldItem> set = clazz.findField
                 (name, f -> !f.isStatic() && f.isAccessibleVia(mScope.item()));
 
             if (!set.isEmpty()) {
@@ -381,7 +378,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
     private BaseBinding findStaticField(BaseType type, Token.Identifier nameToken) {
         String name = nameToken.text;
 
-        Set<BaseFieldItem> set = type.findField
+        Set<ClassFieldItem> set = type.findField
             (name, f -> f.isStatic() && f.isAccessibleVia(mScope.item()));
 
         if (set.isEmpty()) {
@@ -454,7 +451,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 }
 
                 case BaseClassTypeItem t -> {
-                    Set<BaseFieldItem> fieldSet = t.findField(name, mScope.item());
+                    Set<ClassFieldItem> fieldSet = t.findField(name, mScope.item());
 
                     if (fieldSet.isEmpty()) {
                         String message;
@@ -474,7 +471,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                         return null;
                     }
 
-                    BaseFieldItem fieldItem = fieldSet.iterator().next();
+                    ClassFieldItem fieldItem = fieldSet.iterator().next();
 
                     instanceBinding = BaseBinding.InstanceField.from(instanceBinding, fieldItem);
                 }

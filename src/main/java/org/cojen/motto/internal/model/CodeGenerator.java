@@ -727,7 +727,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     /**
      * @param instanceBinding is null for static field
      */
-    private Variable variableFor(BaseFieldItem fieldItem, BaseBinding instanceBinding) {
+    private Variable variableFor(ClassFieldItem fieldItem, BaseBinding instanceBinding) {
         String fieldName = Maker.mangle(fieldItem.name());
 
         if (instanceBinding == null) {

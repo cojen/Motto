@@ -457,7 +457,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
         }
 
         @Override
-        public FieldItem field(String name) {
+        public BaseFieldItem field(String name) {
             throw new NoSuchElementException();
         }
 
