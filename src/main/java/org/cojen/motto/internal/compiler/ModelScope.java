@@ -23,6 +23,7 @@ import java.util.Objects;
 import org.cojen.motto.internal.model.BaseBinding;
 import org.cojen.motto.internal.model.BaseBlock;
 import org.cojen.motto.internal.model.BaseCallableItem;
+import org.cojen.motto.internal.model.BaseDeferredType;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseScopeItem;
 import org.cojen.motto.internal.model.BaseTupleType;
@@ -114,6 +115,18 @@ final class ModelScope {
                 return null;
             }
         }
+    }
+
+    /**
+     * If the scope is directly or indirectly a lambda function, then return the deferred type
+     * for it. Otherwise, return null.
+     */
+    BaseDeferredType lambdaReturnType() {
+        BaseCallableItem item = callableItem();
+        if (item != null && item.signature().outputType() instanceof BaseDeferredType deferred) {
+            return deferred;
+        }
+        return null;
     }
 
     private CompilationEnv env() {

@@ -1869,17 +1869,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         BaseBinding result = st.source == null ? BaseBinding.Void.THE : st.source.accept(this);
 
-        BaseCallableItem item = mScope.callableItem();
+        BaseDeferredType lrt = mScope.lambdaReturnType();
 
-        if (item != null) {
-            BaseType outputType = item.signature().outputType();
-            if (outputType instanceof BaseDeferredType deferred) {
-                BaseType conflict = deferred.specialize(result.type());
-                if (conflict != null) {
-                    error(st, "return type of " + result.type().displayName() +
-                          " conflicts with earlier return type of " + conflict.displayName());
-                }
-            }
+        if (lrt != null) {
+            // FIXME: Support FarReturnAction.
+            error(st, "far return from a lambda function isn't allowed");
         }
 
         mScope.activeBlock(st).return_(result);
@@ -2083,7 +2077,22 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        BaseBinding result = st.source == null ? BaseBinding.Void.THE : st.source.accept(this);
+
+        BaseDeferredType lrt = mScope.lambdaReturnType();
+
+        if (lrt == null) {
+            error(st, "yield is not permitted here");
+        } else {
+            BaseType conflict = lrt.specialize(result.type());
+            if (conflict != null) {
+                error(st, "return type of " + result.type().displayName() +
+                      " conflicts with earlier return type of " + conflict.displayName());
+            }
+        }
+
+        mScope.activeBlock(st).return_(result);
+
+        return BaseBinding.Void.THE;
     }
 }
