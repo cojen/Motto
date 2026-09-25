@@ -204,12 +204,21 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public final boolean isStringType() {
+    public final int simpleClassType() {
         if (packagePath().equals(BasePath.JAVA_LANG)) {
             BasePath namePath = namePath();
-            return namePath.size() == 1 && namePath.getFirst().equals("String");
+
+            if (namePath.size() == 1) {
+                String first = namePath.getFirst();
+                if ("Object".equals(first)) {
+                    return T_OBJECT;
+                } else if ("String".equals(first)) {
+                    return T_STRING;
+                }
+            }
         }
-        return false;
+
+        return -1;
     }
 
     @Override

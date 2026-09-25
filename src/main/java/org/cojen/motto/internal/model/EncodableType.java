@@ -30,10 +30,10 @@ import org.cojen.motto.internal.util.Utils;
  */
 public interface EncodableType extends Comparable<EncodableType> {
     public static final int T_UNSPECIFIED = 0, T_NULL = 1, T_VOID = 2, T_BOOLEAN = 3, T_CHAR = 4,
-        T_BYTE = 5, T_SHORT = 6, T_INT = 7, T_LONG = 8, T_FLOAT = 9, T_DOUBLE = 10,
-        T_STRING = 11, T_ARRAY = 12, T_CLASS = 13, T_COMPOSITE = 14, T_TUPLE = 15, T_FUNCTION = 16,
+        T_BYTE = 5, T_SHORT = 6, T_INT = 7, T_LONG = 8, T_FLOAT = 9, T_DOUBLE = 10, T_OBJECT = 11,
+        T_STRING = 12, T_ARRAY = 13, T_CLASS = 14, T_COMPOSITE = 15, T_TUPLE = 16, T_FUNCTION = 17,
 
-        // 17..19: reserved for future use
+        // 18, 19: reserved for future use
 
         T_INDEXED = 20; // not a real type code; real type codes must have a lower value
 
@@ -166,7 +166,7 @@ public interface EncodableType extends Comparable<EncodableType> {
 
         @Override
         public default void encodePrepare(TypeEncoder encoder) {
-            if (!isStringType() && encoder.prepare(this)) {
+            if (simpleClassType() < 0 && encoder.prepare(this)) {
                 preparePath(encoder, packagePath());
                 preparePath(encoder, namePath());
             }
@@ -180,10 +180,11 @@ public interface EncodableType extends Comparable<EncodableType> {
 
         @Override
         public default void encode(TypeEncoder encoder) {
-            if (isStringType()) {
-                encoder.encodeByte(T_STRING);
-            } else {
+            int type = simpleClassType();
+            if (type < 0) {
                 encodeIndexed(this, encoder);
+            } else {
+                encoder.encodeByte(type);
             }
         }
 
@@ -218,7 +219,10 @@ public interface EncodableType extends Comparable<EncodableType> {
 
         public List<String> namePath();
 
-        public boolean isStringType();
+        /**
+         * Returns T_OBJECT, T_STRING, or else -1 if not applicable.
+         */
+        public int simpleClassType();
     }
 
     public static interface CompositeT extends EncodableType {

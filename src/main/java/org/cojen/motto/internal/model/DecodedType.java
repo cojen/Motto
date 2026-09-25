@@ -130,6 +130,7 @@ public abstract sealed class DecodedType implements EncodableType {
                 case T_LONG -> ConstantDescs.CD_long;
                 case T_FLOAT -> ConstantDescs.CD_float;
                 case T_DOUBLE -> ConstantDescs.CD_double;
+                case T_OBJECT -> ConstantDescs.CD_Object;
                 case T_STRING -> ConstantDescs.CD_String;
                 default -> {
                     throw new IllegalStateException();
@@ -188,10 +189,19 @@ public abstract sealed class DecodedType implements EncodableType {
         }
 
         @Override
-        public boolean isStringType() {
-            return mPackagePath.size() == 2 && mNamePath.size() == 1
-                && mNamePath.get(0).equals("String")
-                && mPackagePath.get(0).equals("java") && mPackagePath.get(1).equals("lang");
+        public int simpleClassType() {
+            if (mPackagePath.size() == 2 && mNamePath.size() == 1) {
+                if (mPackagePath.get(0).equals("java") && mPackagePath.get(1).equals("lang")) {
+                    String first = mNamePath.getFirst();
+                    if ("Object".equals(first)) {
+                        return T_OBJECT;
+                    } else if ("String".equals(first)) {
+                        return T_STRING;
+                    }
+                }
+            }
+
+            return -1;
         }
 
         @Override
