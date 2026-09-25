@@ -247,7 +247,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
             }
         }
 
-        return false;
+        return true;
     }
 
     @Override
