@@ -469,7 +469,11 @@ public final class Parser implements Closeable {
                 }
 
                 case T_ARROW -> {
-                    Statement body = parseStatement("lambda");
+                    // Must not parse new symbols because it would allow the definition of a
+                    // silly lambda function which consists of a declaration inside a scope.
+                    // "(int) -> int x"  would be interpreted as this: "(int) -> {int x}"
+                    // If this behavior is desired, the braces must be explicitly specified.
+                    Statement body = parseStatement("lambda", ID_NO_NEW_SYMBOLS);
 
                     List<Statement> items;
 
