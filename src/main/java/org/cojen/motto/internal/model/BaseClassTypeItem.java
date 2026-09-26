@@ -904,10 +904,6 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         for (Map.Entry<BaseCallSignature, BaseCallableItem> e : available.entrySet()) {
             BaseCallableItem item = e.getValue();
 
-            if (filter != null && !filter.test(item)) {
-                continue;
-            }
-
             // Note: The key doesn't have the implicit "this" parameter for instance methods,
             // unlike the item itself.
             BaseCallSignature key = e.getKey();
@@ -937,6 +933,10 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
                         continue;
                     }
                 }
+            }
+
+            if (filter != null && !filter.test(item)) {
+                continue;
             }
 
             if (map.isEmpty()) {
