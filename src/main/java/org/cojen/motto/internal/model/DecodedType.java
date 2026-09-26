@@ -119,6 +119,8 @@ public abstract sealed class DecodedType implements EncodableType {
 
         @Override
         public ClassDesc asClassDesc() {
+            // FIXME: Handling of T_UNSPECIFIED and T_NULL might be wrong. The ClassDesc is for
+            // generated types, and so that's an issue.
             return switch (mCode) {
                 case T_UNSPECIFIED, T_NULL -> super.asClassDesc();
                 case T_VOID -> ConstantDescs.CD_void;

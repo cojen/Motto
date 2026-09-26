@@ -724,7 +724,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     @Override
     public final boolean isEquivalentTo(Type other) {
-        return other instanceof ClassTypeItem otherClass
+        return this == other || other instanceof ClassTypeItem otherClass
             && packagePath().equals(otherClass.packagePath())
             && namePath().equals(otherClass.namePath());
     }

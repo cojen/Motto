@@ -17,13 +17,16 @@
 package org.cojen.motto.model;
 
 import org.cojen.motto.internal.model.BaseClassTypeItem;
+import org.cojen.motto.internal.model.GeneratedType;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public sealed interface ClassTypeItem extends ObjectType, Item permits BaseClassTypeItem {
+public sealed interface ClassTypeItem extends ObjectType, Item
+    permits BaseClassTypeItem, GeneratedType
+{
     @Override
     public default Type enclosingType() {
         return outerType();

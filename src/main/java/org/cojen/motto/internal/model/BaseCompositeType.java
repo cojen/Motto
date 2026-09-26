@@ -88,6 +88,10 @@ public final class BaseCompositeType extends GeneratedType implements
 
     @Override
     public boolean isEquivalentTo(Type other) {
+        if (super.isEquivalentTo(other)) {
+            return true;
+        }
+
         if (!(other instanceof BaseCompositeType ost)) {
             return false;
         }

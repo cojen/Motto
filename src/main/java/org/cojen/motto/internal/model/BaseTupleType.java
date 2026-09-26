@@ -228,6 +228,10 @@ public sealed abstract class BaseTupleType extends GeneratedType
 
     @Override
     public final boolean isEquivalentTo(Type other) {
+        if (super.isEquivalentTo(other)) {
+            return true;
+        }
+
         if (!(other instanceof TupleType ott)) {
             return false;
         }

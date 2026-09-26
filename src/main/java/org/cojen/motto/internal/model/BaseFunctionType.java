@@ -87,8 +87,8 @@ public final class BaseFunctionType extends GeneratedType
     }
 
     @Override
-    public final boolean isEquivalentTo(Type other) {
-        return other instanceof FunctionType otherFunction
+    public boolean isEquivalentTo(Type other) {
+        return super.isEquivalentTo(other) || other instanceof FunctionType otherFunction
             && outputType().isEquivalentTo(otherFunction.outputType())
             && inputType().isEquivalentTo(otherFunction.inputType());
     }
