@@ -53,9 +53,10 @@ public final class Parser implements Closeable {
     // the parseIdentifierStatement method. The level isn't recursive, and so statements which
     // reference other statements can pass along a different level.
     private static final int
-        ID_BASIC          = 1, // Parse keywords, Load, CoordinateLoad, and MethodCall
-        ID_NO_NEW_SYMBOLS = 2, // Parse Store and CoordinateStore
-        ID_FULL           = 3; // Parse Declaration and *Definition (these define new symbols)
+        ID_BASIC    = 1, // Parse keywords, Load, CoordinateLoad, and MethodCall
+        ID_STORE    = 2, // Also parse Store and CoordinateStore
+        ID_SEGMENTS = 3, // Also parse MethodCall segments (stop short of parsing new symbols)
+        ID_FULL     = 4; // Also parse Declaration and *Definition (these define new symbols)
 
     private final CompilationEnv mEnv;
     private final Tokenizer mTokenizer;
@@ -340,7 +341,7 @@ public final class Parser implements Closeable {
         // Check if the statement is a tuple which starts a declaration or method definition,
         // unless new symbols aren't allowed.
 
-        if (idLevel <= ID_NO_NEW_SYMBOLS || st.end() instanceof Newline) {
+        if (idLevel <= ID_STORE || st.end() instanceof Newline) {
             return st;
         }
 
@@ -459,7 +460,7 @@ public final class Parser implements Closeable {
                         }
                     }
 
-                    st = parseMethodCall(st, List.of(name), params);
+                    st = parseMethodCall(st, List.of(name), params, ID_FULL);
                 }
 
                 case T_EQ, T_NE, T_GE, T_LT, T_LE, T_GT, T_LAND, T_LOR, T_AND, T_OR, T_XOR,
@@ -473,7 +474,7 @@ public final class Parser implements Closeable {
                     // silly lambda function which consists of a declaration inside a scope.
                     // "(int) -> int x"  would be interpreted as this: "(int) -> {int x}"
                     // If this behavior is desired, the braces must be explicitly specified.
-                    Statement body = parseStatement("lambda", ID_NO_NEW_SYMBOLS);
+                    Statement body = parseStatement("lambda", ID_SEGMENTS);
 
                     List<Statement> items;
 
@@ -793,7 +794,7 @@ public final class Parser implements Closeable {
      * @param source optional
      */
     private Statement parseMethodCall(Statement source, List<Identifier> name,
-                                      TupleStatement params)
+                                      TupleStatement params, int idLevel)
         throws IOException, Abort
     {
         // First create the method call without any call segments.
@@ -809,7 +810,7 @@ public final class Parser implements Closeable {
             call = new MethodCallStatement(source, simpleName, params, List.of());
         }
 
-        if (params.end() instanceof Newline) {
+        if (idLevel < ID_SEGMENTS || params.end() instanceof Newline) {
             // No segments can follow.
             return call;
         }
@@ -840,13 +841,20 @@ public final class Parser implements Closeable {
         List<Statement> segments = List.of();
 
         while (true) {
-            // Must not parse new symbols because when the statement leads with more than one
-            // identifier, it consumes identifiers which should be interpreted as segment
-            // names. The inability to declare or define symbols as standalone statements isn't
-            // big issue, considering that in practice the symbol would be in a lone
-            // inaccessible scope. If this behavior is desired, the declaration/definition must
-            // be wrapped in a tuple statement.
-            Statement st = tryParseStatement(ID_NO_NEW_SYMBOLS);
+            /*
+              If the next statement is a MethodCall, don't allow it to parse any segments.
+              They belong to this MethodCall which is currently being parsed.
+
+              Also, don't parse statements which define new symbols. This is because when the
+              statement leads with more than one identifier, it consumes identifiers which
+              should be interpreted as segment names.
+
+              The inability to declare or define symbols as standalone statements isn't big
+              issue, considering that in practice the symbol would be in a lone inaccessible
+              scope. If this behavior is desired, the declaration/definition must be wrapped in
+              a tuple statement.
+             */
+            Statement st = tryParseStatement(ID_STORE);
 
             if (st == null) {
                 break;
@@ -864,14 +872,7 @@ public final class Parser implements Closeable {
                 segments = new ArrayList<>(4);
             }
 
-            Statement chain = parseStatementChain(st);
-
-            segments.add(chain);
-
-            if (chain != st) {
-                // Chain parsing rules win, and so no more segments can follow.
-                break;
-            }
+            segments.add(st);
         }
 
         return segments;
@@ -917,7 +918,7 @@ public final class Parser implements Closeable {
                 }
 
                 case "class", "interface" -> {
-                    if (idLevel > ID_NO_NEW_SYMBOLS) {
+                    if (idLevel > ID_STORE) {
                         return parseClassDefinitionStatement(List.of(), first);
                     }
                 }
@@ -974,7 +975,7 @@ public final class Parser implements Closeable {
 
         List<Identifier> modifiers = List.of();
 
-        if (idLevel > ID_NO_NEW_SYMBOLS) {
+        if (idLevel > ID_STORE) {
             loop: while (true) {
                 if (qname.size() > 1) {
                     break loop;
@@ -1032,7 +1033,7 @@ public final class Parser implements Closeable {
 
         if (qname == null) {
             // If this point is reached, then at least one modifier was parsed. It also implies
-            // that idLevel is greater than ID_NO_NEW_SYMBOLS.
+            // that idLevel is greater than ID_STORE.
 
             Token t = nextToken();
             int tType = t.type();
@@ -1121,7 +1122,7 @@ public final class Parser implements Closeable {
                     }
 
                     case T_IDENTIFIER -> {
-                        if (idLevel > ID_NO_NEW_SYMBOLS) {
+                        if (idLevel > ID_STORE) {
                             if (canMatchInfixTypeStatement(t)) {
                                 idLevel = ID_BASIC;
                             } else {
@@ -1154,7 +1155,7 @@ public final class Parser implements Closeable {
                 break vtype;
             }
 
-            if (idLevel > ID_NO_NEW_SYMBOLS) {
+            if (idLevel > ID_STORE) {
                 Statement st = tryParseConstructorDefinition(modifiers, qname, params);
                 if (st != null) {
                     return st;
@@ -1164,7 +1165,7 @@ public final class Parser implements Closeable {
                 }
             }
 
-            return parseMethodCall(null, qname, params);
+            return parseMethodCall(null, qname, params, idLevel);
         }
 
         // If this point is reached, idLevel must allow new symbols.
