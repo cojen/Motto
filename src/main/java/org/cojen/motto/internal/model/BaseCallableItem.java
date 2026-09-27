@@ -89,6 +89,17 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
     }
 
     /**
+     * Calls the namesMatch method against the signature output and input types. True is
+     * returned when all calls return true.
+     *
+     * @param otherSig for an instance call, don't supply the implicit "this" parameter
+     */
+    boolean typeNamesMatch(BaseCallSignature otherSig) {
+        return mSignature.outputType().namesMatch(0, otherSig.outputType())
+            && mSignature.inputType().namesMatch(isStatic() ? 0 : 1, otherSig.inputType());
+    }
+
+    /**
      * Capture a local variable of the given type and name.
      *
      * @throws IllegalStateException if already captured and the type doesn't match

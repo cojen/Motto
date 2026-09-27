@@ -904,6 +904,10 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         for (Map.Entry<BaseCallSignature, BaseCallableItem> e : available.entrySet()) {
             BaseCallableItem item = e.getValue();
 
+            if (!item.typeNamesMatch(sig)) {
+                continue;
+            }
+
             // Note: The key doesn't have the implicit "this" parameter for instance methods,
             // unlike the item itself.
             BaseCallSignature key = e.getKey();

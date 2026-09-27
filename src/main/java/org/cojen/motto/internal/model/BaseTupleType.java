@@ -280,6 +280,30 @@ public sealed abstract class BaseTupleType extends GeneratedType
     }
 
     @Override
+    public boolean namesMatch(int offset, BaseType other) {
+        if (other instanceof BaseTupleType ott) {
+            int numFields = Math.min(numFields() - offset, ott.numFields());
+
+            int i = 0;
+            for (; i<numFields; i++) {
+                String otherName = ott.fieldName(i);
+                if (otherName != null && !otherName.equals(fieldName(offset + i))) {
+                    return false;
+                }
+            }
+
+            numFields = ott.numFields();
+            for (; i<numFields; i++) {
+                if (ott.fieldName(i) != null) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    @Override
     public final int canConvertTo(Type to) {
         if (isEquivalentTo(to) || to == Type.unspecified()) {
             return 0;

@@ -259,6 +259,30 @@ public sealed interface BaseType extends Type, EncodableType
     public BaseType inferredType(BaseType other);
 
     /**
+     * For all named fields of the other type, checks that the name is equal to a corresponding
+     * field of this type.
+     *
+     * <p>If this type is a tuple and the other isn't, then true is returned. If the other type
+     * has more fields than this one, then false is returned if the extra fields have names. If
+     * the other type is a tuple and this type isn't, then true is returned only if the other
+     * type doesn't have any field names.
+     *
+     * @param field offset for this type; usually 0 or 1
+     */
+    default boolean namesMatch(int offset, BaseType other) {
+        if (other instanceof BaseTupleType ott) {
+            int numFields = ott.numFields();
+            for (int i=0; i<numFields; i++) {
+                if (ott.fieldName(i) != null) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Checks if a type can be converted without losing information. Lower codes have a cheaper
      * conversion cost.
      *
