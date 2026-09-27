@@ -87,11 +87,9 @@ public final class ConstructorDefinitionStatement extends FunctionDefinitionStat
             return null;
         }
 
-        boolean evaluated = paramType.isEvaluated();
-
         // FIXME: Clauses.
 
-        if ((mItem = clazz.tryAddConstructor(modifierBits, inputType, evaluated)) == null) {
+        if ((mItem = clazz.tryAddConstructor(modifierBits, inputType)) == null) {
             env.error(this, "duplicate constructor definition");
         }
 

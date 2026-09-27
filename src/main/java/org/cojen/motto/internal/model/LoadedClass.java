@@ -215,10 +215,7 @@ public final class LoadedClass extends BaseClassTypeItem {
                 String name = Maker.demangle(m.getName());
                 BaseTupleType inputType = inputTypeFor(m);
 
-                // FIXME: Must look for a special annotation.
-                boolean evaluated = true;
-
-                var sig = BaseCallSignature.from(outputType, name, inputType, evaluated);
+                var sig = BaseCallSignature.from(outputType, name, inputType);
 
                 tryAddMethod(modifierBits, sig);
             }
@@ -251,10 +248,7 @@ public final class LoadedClass extends BaseClassTypeItem {
 
                 BaseTupleType inputType = inputTypeFor(c);
 
-                // FIXME: Must look for a special annotation.
-                boolean evaluated = true;
-
-                tryAddConstructor(modifierBits, inputType, evaluated);
+                tryAddConstructor(modifierBits, inputType);
             }
 
             mInitState |= mask;

@@ -393,10 +393,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     public final Map<BaseCallSignature, Set<CallableItem>> findMethod
         (String name, BaseTupleType inputType, Predicate<CallableItem> filter)
     {
-        // Note: The evaluated option is ignored. See BaseCallSignature.canBindTo.
-        BaseCallSignature sig = BaseCallSignature.from
-            (BaseUnspecifiedType.THE, name, inputType, true);
-
+        BaseCallSignature sig = BaseCallSignature.from(BaseUnspecifiedType.THE, name, inputType);
         return findMethod(sig, filter);
     }
 
@@ -547,8 +544,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     public Map<BaseCallSignature, BaseCallableItem> findConstructor
         (BaseTupleType inputType, Predicate<CallableItem> filter)
     {
-        // Note: The evaluated option is ignored. See BaseCallSignature.canBindTo.
-        BaseCallSignature sig = BaseCallSignature.from(BaseVoidType.THE, "", inputType, true);
+        BaseCallSignature sig = BaseCallSignature.from(BaseVoidType.THE, "", inputType);
 
         Map<BaseCallSignature, Set<CallableItem>> mapOfSets =
             findCallable(Map.of(), sig, filter, null, constructorMap());
@@ -576,15 +572,11 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
      * Attempt to add a constructor, which initially doesn't have any code.
      *
      * @param inputType the first parameter must be named "this", with the correct type
-     * @param evaluated when false, the inputType elements have been converted to function
-     * types, except for "this"
      * @return null if a conflicting constructor definition already exists
      * @throws IllegalArgumentException the first parameter isn't named "this"
      */
-    public final BaseCallableItem tryAddConstructor(int modifierBits, BaseTupleType inputType,
-                                                    boolean evaluated)
-    {
-        var sig = BaseCallSignature.from(BaseVoidType.THE, "", validateThis(inputType), evaluated);
+    public final BaseCallableItem tryAddConstructor(int modifierBits, BaseTupleType inputType) {
+        var sig = BaseCallSignature.from(BaseVoidType.THE, "", validateThis(inputType));
 
         var ctor = BaseCallableItem.from(modifierBits, this, sig);
 

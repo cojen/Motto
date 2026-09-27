@@ -153,18 +153,17 @@ public final class ExternalClass extends BaseClassTypeItem
         methods().forEach(method -> {
             // FIXME: If any types are unspecified, use Object (as is currently done), but also
             // define an attribute which has a correct signature. Something special is needed
-            // for void parameters too. Also use a signature for macros, or signatures which
-            // are unevaluated. Attribute name: "motto.CallSignature"
+            // for void parameters too. Possibly also use a signature for macros. Attribute
+            // name: "motto.CallSignature"
 
             MethodMaker mm;
 
             if (!method.isMacro()) {
-                BaseCallSignature flattened = method.signature().flatten();
-                Object[] paramTypes = makerParamsFor(method, flattened);
+                BaseCallSignature signature = method.signature();
+                Object[] paramTypes = makerParamsFor(method, signature);
 
-                // FIXME: might have conflicts
-                mm = cm.addMethod(flattened.outputType().asMakerType(),
-                                  Maker.mangle(flattened.name()), paramTypes);
+                mm = cm.addMethod(signature.outputType().asMakerType(),
+                                  Maker.mangle(signature.name()), paramTypes);
 
                 method.applyModifiers(mm);
             } else {
@@ -241,14 +240,14 @@ public final class ExternalClass extends BaseClassTypeItem
             }
 
             if (mname.equals("<init>")) {
-                tryAddConstructor(modifierBits, params, true);
+                tryAddConstructor(modifierBits, params);
             } else {
                 // FIXME: Look for MacroMethod attribute. If found and is valid, update
                 // modifierBits before calling tryAddMethod. If tryAddMethod is successful,
                 // then call macroImpl.
                 BaseType returnType = toType(methodType.returnType());
                 mname = Maker.demangle(mname);
-                var sig = BaseCallSignature.from(returnType, mname, params, true);
+                var sig = BaseCallSignature.from(returnType, mname, params);
                 tryAddMethod(modifierBits, sig);
             }
         }

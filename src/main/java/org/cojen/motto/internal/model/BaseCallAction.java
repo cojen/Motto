@@ -30,22 +30,14 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
     private final BaseCallableItem mCallable;
     private final BaseBinding mOutput;
     private final BaseBinding[] mInputs;
-    private final BaseSegmentArgument[] mSegments;
 
     BaseCallAction(int position, BaseCallableItem callable,
                    BaseBinding output, BaseBinding... inputs)
-    {
-        this(position, callable, output, inputs, (BaseSegmentArgument[]) null);
-    }
-
-    BaseCallAction(int position, BaseCallableItem callable,
-                   BaseBinding output, BaseBinding[] inputs, BaseSegmentArgument... segments)
     {
         super(position);
         mCallable = Objects.requireNonNull(callable);
         mOutput = Objects.requireNonNull(output);
         mInputs = Objects.requireNonNull(inputs);
-        mSegments = segments;
     }
 
     @Override
@@ -68,17 +60,6 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
         return mInputs[index];
     }
 
-    public final int numSegments() {
-        return mSegments == null ? 0 : mSegments.length;
-    }
-
-    public final BaseSegmentArgument segment(int index) {
-        if (mSegments == null) {
-            throw new IndexOutOfBoundsException();
-        }
-        return mSegments[index];
-    }
-
     @Override
     final void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
         for (BaseBinding input : mInputs) {
@@ -93,12 +74,6 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
                       BaseBinding output, BaseBinding... inputs)
         {
             super(position, callable, output, inputs);
-        }
-
-        public Direct(int position, BaseCallableItem callable,
-                      BaseBinding output, BaseBinding[] inputs, BaseSegmentArgument... segments)
-        {
-            super(position, callable, output, inputs, segments);
         }
 
         @Override

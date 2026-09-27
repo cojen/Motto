@@ -43,22 +43,21 @@ public abstract sealed class Token implements Element {
 
     // Regular tokens.
     public static final int T_DOT = 10, T_COLON = 11, T_ASSIGN = 12,
-        T_INC = 13, T_DEC = 14, T_QUESTION = 15, T_BANG = 16, T_TILDE = 17,
-        T_COLON_COLON = 18, T_COLON_PLUS = 19, T_COLON_MUL = 20;
+        T_INC = 13, T_DEC = 14, T_QUESTION = 15, T_BANG = 16, T_TILDE = 17;
 
     // Standard infix operators.
-    public static final int T_EQ = 21, T_NE = 22, T_GE = 23, T_LT = 24, T_LE = 25, T_GT = 26,
-        T_LAND = 27, T_LOR = 28, T_AND = 29, T_OR = 30, T_XOR = 31,
-        T_PLUS = 32, T_MINUS = 33, T_MUL = 34, T_DIV = 35, T_REM = 36,
-        T_SHL = 37, T_SHR = 38, T_USHR = 39, T_ARROW = 40;
+    public static final int T_EQ = 18, T_NE = 19, T_GE = 20, T_LT = 21, T_LE = 22, T_GT = 23,
+        T_LAND = 24, T_LOR = 25, T_AND = 26, T_OR = 27, T_XOR = 28,
+        T_PLUS = 29, T_MINUS = 30, T_MUL = 31, T_DIV = 32, T_REM = 33,
+        T_SHL = 34, T_SHR = 35, T_USHR = 36, T_ARROW = 37;
 
     // Standard infix assignment operators.
-    public static final int T_AND_A = 41, T_OR_A = 42, T_XOR_A = 43,
-        T_PLUS_A = 44, T_MINUS_A = 45, T_MUL_A = 46, T_DIV_A = 47, T_REM_A = 48,
-        T_SHL_A = 49, T_SHR_A = 50, T_USHR_A = 51;
+    public static final int T_AND_A = 38, T_OR_A = 39, T_XOR_A = 40,
+        T_PLUS_A = 41, T_MINUS_A = 42, T_MUL_A = 43, T_DIV_A = 44, T_REM_A = 45,
+        T_SHL_A = 46, T_SHR_A = 47, T_USHR_A = 48;
 
     // Tokens which have a text value.
-    public static final int T_CUSTOM_OP = 52, T_IDENTIFIER = 53, T_STRING = 54, T_COMMENT = 55;
+    public static final int T_CUSTOM_OP = 49, T_IDENTIFIER = 50, T_STRING = 51, T_COMMENT = 52;
 
     // Numerical constants.
     public static final int T_INT32 = 56, T_INT64 = 57, T_BIGINT = 58,

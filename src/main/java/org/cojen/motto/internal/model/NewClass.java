@@ -344,7 +344,7 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
         // Use only the relevant modifiers.
         modifierBits &= Modifiers.PUBLIC | Modifiers.PRIVATE | Modifiers.PROTECTED;
 
-        return tryAddConstructor(modifierBits, BaseTupleType.from(this).withNames("this"), true);
+        return tryAddConstructor(modifierBits, BaseTupleType.from(this).withNames("this"));
     }
 
     private static boolean anyInstanceMember(Stream<? extends BaseItem> items) {
@@ -398,22 +398,23 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
         methods().forEach(method -> {
             // FIXME: If any types are unspecified, use Object (as is currently done), but also
             // define an attribute which has a correct signature. Something special is needed
-            // for void parameters too. Also use a signature for macros, or signatures which
-            // are unevaluated. Attribute name: "motto.CallSignature"
+            // for void parameters too. Possibly also use a signature for macros. Attribute
+            // name: "motto.CallSignature"
 
             MethodMaker mm;
 
             if (!method.isMacro()) {
-                BaseCallSignature flattened = method.signature().flatten();
-                Object[] paramTypes = makerParamsFor(method, flattened);
+                BaseCallSignature signature = method.signature();
+                Object[] paramTypes = makerParamsFor(method, signature);
 
-                // FIXME: might have conflicts
-                mm = cm.addMethod(flattened.outputType().asMakerType(),
-                                  Maker.mangle(flattened.name()), paramTypes);
+                mm = cm.addMethod(signature.outputType().asMakerType(),
+                                  Maker.mangle(signature.name()), paramTypes);
 
                 method.applyModifiers(mm);
-                applyParamNames(mm, method, flattened);
+                applyParamNames(mm, method, signature);
             } else {
+                BaseCallSignature signature = method.macroSignature();
+
                 // FIXME: macro
                 throw null;
             }

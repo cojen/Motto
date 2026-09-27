@@ -40,7 +40,6 @@ import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseNullType;
 import org.cojen.motto.internal.model.BasePath;
 import org.cojen.motto.internal.model.BasePrimitiveType;
-import org.cojen.motto.internal.model.BaseSegmentArgument;
 import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
@@ -524,9 +523,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         Map<BaseCallSignature, Set<CallableItem>> methods;
 
-        BaseCallSignature.BaseSegment[] segSignatures = null;
-        BaseSegmentArgument[] segArguments = null;
-
         findMethods: {
             List<Statement> segments = st.segments;
 
@@ -580,12 +576,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 throw null;
             }
 
-            String name = nameToken.text;
-            // FIXME: Drop the "evaluated" option.
-            boolean evaluated = st.params.open.type() == Token.T_LPAREN;
-
-            var sig = BaseCallSignature.from
-                (BaseUnspecifiedType.THE, name, vt.type, evaluated, segSignatures);
+            var sig = BaseCallSignature.from(BaseUnspecifiedType.THE, nameToken.text, vt.type);
 
             BaseType type = item.nearestType();
 
@@ -640,8 +631,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         BaseBlock block = mScope.activeBlock(st);
 
-        if (direct | staticCall | callable.isPrivate() | segArguments != null) {
-            return block.callDirect(callable, (Object[]) inputBindings, segArguments);
+        if (direct | staticCall | callable.isPrivate()) {
+            return block.callDirect(callable, (Object[]) inputBindings);
         } else {
             return block.callVirtual(callable, (Object[]) inputBindings);
         }
@@ -1348,7 +1339,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             // Note: The CodeGenerator sees that the class is a constant and uses the
             // instanceof instruction.
             var sig = BaseCallSignature.from
-                (BaseBooleanType.THE, "isInstance", BaseTupleType.from(objectClass), true);
+                (BaseBooleanType.THE, "isInstance", BaseTupleType.from(objectClass));
             var isInstance = classClass.method(sig);
             BaseBlock block = mScope.activeBlock(st);
             result = block.callVirtual(isInstance, clazzObj, binding);
@@ -1430,7 +1421,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         var inputType = st.inputType.tryResolve(mEnv, lambda);
         var callInputType = st.inputType.tryResolve(mEnv, lambda, lambda);
 
-        var sig = BaseCallSignature.from(deferredOutputType, "apply", callInputType, true);
+        var sig = BaseCallSignature.from(deferredOutputType, "apply", callInputType);
         var callable = BaseCallableItem.from(PUBLIC | FINAL, lambda, sig);
 
         visitCode(null, callable, st.items);
@@ -1451,7 +1442,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         // This causes the lambda class to implement the function type interface.
         lambda.setFunctionType(functionType);
 
-        sig = BaseCallSignature.from(outputType, "apply", callInputType, true);
+        sig = BaseCallSignature.from(outputType, "apply", callInputType);
         callable = lambda.tryAddMethod(PUBLIC | FINAL, sig);
 
         callable.assignCode(code);
@@ -1459,7 +1450,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         // Construct and return a new lambda instance.
 
         BaseCallableItem ctor = lambda.tryAddConstructor
-            (PRIVATE, BaseTupleType.from(lambda).withNames("this"), true);
+            (PRIVATE, BaseTupleType.from(lambda).withNames("this"));
 
         return mScope.activeBlock(st).callNew(ctor);
     }
@@ -1915,7 +1906,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         if (mScope.item() instanceof NewClass clazz) {
             CodeScopeStatement code = st.code;
             if (code != null && !code.items.isEmpty()) {
-                var sig = BaseCallSignature.from(BaseVoidType.THE, "", BaseTupleType.EMPTY, true);
+                var sig = BaseCallSignature.from(BaseVoidType.THE, "", BaseTupleType.EMPTY);
                 var clinit = BaseCallableItem.from(STATIC, clazz, sig);
                 clazz.addClinit(clinit);
                 visitCode(code, clinit);

@@ -265,11 +265,6 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             throw null;
         }
 
-        if (action.numSegments() != 0) {
-            // FIXME: segments
-            throw null;
-        }
-
         BaseClassTypeItem objType = callable.nearestClass();
 
         if (objType.packagePath().equals(BasePath.MOTTO_RUNTIME)) {

@@ -27,8 +27,6 @@ import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseVoidType;
 import org.cojen.motto.internal.model.NewClass;
 
-import static org.cojen.motto.internal.model.BaseCallSignature.BaseSegment;
-
 import static org.cojen.motto.internal.model.Modifiers.*;
 
 /**
@@ -37,8 +35,6 @@ import static org.cojen.motto.internal.model.Modifiers.*;
  * @author Brian S. O'Neill
  */
 public final class MethodDefinitionStatement extends FunctionDefinitionStatement {
-    public final List<DefinitionSegment> segments;
-
     // These are assigned when addToClass is called.
     private NewClass mClass;
     private BaseCallableItem mItem;
@@ -49,14 +45,12 @@ public final class MethodDefinitionStatement extends FunctionDefinitionStatement
      * @param clauses required; might be empty
      * @param code optional
      * @param returnType can be null for void
-     * @param segments required; can be empty
      */
     MethodDefinitionStatement(List<Token.Identifier> modifiers, Token.Identifier name,
                               List<Clause> clauses, CodeScopeStatement code, VarType returnType,
-                              TupleVarType paramType, List<DefinitionSegment> segments)
+                              TupleVarType paramType)
     {
         super(modifiers, name, clauses, code, returnType, paramType);
-        this.segments = segments;
     }
 
     @Override
@@ -73,9 +67,6 @@ public final class MethodDefinitionStatement extends FunctionDefinitionStatement
     public Token end() {
         if (code != null) {
             return code.end();
-        }
-        if (!segments.isEmpty()) {
-            return segments.getLast().end();
         }
         if (!clauses.isEmpty()) {
             return clauses.getLast().end();
@@ -118,41 +109,13 @@ public final class MethodDefinitionStatement extends FunctionDefinitionStatement
             return null;
         }
 
-        BaseSegment[] segments = null;
-
-        if (!this.segments.isEmpty()) {
-            segments = new BaseSegment[this.segments.size()];
-
-            int i = 0;
-            for (DefinitionSegment dseg : this.segments) {
-                String name = dseg.name == null ? "" : dseg.name.text;
-
-                BaseTupleType segParamType = dseg.paramType.tryResolve(env, clazz, null);
-
-                if (segParamType == null) {
-                    // An error should have been reported already.
-                    return null;
-                }
-
-                var seg = BaseSegment.from
-                    (dseg.repetition, name, segParamType, dseg.paramType.isEvaluated());
-
-                segments[i++] = seg;
-            }
-
-            if (i != segments.length) {
-                throw new AssertionError();
-            }
-        }
-
         if ((modifierBits & (MACRO | STATIC)) == MACRO) {
             // FIXME: drop this restriction
             env.error(this, "macro method must be static");
             return null;
         }
 
-        BaseCallSignature sig = BaseCallSignature.from
-            (outputType, name.text, inputType, paramType.isEvaluated(), segments);
+        BaseCallSignature sig = BaseCallSignature.from(outputType, name.text, inputType);
 
         // FIXME: Clauses.
 

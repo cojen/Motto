@@ -33,7 +33,6 @@ import org.cojen.motto.model.ArrayType;
 import org.cojen.motto.model.Binding;
 import org.cojen.motto.model.Block;
 import org.cojen.motto.model.CallableItem;
-import org.cojen.motto.model.SegmentArgument;
 import org.cojen.motto.model.TerminalAction;
 import org.cojen.motto.model.TerminatedBlockException;
 import org.cojen.motto.model.Type;
@@ -290,38 +289,15 @@ public final class BaseBlock implements Block {
 
     @Override
     public BaseBinding callDirect(CallableItem callable, Object... inputs) {
-        return callDirect(callable, inputs, (SegmentArgument[]) null);
+        return callDirect((BaseCallableItem) callable, inputs);
     }
 
-    @Override
-    public BaseBinding callDirect(CallableItem callable, Object[] inputs,
-                                  SegmentArgument... segments)
-    {
-        return callDirect((BaseCallableItem) callable, inputs, segments);
-    }
-
-    public BaseBinding callDirect(BaseCallableItem callable,
-                                  Object[] inputs, SegmentArgument... segments)
-    {
+    public BaseBinding callDirect(BaseCallableItem callable, Object[] inputs) {
         // FIXME: verify target and input types
-
-        BaseSegmentArgument[] extArray = null;
-
-        if (segments != null && segments.length != 0) {
-            if (segments instanceof BaseSegmentArgument[] a) {
-                extArray = a;
-            } else {
-                extArray = new BaseSegmentArgument[segments.length];
-                for (int i=0; i<segments.length; i++) {
-                    extArray[i] = (BaseSegmentArgument) segments[i];
-                }
-            }
-        }
 
         BaseBinding target = targetVar(callable);
 
-        addAction(new BaseCallAction.Direct
-                  (mPosition, callable, target, toBindings(inputs), extArray));
+        addAction(new BaseCallAction.Direct(mPosition, callable, target, toBindings(inputs)));
 
         return target;
     }

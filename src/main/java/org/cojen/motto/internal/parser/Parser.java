@@ -1348,22 +1348,6 @@ public final class Parser implements Closeable {
     {
         Identifier sname = simpleName(qname, "method name");
 
-        List<DefinitionSegment> segments = List.of();
-
-        while (true) {
-            DefinitionSegment seg = tryParseDefinitionSegment();
-
-            if (seg == null) {
-                break;
-            }
-
-            if (segments.isEmpty()) {
-                segments = new ArrayList<>(4);
-            }
-
-            segments.add(seg);
-        }
-
         List<Clause> clauses = parseClauses();
 
         CodeScopeStatement code;
@@ -1393,56 +1377,7 @@ public final class Parser implements Closeable {
         TupleVarType paramType = params.asTupleVarType(this);
 
         return new MethodDefinitionStatement
-            (modifiers, sname, clauses, code, returnType, paramType, segments);
-    }
-
-    private DefinitionSegment tryParseDefinitionSegment() throws IOException, Abort {
-        Token repToken = nextToken();
-        int repetition;
-
-        switch (repToken.type()) {
-            default -> {
-                pushToken(repToken);
-                return null;
-            }
-            case T_COLON_COLON -> { // once
-                repetition = -1;
-            }
-            case T_COLON_MUL -> { // zero or more
-                repetition = 0;
-            }
-            case T_COLON_PLUS -> { // one or more
-                repetition = 1;
-            }
-        }
-
-        Token t = nextToken();
-
-        Identifier name = null;
-
-        if (t.type() == T_IDENTIFIER) {
-            name = (Identifier) t;
-            t = nextToken();
-        }
-
-        TupleStatement params;
-
-        switch (t.type()) {
-            case T_LPAREN -> {
-                params = parseTuple(t, T_RPAREN);
-            }
-
-            case T_LBRACE -> {
-                params = parseTuple(t, T_RBRACE);
-            }
-
-            default -> {
-                params = null;
-                error(t, "illegal parameter type");
-            }
-        }
-
-        return new DefinitionSegment(repetition, name, params.asTupleVarType(this));
+            (modifiers, sname, clauses, code, returnType, paramType);
     }
 
     private ConstructorDefinitionStatement tryParseConstructorDefinition

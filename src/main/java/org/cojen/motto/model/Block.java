@@ -104,13 +104,6 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
-    public Binding callDirect(CallableItem callable, Object[] inputs, SegmentArgument... segments);
-
-    /**
-     * @param inputs Bindings or constants
-     * @return the result binding
-     * @throws TerminatedBlockException if this block is terminated
-     */
     public Binding callNew(CallableItem callable, Object... inputs);
 
     /**
