@@ -147,12 +147,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         return false;
     }
 
-    private static String typeString(BaseType type) {
-        // FIXME: typeString
-        return String.valueOf(type);
-        //return ToStringVisitor.toString(type);
-    }
-
     private BaseBinding tryMatchKeywordBinding(Token.Identifier token) {
         if (!token.quoted) {
             switch (token.text) {
@@ -498,8 +492,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
     private BaseBinding tryMakeMethodCall(MethodCallStatement st,
                                           BaseItem item, BaseBinding instance,
                                           Token.Identifier nameToken,
-                                          BaseType[] inputTypes, BaseBinding[] inputBindings,
-                                          boolean direct)
+                                          VistedTuple vt, boolean direct)
     {
         final boolean staticCall = item != null;
 
@@ -538,10 +531,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             List<Statement> segments = st.segments;
 
             if (!segments.isEmpty()) {
-                // FIXME: Should process segment inputs like a single tuple. This should also
-                // ensure lambda conversion for unevaluated tuples. Unlike the main parameters,
-                // segments run in separate scopes.
-
                 /* FIXME
                 segSignatures = new BaseCallSignature.BaseSegment[segments.size()];
                 segArguments = new BaseSegmentArgument[segSignatures.length];
@@ -592,11 +581,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             }
 
             String name = nameToken.text;
-            BaseTupleType inputType = BaseTupleType.from(inputTypes);
+            // FIXME: Drop the "evaluated" option.
             boolean evaluated = st.params.open.type() == Token.T_LPAREN;
 
             var sig = BaseCallSignature.from
-                (BaseUnspecifiedType.THE, name, inputType, evaluated, segSignatures);
+                (BaseUnspecifiedType.THE, name, vt.type, evaluated, segSignatures);
 
             BaseType type = item.nearestType();
 
@@ -634,6 +623,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         }
 
         var callable = (BaseCallableItem) set.iterator().next();
+
+        BaseBinding[] inputBindings = vt.inputs;
 
         if (!staticCall) {
             // Need a binding for the instance.
@@ -797,6 +788,63 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         }
 
         return bindings;
+    }
+
+    private record VistedTuple(BaseTupleType type, BaseBinding[] inputs) {}
+
+    /**
+     * @return null if an error was reported
+     */
+    private VistedTuple visitTuple(TupleStatement st) {
+        if (checkUnreachable(st)) {
+            return null;
+        }
+
+        List<Statement> items = st.items;
+        int numItems = items.size();
+
+        if (numItems == 0) {
+            return new VistedTuple(BaseTupleType.EMPTY, new BaseBinding[0]);
+        }
+
+        if (st.isUnevaluated()) {
+            // FIXME: use lambdas
+            throw null;
+        }
+
+        var types = new BaseType[numItems];
+        var names = new String[types.length];
+        var inputs = new BaseBinding[types.length];
+
+        int i = 0;
+        for (Statement item : items) {
+            while (item instanceof LabeledStatement ls) {
+                if (names[i] == null) {
+                    names[i] = ls.label.text;
+                    item = ls.source;
+                } else {
+                    item = ls.noLabel(mEnv);
+                }
+            }
+
+            BaseBinding input = item.accept(this);
+
+            if (input == null) {
+                // Error state.
+                return null;
+            }
+
+            types[i] = input.type();
+            inputs[i] = input;
+
+            i++;
+        }
+
+        if (i != types.length) {
+            throw new AssertionError();
+        }
+
+        return new VistedTuple(BaseTupleType.from(types).withNames(names), inputs);
     }
 
     // Visit methods: Null is returned if an error was reported. Void is returned if the
@@ -1514,27 +1562,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             }
         }
 
-        List<Statement> items = st.params.items;
+        VistedTuple vt = visitTuple(st.params);
 
-        // FIXME: Should process inputs like a single tuple. This should also ensure lambda
-        // conversion for unevaluated tuples.
-        var inputTypes = new BaseType[items.size()];
-        var inputBindings = new BaseBinding[inputTypes.length];
-
-        int i = 0;
-        for (Statement paramItem : items) {
-            BaseBinding param = paramItem.accept(this);
-            if (param == null) {
-                // Error state.
-                return null;
-            }
-            inputTypes[i] = param.type();
-            inputBindings[i] = param;
-            i++;
-        }
-
-        if (i != inputTypes.length) {
-            throw new AssertionError();
+        if (vt == null) {
+            // Error state.
+            return null;
         }
 
         boolean autoThis = false;
@@ -1553,7 +1585,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 int numErrors = mEnv.numErrors();
 
                 BaseBinding result = tryMakeMethodCall
-                    (st, mScope.item(), null, nameToken, inputTypes, inputBindings, false);
+                    (st, mScope.item(), null, nameToken, vt, false);
 
                 if (result != null || numErrors != mEnv.numErrors()) {
                     return result;
@@ -1564,8 +1596,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 if (classItem != null) {
                     numErrors = mEnv.numErrors();
 
-                    result = tryMakeMethodCall
-                        (st, classItem, null, nameToken, inputTypes, inputBindings, false);
+                    result = tryMakeMethodCall(st, classItem, null, nameToken, vt, false);
 
                     if (result != null || numErrors != mEnv.numErrors()) {
                         return result;
@@ -1632,8 +1663,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                     BaseBinding result;
 
                     if (type instanceof BaseClassTypeItem classItem) {
-                        result = tryMakeMethodCall
-                            (st, classItem, null, nameToken, inputTypes, inputBindings, false);
+                        result = tryMakeMethodCall(st, classItem, null, nameToken, vt, false);
                     } else {
                         // FIXME: Support static calls on primitive types.
                         result = null;
@@ -1666,8 +1696,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         int numErrors = mEnv.numErrors();
 
-        BaseBinding result = tryMakeMethodCall
-            (st, null, instance, nameToken, inputTypes, inputBindings, false);
+        BaseBinding result = tryMakeMethodCall(st, null, instance, nameToken, vt, false);
 
         if (result == null && numErrors == mEnv.numErrors()) {
             String message;
@@ -1772,25 +1801,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             throw null;
         }
 
-        List<Statement> items = st.params.items;
+        VistedTuple vt = visitTuple(st.params);
 
-        var inputTypes = new BaseType[items.size()];
-        var inputBindings = new BaseBinding[inputTypes.length];
-
-        int i = 0;
-        for (Statement paramItem : items) {
-            BaseBinding input = paramItem.accept(this);
-            if (input == null) {
-                // Error state.
-                return null;
-            }
-            inputTypes[i] = input.type();
-            inputBindings[i] = input;
-            i++;
-        }
-
-        if (i != inputTypes.length) {
-            throw new AssertionError();
+        if (vt == null) {
+            // Error state.
+            return null;
         }
 
         BaseClassTypeItem clazz = tryResolveClass(st.name, st.name.listIterator(), true);
@@ -1800,10 +1815,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        BaseTupleType inputType = BaseTupleType.from(inputTypes);
-
         Map<BaseCallSignature, BaseCallableItem> ctors =
-            clazz.findConstructor(inputType, mScope.item());
+            clazz.findConstructor(vt.type, mScope.item());
 
         if (ctors.isEmpty()) {
             error(st, "constructor not found");
@@ -1818,7 +1831,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         BaseCallableItem ctor = ctors.values().iterator().next();
 
-        return mScope.activeBlock(st).callNew(ctor, (Object[]) inputBindings);
+        return mScope.activeBlock(st).callNew(ctor, (Object[]) vt.inputs);
     }
 
     @Override
@@ -1999,66 +2012,22 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
     @Override
     public BaseBinding visit(TupleStatement st) {
-        if (checkUnreachable(st)) {
+        VistedTuple vt = visitTuple(st);
+
+        if (vt == null) {
+            // Error state.
             return null;
         }
 
-        List<Statement> items = st.items;
-        int numItems = items.size();
+        BaseTupleType tt = vt.type;
 
-        if (numItems == 0) {
-            return mScope.activeBlock(st).tupleNew(BaseTupleType.EMPTY);
+        if (tt.numFields() == 1 && tt.fieldName(0) == null) {
+            // A single element tuple is just a grouped expression. It can be converted into a
+            // tuple easily enough by the receiver if necessary.
+            return vt.inputs[0];
         }
 
-        if (st.isUnevaluated()) {
-            // FIXME: use lambdas
-            throw null;
-        }
-
-        if (numItems == 1) {
-            Statement first = items.getFirst();
-            if (!(first instanceof LabeledStatement)) {
-                // A single element tuple is just a grouped expression. It can be converted
-                // into a tuple easily enough by the receiver if necessary.
-                return first.accept(this);
-            }
-        }
-
-        var types = new BaseType[numItems];
-        var names = new String[types.length];
-        var inputs = new BaseBinding[types.length];
-
-        int i = 0;
-        for (Statement item : items) {
-            while (item instanceof LabeledStatement ls) {
-                if (names[i] == null) {
-                    names[i] = ls.label.text;
-                    item = ls.source;
-                } else {
-                    item = ls.noLabel(mEnv);
-                }
-            }
-
-            BaseBinding input = item.accept(this);
-
-            if (input == null) {
-                // Error state.
-                return null;
-            }
-
-            types[i] = input.type();
-            inputs[i] = input;
-
-            i++;
-        }
-
-        if (i != types.length) {
-            throw new AssertionError();
-        }
-
-        BaseTupleType tt = BaseTupleType.from(types).withNames(names);
-
-        return mScope.activeBlock(st).tupleNew(tt, (Object[]) inputs);
+        return mScope.activeBlock(st).tupleNew(tt, (Object[]) vt.inputs);
     }
 
     @Override
