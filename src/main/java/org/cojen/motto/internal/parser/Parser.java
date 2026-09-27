@@ -929,9 +929,7 @@ public final class Parser implements Closeable {
                         pushDefinitionContext(null, DefinitionContext.T_CLINIT);
 
                         try {
-                            CodeScopeStatement code = codeScope
-                                (parseStatement("class initializer", ID_BASIC));
-
+                            CodeScopeStatement code = parseCodeScope("class initializer");
                             return new StaticInitStatement(first, code);
                         } finally {
                             popDefinitionContext();
@@ -1197,6 +1195,27 @@ public final class Parser implements Closeable {
     }
 
     /**
+     * @param which optional type of statement being parsed (used for error reporting)
+     */
+    private CodeScopeStatement parseCodeScope(String which) throws IOException, Abort {
+        Statement st = parseStatement(which, ID_BASIC);
+
+        if (st instanceof TupleStatement tuple && tuple.isUnevaluated()) {
+            return toCodeScope(tuple);
+        }
+
+        String message = "code scope required";
+
+        if (which != null) {
+            message = message + " for " + which;
+        }
+
+        error(st, message);
+
+        return null;
+    }
+
+    /**
      * Parses these forms:
      *
      * - MethodDefinition       [ modifiers ] vtype sname Tuple ...
@@ -1335,7 +1354,7 @@ public final class Parser implements Closeable {
 
         try {
             Identifier sname = simpleName(cname, "class name");
-            CodeScopeStatement code = codeScope(parseStatement("class definition", ID_BASIC));
+            CodeScopeStatement code = parseCodeScope("class definition");
             return new ClassDefinitionStatement(modifiers, ctype, sname, clauses, code);
         } finally {
             popDefinitionContext();
@@ -1363,7 +1382,7 @@ public final class Parser implements Closeable {
 
                 switch (peek.type()) {
                     default -> {
-                        code = codeScope(parseStatement("method definition", ID_BASIC));
+                        code = parseCodeScope("method definition");
                     }
                     case T_COMMA, T_SEMI -> {
                         code = null;
@@ -1408,7 +1427,7 @@ public final class Parser implements Closeable {
         pushDefinitionContext(qname, DefinitionContext.T_CONSTRUCTOR);
 
         try {
-            CodeScopeStatement code = codeScope(parseStatement("constructor definition", ID_BASIC));
+            CodeScopeStatement code = parseCodeScope("constructor definition");
             return new ConstructorDefinitionStatement(modifiers, sname, clauses, code, paramType);
         } finally {
             popDefinitionContext();
@@ -1628,21 +1647,6 @@ public final class Parser implements Closeable {
         }
 
         return List.of(new Identifier(t.line(), t.column(), 0, "", false));
-    }
-
-    /**
-     * Convertes the goven statement to a CodeScopeStatement, if it's an unevaluated
-     * TupleStatement, or else report an error and return null.
-     *
-     * @return an optional CodeScopeStatement which doesn't have any top-level SequenceStatements
-     */
-    private CodeScopeStatement codeScope(Statement st) {
-        if (st instanceof TupleStatement tuple && tuple.isUnevaluated()) {
-            return toCodeScope(tuple);
-        } else {
-            error(st, "code scope required");
-            return null;
-        }
     }
 
     /**
