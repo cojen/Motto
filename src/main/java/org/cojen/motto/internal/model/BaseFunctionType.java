@@ -34,7 +34,7 @@ public final class BaseFunctionType extends GeneratedType
     implements BaseObjectType, FunctionType, EncodableType.FunctionT
 {
     public static BaseFunctionType from(BaseType outputType, BaseType inputType) {
-        return InternSet.apply(new BaseFunctionType(outputType, inputType));
+        return InternSet.apply(new BaseFunctionType(outputType.unwrap(), inputType.unwrap()));
     }
 
     private final BaseType mOutputType;

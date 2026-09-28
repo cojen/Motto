@@ -226,6 +226,14 @@ public sealed interface BaseType extends Type, EncodableType
     @Override
     public BaseType noFieldNames();
 
+    /**
+     * If this is a tuple type consisting of one unnamed field, return the field type, also
+     * unwrapped. Otherwise, return this orginal type.
+     */
+    public default BaseType unwrap() {
+        return this;
+    }
+
     @Override
     public default BaseType box() {
         return this;

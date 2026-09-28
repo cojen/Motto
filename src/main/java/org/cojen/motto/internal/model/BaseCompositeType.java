@@ -36,6 +36,7 @@ public final class BaseCompositeType extends GeneratedType implements
      * @param fieldTypes should be sorted to reduce the amount of generated composite types
      */
     public static BaseCompositeType from(BaseType... fieldTypes) {
+        // FIXME: no fields names
         return InternSet.apply(new BaseCompositeType(fieldTypes));
     }
 

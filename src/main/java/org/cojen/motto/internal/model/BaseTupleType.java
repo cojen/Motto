@@ -511,6 +511,11 @@ public sealed abstract class BaseTupleType extends GeneratedType
         }
 
         @Override
+        public BaseType unwrap() {
+            return mFieldTypes.length == 1 ? mFieldTypes[0].unwrap() : this;
+        }
+
+        @Override
         protected NoNames doTrimFirst() {
             return new NoNames(Arrays.copyOfRange(mFieldTypes, 1, mFieldTypes.length));
         }

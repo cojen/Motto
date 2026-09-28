@@ -309,7 +309,7 @@ public abstract sealed class DecodedType implements EncodableType {
         }
 
         @Override
-        public DecodedType noFieldNames() {
+        public DecodedType.FunctionT noFieldNames() {
             return new DecodedType.FunctionT(mOutputType.noFieldNames(), mInputType.noFieldNames());
         }
 

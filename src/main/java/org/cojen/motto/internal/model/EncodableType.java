@@ -285,10 +285,7 @@ public interface EncodableType extends Comparable<EncodableType> {
 
         @Override
         public default void encodePrepare(TypeEncoder encoder) {
-            EncodableType unwrapped = tryUnwrap();
-            if (unwrapped != null) {
-                unwrapped.encodePrepare(encoder);
-            } else if (encoder.prepare(this)) {
+            if (encoder.prepare(this)) {
                 int numFields = numFields();
                 for (int i=0; i<numFields; i++) {
                     fieldType(i).encodePrepare(encoder);
@@ -302,12 +299,7 @@ public interface EncodableType extends Comparable<EncodableType> {
 
         @Override
         public default void encode(TypeEncoder encoder) {
-            EncodableType unwrapped = tryUnwrap();
-            if (unwrapped != null) {
-                unwrapped.encode(encoder);
-            } else {
-                encodeIndexed(this, encoder);
-            }
+            encodeIndexed(this, encoder);
         }
 
         @Override
@@ -385,10 +377,6 @@ public interface EncodableType extends Comparable<EncodableType> {
 
             return Maker.mangle(name);
         }
-
-        private EncodableType tryUnwrap() {
-            return (numFields() == 1 && fieldName(0) == null) ? fieldType(0) : null;
-        }
     }
 
     public static interface FunctionT extends EncodableType {
@@ -398,10 +386,14 @@ public interface EncodableType extends Comparable<EncodableType> {
         }
 
         @Override
+        public FunctionT noFieldNames();
+
+        @Override
         public default void encodePrepare(TypeEncoder encoder) {
             if (encoder.prepare(this)) {
-                inputType().noFieldNames().encodePrepare(encoder);
-                outputType().noFieldNames().encodePrepare(encoder);
+                var thisFunction = noFieldNames();
+                thisFunction.outputType().encodePrepare(encoder);
+                thisFunction.inputType().encodePrepare(encoder);
             }
         }
 
@@ -413,20 +405,20 @@ public interface EncodableType extends Comparable<EncodableType> {
         @Override
         public default void doEncode(TypeEncoder encoder) {
             encoder.encodeByte(T_FUNCTION);
-            outputType().noFieldNames().encode(encoder);
-            inputType().noFieldNames().encode(encoder);
+            var thisFunction = noFieldNames();
+            thisFunction.outputType().encode(encoder);
+            thisFunction.inputType().encode(encoder);
         }
 
         @Override
         public default int doCompare(EncodableType other) {
-            var otherFunction = (FunctionT) other;
+            var thisFunction = this.noFieldNames();
+            var otherFunction = ((FunctionT) other).noFieldNames();
 
-            int cmp = outputType().noFieldNames()
-                .compareTo(otherFunction.outputType().noFieldNames());
+            int cmp = thisFunction.outputType().compareTo(otherFunction.outputType());
 
             if (cmp == 0) {
-                cmp = inputType().noFieldNames()
-                    .compareTo(otherFunction.inputType().noFieldNames());
+                cmp = thisFunction.inputType().compareTo(otherFunction.inputType());
             }
 
             return cmp;
