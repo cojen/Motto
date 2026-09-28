@@ -549,6 +549,8 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         Map<BaseCallSignature, Set<CallableItem>> mapOfSets =
             findCallable(Map.of(), sig, filter, null, constructorMap());
 
+        mapOfSets = reduceCallables(mapOfSets, sig);
+
         int size = mapOfSets.size();
 
         if (size == 0) {
