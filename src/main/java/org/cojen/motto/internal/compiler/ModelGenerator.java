@@ -491,7 +491,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
     private BaseBinding tryMakeMethodCall(MethodCallStatement st,
                                           BaseItem item, BaseBinding instance,
                                           Token.Identifier nameToken,
-                                          VistedTuple vt, boolean direct)
+                                          VisitedTuple vt, boolean direct)
     {
         final boolean staticCall = item != null;
 
@@ -712,7 +712,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 error(ls, "unreachable");
             } else if (css == null) {
                 // If necessary, specialize the output type of a LambdaStatement.
-                if (items.size() == 1) {
+                if (items.size() == 1 && lastResult != null) {
                     Statement first = items.getFirst();
                     if (!(first instanceof ReturnStatement)) {
                         BaseType type = lastResult.type();
@@ -781,12 +781,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         return bindings;
     }
 
-    private record VistedTuple(BaseTupleType type, BaseBinding[] inputs) {}
+    private record VisitedTuple(BaseTupleType type, BaseBinding[] inputs) {}
 
     /**
      * @return null if an error was reported
      */
-    private VistedTuple visitTuple(TupleStatement st) {
+    private VisitedTuple visitTuple(TupleStatement st) {
         if (checkUnreachable(st)) {
             return null;
         }
@@ -795,7 +795,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         int numItems = items.size();
 
         if (numItems == 0) {
-            return new VistedTuple(BaseTupleType.EMPTY, new BaseBinding[0]);
+            return new VisitedTuple(BaseTupleType.EMPTY, new BaseBinding[0]);
         }
 
         if (st.isUnevaluated()) {
@@ -835,7 +835,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             throw new AssertionError();
         }
 
-        return new VistedTuple(BaseTupleType.from(types).withNames(names), inputs);
+        return new VisitedTuple(BaseTupleType.from(types).withNames(names), inputs);
     }
 
     // Visit methods: Null is returned if an error was reported. Void is returned if the
@@ -1553,7 +1553,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             }
         }
 
-        VistedTuple vt = visitTuple(st.params);
+        VisitedTuple vt = visitTuple(st.params);
 
         if (vt == null) {
             // Error state.
@@ -1792,7 +1792,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             throw null;
         }
 
-        VistedTuple vt = visitTuple(st.params);
+        VisitedTuple vt = visitTuple(st.params);
 
         if (vt == null) {
             // Error state.
@@ -2003,7 +2003,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
     @Override
     public BaseBinding visit(TupleStatement st) {
-        VistedTuple vt = visitTuple(st);
+        VisitedTuple vt = visitTuple(st);
 
         if (vt == null) {
             // Error state.
