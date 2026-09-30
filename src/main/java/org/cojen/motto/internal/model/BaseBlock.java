@@ -308,9 +308,11 @@ public final class BaseBlock implements Block {
     }
 
     public BaseBinding callNew(BaseCallableItem callable, Object... inputs) {
-        // FIXME: verify target, "this" input, and other input types
+        return callNew(var(callable.signature().inputType().fieldType(0)), callable, inputs);
+    }
 
-        BaseBinding target = var(callable.signature().inputType().fieldType(0));
+    public BaseBinding callNew(BaseBinding target, BaseCallableItem callable, Object... inputs) {
+        // FIXME: verify target, "this" input, and other input types
 
         addAction(new BaseCallAction.New(mPosition, callable, target, toBindings(inputs)));
 

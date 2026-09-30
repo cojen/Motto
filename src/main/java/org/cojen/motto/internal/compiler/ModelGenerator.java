@@ -1487,13 +1487,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         BaseBlock block = mScope.activeBlock(st);
 
-        // Copy in order for the type to be functionType interface, not lambdaClass type. When
-        // the lambda is passed to a tuple, the tuple should be defined against the generic
-        // functionType interface, not the specialized lambdaClass.
-        BaseBinding asFunctionType = block.var(functionType);
-        block.copy(asFunctionType, block.callNew(ctor));
-
-        return asFunctionType;
+        // Construct as the functionType interface, not lambdaClass type. When the lambda is
+        // passed to a tuple, the tuple should be defined against the generic functionType
+        // interface, not the specialized lambdaClass.
+        BaseBinding target = block.var(functionType);
+        return block.callNew(target, ctor);
     }
 
     @Override
