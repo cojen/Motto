@@ -130,13 +130,18 @@ public final class LoadedClass extends BaseClassTypeItem {
 
             BaseClassTypeItem superType;
 
-            {
+            superType: {
                 Class<?> superclass = mClass.getSuperclass();
+
                 if (superclass == null) {
-                    superType = null;
-                } else {
-                    superType = classFrom(superclass);
+                    if (!mClass.isInterface()) {
+                        superType = null;
+                        break superType;
+                    }
+                    superclass = Object.class;
                 }
+
+                superType = classFrom(superclass);
             }
 
             Set<BaseClassTypeItem> interfaces;
