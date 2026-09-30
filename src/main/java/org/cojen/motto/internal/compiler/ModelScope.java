@@ -335,8 +335,10 @@ final class ModelScope {
      * members defined yet.
      *
      * Returns null if no class was added and an error was reported.
+     *
+     * @param st used for error reporting
      */
-    NewLocalClass addLambdaClass(LambdaStatement st) {
+    NewLocalClass addLambdaClass(Statement st) {
         NewLocalClass clazz;
 
         try {

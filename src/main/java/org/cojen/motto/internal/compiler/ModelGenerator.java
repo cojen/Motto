@@ -798,14 +798,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return new VisitedTuple(BaseTupleType.EMPTY, new BaseBinding[0]);
         }
 
-        if (st.isUnevaluated()) {
-            // FIXME: use lambdas
-            throw null;
-        }
-
         var types = new BaseType[numItems];
         var names = new String[types.length];
         var inputs = new BaseBinding[types.length];
+
+        boolean lambdas = st.isUnevaluated();
 
         int i = 0;
         for (Statement item : items) {
@@ -818,7 +815,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 }
             }
 
-            BaseBinding input = item.accept(this);
+            BaseBinding input = lambdas ? visitLambda(null, item) : item.accept(this);
 
             if (input == null) {
                 // Error state.
@@ -1406,25 +1403,61 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
     @Override
     public BaseBinding visit(LambdaStatement st) {
+        return visitLambda(st, null);
+    }
+
+    /**
+     * Pass a LambdaStatement or a single item to use in a simple lambda.
+     */
+    private BaseBinding visitLambda(LambdaStatement lambda, Statement item) {
+        Statement st;
+
+        if (lambda != null) {
+            if (item != null) {
+                throw new IllegalArgumentException();
+            }
+            st = lambda;
+        } else {
+            st = item;
+        }
+
         if (checkUnreachable(st)) {
             return null;
         }
 
-        NewLocalClass lambda = mScope.addLambdaClass(st);
+        NewLocalClass lambdaClass = mScope.addLambdaClass(st);
 
-        if (lambda == null) {
+        if (lambdaClass == null) {
             // Error state.
             return null;
         }
 
+        BaseType inputType;
+        BaseTupleType callInputType;
+        List<Statement> items;
+
+        if (lambda != null) {
+            inputType = lambda.inputType.tryResolve(mEnv, lambdaClass);
+
+            if (inputType == null) {
+                // Error state.
+                return null;
+            }
+
+            callInputType = lambda.inputType.tryResolve(mEnv, lambdaClass, lambdaClass);
+
+            items = lambda.items;
+        } else {
+            inputType = BaseTupleType.EMPTY;
+            callInputType = BaseTupleType.from(lambdaClass).withNames("this");
+            items = List.of(item);
+        }
+
         var deferredOutputType = new BaseDeferredType();
-        var inputType = st.inputType.tryResolve(mEnv, lambda);
-        var callInputType = st.inputType.tryResolve(mEnv, lambda, lambda);
-
         var sig = BaseCallSignature.from(deferredOutputType, "apply", callInputType);
-        var callable = BaseCallableItem.from(PUBLIC | FINAL, lambda, sig);
+        var callable = BaseCallableItem.from(PUBLIC | FINAL, lambdaClass, sig);
 
-        visitCode(null, callable, st.items);
+        visitCode(null, callable, items);
 
         BaseBlock code = callable.code();
 
@@ -1440,17 +1473,17 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         var functionType = BaseFunctionType.from(outputType, inputType);
 
         // This causes the lambda class to implement the function type interface.
-        lambda.setFunctionType(functionType);
+        lambdaClass.setFunctionType(functionType);
 
         sig = BaseCallSignature.from(outputType, "apply", callInputType);
-        callable = lambda.tryAddMethod(PUBLIC | FINAL, sig);
+        callable = lambdaClass.tryAddMethod(PUBLIC | FINAL, sig);
 
         callable.assignCode(code);
 
         // Construct and return a new lambda instance.
 
-        BaseCallableItem ctor = lambda.tryAddConstructor
-            (PRIVATE, BaseTupleType.from(lambda).withNames("this"));
+        BaseCallableItem ctor = lambdaClass.tryAddConstructor
+            (PRIVATE, BaseTupleType.from(lambdaClass).withNames("this"));
 
         return mScope.activeBlock(st).callNew(ctor);
     }
