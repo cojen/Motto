@@ -210,14 +210,14 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
         } catch (InterruptedException e) {
         }
 
-        synchronized (this) {
+        NewClass outer = outerType();
+
+        synchronized (outer == null ? this : outer) {
             cm = mClassMaker;
 
             if (cm != null) {
                 return cm;
             }
-
-            NewClass outer = outerType();
 
             if (outer == null) {
                 cm = ClassMaker.beginExternal(fullMangledName());
