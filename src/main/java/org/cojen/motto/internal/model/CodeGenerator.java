@@ -749,7 +749,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     private Variable variableFor(BaseBinding.TupleField binding) {
-        String name = binding.tupleType().fieldName(binding.index());
+        String name = binding.tupleType().mangledFieldName(binding.index());
         return variableFor(binding.tuple()).invoke(name);
     }
 
