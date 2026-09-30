@@ -397,9 +397,10 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
     /**
      * Follows an instance path, returning the original binding or a composite binding.
      *
-     * @param st if given a MethodCallStatement, the last item  isn't followed
-     * @param instanceBinding the first binding
+     * @param st if given a MethodCallStatement, the last item isn't followed
+     * @param instanceBinding the first binding; required 
      * @param autoThis true if tryAccessThis was used (only affects error reporting)
+     * @param pathIt can be empty
      * @return null if an error was reported.
      */
     private BaseBinding followInstancePath(Statement st, BaseBinding instanceBinding,
@@ -1656,7 +1657,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             BaseBinding localBinding = tryFindLocalVariable(pathIt);
 
             tryInstance: if (localBinding != null) {
-                instance = localBinding;
+                instance = followInstancePath(st, localBinding, false, pathIt);
             } else {
                 BaseType type = tryResolveClass(st.path, pathIt, false);
 
@@ -1714,14 +1715,18 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 }
 
                 instance = followInstancePath(st, fieldBinding, false, pathIt);
+            }
 
-                if (instance == null) {
-                    // Error state.
-                    return null;
-                }
+            if (instance == null) {
+                // Error state.
+                return null;
             }
 
             nameToken = pathIt.next();
+
+            if (pathIt.hasNext()) {
+                throw new AssertionError();
+            }
         }
 
         int numErrors = mEnv.numErrors();
