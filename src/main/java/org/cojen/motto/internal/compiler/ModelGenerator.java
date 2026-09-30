@@ -1657,7 +1657,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             BaseBinding localBinding = tryFindLocalVariable(pathIt);
 
             tryInstance: if (localBinding != null) {
-                instance = followInstancePath(st, localBinding, false, pathIt);
+                instance = localBinding;
             } else {
                 BaseType type = tryResolveClass(st.path, pathIt, false);
 
@@ -1714,8 +1714,10 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                     return null;
                 }
 
-                instance = followInstancePath(st, fieldBinding, false, pathIt);
+                instance = fieldBinding;
             }
+
+            instance = followInstancePath(st, instance, false, pathIt);
 
             if (instance == null) {
                 // Error state.
