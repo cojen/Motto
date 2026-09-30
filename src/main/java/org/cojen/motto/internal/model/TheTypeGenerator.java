@@ -138,6 +138,7 @@ public final class TheTypeGenerator {
         }
 
         ClassMaker cm = ClassMaker.beginExternal(className).public_().final_().synthetic();
+        cm.implement(motto.Tuple.class);
 
         boolean doValueClass = areValueClassesSupported();
 

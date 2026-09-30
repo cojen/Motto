@@ -367,15 +367,19 @@ public interface EncodableType extends Comparable<EncodableType> {
                 return "\\=" + index;
             }
 
-            switch (name) {
-                case "clone", "equals", "finalize", "getClass", "hashCode",
-                    "notify", "notifyAll", "toString", "wait" ->
-                {
-                    return "\\=" + name;
-                }
+            if (isObjectMethod(name)) {
+                return "\\=" + name;
             }
 
             return Maker.mangle(name);
+        }
+
+        public static boolean isObjectMethod(String name) {
+            return switch (name) {
+                case "clone", "equals", "finalize", "getClass", "hashCode",
+                    "notify", "notifyAll", "toString", "wait" -> true;
+                default -> false;
+            };
         }
     }
 

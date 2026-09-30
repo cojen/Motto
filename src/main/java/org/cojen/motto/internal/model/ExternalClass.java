@@ -221,10 +221,17 @@ public final class ExternalClass extends BaseClassTypeItem
             tryAddField(Modifiers.from(field), fieldType, fieldName);
         }
 
+        boolean isTuple = LoadedClass.classFrom(motto.Tuple.class).isAssignableFrom(this);
+
         for (MethodModel method : model.methods()) {
             String mname = method.methodName().stringValue();
 
             if (mname.equals("<clinit>")) {
+                continue;
+            }
+
+            if (isTuple && !EncodableType.TupleT.isObjectMethod(mname)) {
+                // Drop generated methods corresponding to tuple fields.
                 continue;
             }
 

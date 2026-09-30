@@ -209,6 +209,8 @@ public final class LoadedClass extends BaseClassTypeItem {
 
             Method[] methods = mClass.getDeclaredMethods();
 
+            boolean isTuple = motto.Tuple.class.isAssignableFrom(mClass);
+
             for (Method m : methods) {
                 int modifierBits = Modifiers.from(m);
 
@@ -216,8 +218,15 @@ public final class LoadedClass extends BaseClassTypeItem {
                     continue;
                 }
 
+                String name = m.getName();
+
+                if (isTuple && !EncodableType.TupleT.isObjectMethod(name)) {
+                    // Drop generated methods corresponding to tuple fields.
+                    continue;
+                }
+
                 BaseType outputType = from(m.getReturnType());
-                String name = Maker.demangle(m.getName());
+                name = Maker.demangle(name);
                 BaseTupleType inputType = inputTypeFor(m);
 
                 var sig = BaseCallSignature.from(outputType, name, inputType);
