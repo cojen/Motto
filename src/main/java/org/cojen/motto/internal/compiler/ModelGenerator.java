@@ -714,7 +714,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 // If necessary, specialize the output type of a LambdaStatement.
                 if (items.size() == 1 && lastResult != null) {
                     Statement first = items.getFirst();
-                    if (!(first instanceof ReturnStatement)) {
+                    if (!(first instanceof YieldStatement)) {
                         BaseType type = lastResult.type();
                         ((BaseDeferredType) callable.signature().outputType()).specialize(type);
                         mScope.activeBlock(first).return_(lastResult);
@@ -2041,18 +2041,22 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         BaseDeferredType lrt = mScope.lambdaReturnType();
 
+        BaseBinding finalResult = BaseBinding.Void.THE;
+
         if (lrt == null) {
             error(st, "yield is not permitted here");
+            finalResult = null;
         } else {
             BaseType conflict = lrt.specialize(result.type());
             if (conflict != null) {
                 error(st, "return type of " + result.type().displayName() +
                       " conflicts with earlier return type of " + conflict.displayName());
+                finalResult = null;
             }
         }
 
         mScope.activeBlock(st).return_(result);
 
-        return BaseBinding.Void.THE;
+        return finalResult;
     }
 }
