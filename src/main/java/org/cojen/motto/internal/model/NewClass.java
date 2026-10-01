@@ -67,6 +67,8 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
 
     private Set<String> mGeneratedTypeNames;
 
+    private ClassMaker mMacroMaker;
+
     /**
      * @param outerClass is null for top-level classes
      * @param origin optional object describing where the class came from (usually a File)
@@ -142,7 +144,6 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
         return finish(null);
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, byte[]> finish(Map<String, byte[]> finished) {
         ClassMaker cm = classMaker();
 
@@ -178,6 +179,17 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
             finished = ((NewClass) inner).finish(finished);
         }
 
+        if (mMacroMaker != null) {
+            finished = finish(finished, mMacroMaker);
+        }
+
+        finished = finish(finished, cm);
+
+        return finished;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, byte[]> finish(Map<String, byte[]> finished, ClassMaker cm) {
         byte[] bytes = cm.finishBytes();
         String fullName = cm.name();
 
@@ -416,6 +428,8 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
             } else {
                 BaseCallSignature signature = method.macroSignature();
 
+                ClassMaker macroMaker = macroMaker();
+
                 // FIXME: macro
                 throw null;
             }
@@ -431,6 +445,37 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
 
             addCodeGenerator(mm, ctor);
         });
+    }
+
+    /**
+     * Returns an inner class which should only contain macro method implementations. This
+     * method should only be called after all user declared inner classes have been added, to
+     * prevent naming collisions.
+     */
+    private ClassMaker macroMaker() {
+        ClassMaker cm = mMacroMaker;
+
+        if (cm == null) {
+            Map<String, BaseClassTypeItem> innerClassesMap = innerClassesMap();
+
+            String className = "Macro";
+            int num = 0;
+
+            while (innerClassesMap.containsKey(className)) {
+                className = "Macro" + (++num);
+            }
+
+            mMacroMaker = cm = mClassMaker.addInnerClass(className);
+            cm.public_().final_().synthetic();
+
+            if (origin() instanceof File file) {
+                cm.sourceFile(file.getName());
+            }
+
+            mClassMaker.addAttribute("motto.MacroClass", cm);
+        }
+
+        return cm;
     }
 
     private void addCodeGenerator(MethodMaker mm, BaseCallableItem item) {
