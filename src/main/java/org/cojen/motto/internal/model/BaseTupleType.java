@@ -305,26 +305,51 @@ public sealed abstract class BaseTupleType extends GeneratedType
 
     @Override
     public final int canConvertTo(Type to) {
-        if (isEquivalentTo(to) || to == Type.unspecified()) {
-            return 0;
-        }
+        return canConvertTo(to, false);
+    }
 
-        int numFields = numFields();
+    /**
+     * @param partial when true, this type must have fewer fields than the "to" type
+     */
+    public final int canConvertTo(Type to, boolean partial) {
+        int numFields;
+        BaseTupleType ott;
 
-        if (!(to instanceof BaseTupleType ott)) {
-            if (numFields == 1 && fieldType(0) instanceof BaseType t0) {
-                return t0.canConvertTo(to);
-            }
-
-            if (BaseType.isJavaLangObject(to)) {
+        if (!partial) {
+            if (isEquivalentTo(to) || to == Type.unspecified()) {
                 return 0;
             }
 
-            return Integer.MAX_VALUE;
-        }
+            numFields = numFields();
 
-        if (numFields != ott.numFields()) {
-            return Integer.MAX_VALUE;
+            if (!(to instanceof BaseTupleType)) {
+                if (numFields == 1 && fieldType(0) instanceof BaseType t0) {
+                    return t0.canConvertTo(to);
+                }
+
+                if (BaseType.isJavaLangObject(to)) {
+                    return 0;
+                }
+
+                return Integer.MAX_VALUE;
+            }
+
+            ott = (BaseTupleType) to;
+
+            if (numFields != ott.numFields()) {
+                return Integer.MAX_VALUE;
+            }
+        } else {
+            if (!(to instanceof BaseTupleType)) {
+                return Integer.MAX_VALUE;
+            }
+
+            numFields = numFields();
+            ott = (BaseTupleType) to;
+
+            if (numFields >= ott.numFields()) {
+                return Integer.MAX_VALUE;
+            }
         }
 
         int code = 0;

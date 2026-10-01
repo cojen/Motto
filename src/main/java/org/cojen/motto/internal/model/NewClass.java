@@ -300,11 +300,12 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
 
     @Override
     public Map<BaseCallSignature, BaseCallableItem> findConstructor
-        (BaseTupleType inputType, Predicate<CallableItem> filter)
+        (BaseTupleType inputType, boolean partial, Predicate<CallableItem> filter)
     {
-        Map<BaseCallSignature, BaseCallableItem> ctors = super.findConstructor(inputType, filter);
+        Map<BaseCallSignature, BaseCallableItem> ctors =
+            super.findConstructor(inputType, partial, filter);
 
-        if (ctors.isEmpty() && inputType.numFields() == 0) {
+        if (ctors.isEmpty() && inputType.numFields() == 0 && !partial) {
             BaseCallableItem ctor = addAutoConstructor(false);
             if (ctor != null) {
                 ctors = Map.of(ctor.signature(), ctor);

@@ -398,31 +398,37 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public Map<BaseCallSignature, Set<CallableItem>> findMethod
+    public final Map<BaseCallSignature, Set<CallableItem>> findMethod
         (CallSignature sig, Predicate<CallableItem> filter)
     {
         return findMethod((BaseCallSignature) sig, filter);
     }
 
+    /**
+     * @param partial when true, the given signature must have fewer input fields than the
+     * matching callable
+     */
     @Override
-    public Map<BaseCallSignature, Set<CallableItem>> findMethod
-        (BaseCallSignature sig, Predicate<CallableItem> filter)
+    public final Map<BaseCallSignature, Set<CallableItem>> findMethod
+        (BaseCallSignature sig, boolean partial, Predicate<CallableItem> filter)
     {
         Map<BaseCallSignature, Set<CallableItem>> map =
-            doFindMethod(Map.of(), sig, filter, null, new HashSet<>());
+            doFindMethod(Map.of(), sig, partial, filter, null, new HashSet<>());
 
         return reduceCallables(map, sig);
     }
 
     /**
+     * @param partial when true, the given signature must have fewer input fields than the
+     * matching callable
      * @param base should be null for the first call (it becomes "this" for recursive calls)
      */
     private Map<BaseCallSignature, Set<CallableItem>> doFindMethod
         (Map<BaseCallSignature, Set<CallableItem>> map,
-         BaseCallSignature sig, Predicate<CallableItem> filter, BaseClassTypeItem base,
-         Set<BaseClassTypeItem> seen)
+         BaseCallSignature sig, boolean partial, Predicate<CallableItem> filter,
+         BaseClassTypeItem base, Set<BaseClassTypeItem> seen)
     {
-        map = findCallable(map, sig, filter, base, methodMap().get(sig.name()));
+        map = findCallable(map, sig, partial, filter, base, methodMap().get(sig.name()));
 
         if (base == null) {
             base = this;
@@ -431,12 +437,12 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
         BaseClassTypeItem superType = superType();
 
         if (superType != null && seen.add(superType)) {
-            map = superType.doFindMethod(map, sig, filter, base, seen);
+            map = superType.doFindMethod(map, sig, partial, filter, base, seen);
         }
 
         for (BaseClassTypeItem iface : interfaces()) {
             if (seen.add(iface)) {
-                map = iface.doFindMethod(map, sig, filter, base, seen);
+                map = iface.doFindMethod(map, sig, partial, filter, base, seen);
             }
         }
 
@@ -541,13 +547,23 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public Map<BaseCallSignature, BaseCallableItem> findConstructor
+    public final Map<BaseCallSignature, BaseCallableItem> findConstructor
         (BaseTupleType inputType, Predicate<CallableItem> filter)
+    {
+        return findConstructor(inputType, false, filter);
+    }
+
+    /**
+     * @param partial when true, the constructor must have fewer input fields than the matching
+     * constructor
+     */
+    public Map<BaseCallSignature, BaseCallableItem> findConstructor
+        (BaseTupleType inputType, boolean partial, Predicate<CallableItem> filter)
     {
         BaseCallSignature sig = BaseCallSignature.from(BaseVoidType.THE, "", inputType);
 
         Map<BaseCallSignature, Set<CallableItem>> mapOfSets =
-            findCallable(Map.of(), sig, filter, null, constructorMap());
+            findCallable(Map.of(), sig, partial, filter, null, constructorMap());
 
         mapOfSets = reduceCallables(mapOfSets, sig);
 
@@ -881,14 +897,15 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
 
     /**
      * @param map original map, possibly empty
-     * @param via can pass null to only return publicly available methods
+     * @param partial when true, the given signature must have fewer input fields than the
+     * matching callable
      * @param base when non-null, it represents the specific type being called (the base type
      * will remain the same while the super type(s) are examined)
      * @return the actual map
      */
     private static Map<BaseCallSignature, Set<CallableItem>> findCallable
         (Map<BaseCallSignature, Set<CallableItem>> map,
-         BaseCallSignature sig, Predicate<CallableItem> filter,
+         BaseCallSignature sig, boolean partial, Predicate<CallableItem> filter,
          BaseClassTypeItem base, Map<BaseCallSignature, BaseCallableItem> available)
     {
         if (available == null) {
@@ -906,7 +923,7 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
             // unlike the item itself.
             BaseCallSignature key = e.getKey();
 
-            if (!sig.canBindTo(key)) {
+            if (!sig.canBindTo(key, partial)) {
                 continue;
             }
 

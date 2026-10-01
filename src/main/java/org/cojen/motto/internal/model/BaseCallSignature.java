@@ -160,11 +160,14 @@ public final class BaseCallSignature implements CallSignature {
     /**
      * Returns true if this signature, representing a call, can bind to the signature of a
      * defined method. The output and inputs might need to be converted, however.
+     *
+     * @param partial when true, this signature's input must have fewer fields than the other
+     * signature
      */
-    boolean canBindTo(BaseCallSignature other) {
+    boolean canBindTo(BaseCallSignature other, boolean partial) {
         return mName.equals(other.mName)
             && other.mOutputType.canConvertTo(mOutputType) != Integer.MAX_VALUE
-            && mInputType.canConvertTo(other.mInputType) != Integer.MAX_VALUE;
+            && mInputType.canConvertTo(other.mInputType, partial) != Integer.MAX_VALUE;
     }
 
     /**

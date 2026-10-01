@@ -149,6 +149,16 @@ public sealed interface BaseType extends Type, EncodableType
     public default Map<BaseCallSignature, Set<CallableItem>> findMethod
         (BaseCallSignature sig, Predicate<CallableItem> filter)
     {
+        return findMethod(sig, false, filter);
+    }
+
+    /**
+     * @param partial when true, the given signature must have fewer input fields than the
+     * matching callable
+     */
+    public default Map<BaseCallSignature, Set<CallableItem>> findMethod
+        (BaseCallSignature sig, boolean partial, Predicate<CallableItem> filter)
+    {
         return Map.of();
     }
 

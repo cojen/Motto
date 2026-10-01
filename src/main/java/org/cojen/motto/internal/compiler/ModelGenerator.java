@@ -17,6 +17,7 @@
 package org.cojen.motto.internal.compiler;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.cojen.motto.internal.model.BaseCallSignature;
 import org.cojen.motto.internal.model.BaseCallableItem;
 import org.cojen.motto.internal.model.BaseClassTypeItem;
 import org.cojen.motto.internal.model.BaseDeferredType;
+import org.cojen.motto.internal.model.BaseFieldItem;
 import org.cojen.motto.internal.model.BaseFunctionType;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseNullType;
@@ -74,6 +76,7 @@ import org.cojen.motto.internal.parser.NewArrayStatement;
 import org.cojen.motto.internal.parser.NewClassDefinitionStatement;
 import org.cojen.motto.internal.parser.NewStatement;
 import org.cojen.motto.internal.parser.ParseVisitor;
+import org.cojen.motto.internal.parser.PathStatement;
 import org.cojen.motto.internal.parser.PostfixStatement;
 import org.cojen.motto.internal.parser.PrefixStatement;
 import org.cojen.motto.internal.parser.ReturnStatement;
@@ -522,68 +525,19 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             }
         }
 
+        List<Statement> segments = st.segments;
+        boolean hasSegments = !segments.isEmpty();
+        var sig = BaseCallSignature.from(BaseUnspecifiedType.THE, nameToken.text, vt.type);
+
         Map<BaseCallSignature, Set<CallableItem>> methods;
 
         findMethods: {
-            List<Statement> segments = st.segments;
-
-            if (!segments.isEmpty()) {
-                /* FIXME
-                segSignatures = new BaseCallSignature.BaseSegment[segments.size()];
-                segArguments = new BaseSegmentArgument[segSignatures.length];
-
-                for (int i=0; i<segSignatures.length; i++) {
-                    CallSegment seg = st.segments.get(i);
-
-                    if (!(seg.statement instanceof TupleStatement tuple)) {
-                        // This likely indicates a compiler bug.
-                        error(seg.statement, "segment parameters must be a tuple");
-                        return null;
-                    }
-
-                    String name = seg.name == null ? "" : seg.name.text;
-                    boolean evaluated = tuple.first.type() == Token.T_LPAREN;
-
-                    List<Statement> items = tuple.items;
-                    var segBindings = new BaseBinding[items.size()];
-                    var segInputTypes = new BaseType[segBindings.length];
-
-                    boolean hasError = false;
-
-                    for (int j=0; j<segBindings.length; j++) {
-                        BaseBinding segInput = items.get(j).accept(this);
-                        if (segInput == null) {
-                            hasError = true;
-                        } else {
-                            segBindings[j] = segInput;
-                            segInputTypes[j] = segInput.type();
-                        }
-                    }
-
-                    if (hasError) {
-                        // Error state.
-                        return null;
-                    }
-
-                    BaseTupleType segInputType = BaseTupleType.from(segInputTypes);
-
-                    // Can pass -1 for repetition value; it's ignored by findMethod.
-                    segSignatures[i] = BaseCallSignature
-                        .BaseSegment.from(-1, name, segInputType, evaluated);
-
-                    segArguments[i] = new BaseSegmentArgument(name, segBindings);
-                }
-                */
-                throw null;
-            }
-
-            var sig = BaseCallSignature.from(BaseUnspecifiedType.THE, nameToken.text, vt.type);
-
             BaseType type = item.nearestType();
 
             do {
                 methods = type.findMethod
-                    (sig, m -> m.isStatic() == staticCall && m.isAccessibleVia(mScope.item()));
+                    (sig, hasSegments,
+                     m -> m.isStatic() == staticCall && m.isAccessibleVia(mScope.item()));
 
                 if (!methods.isEmpty()) {
                     break findMethods;
@@ -597,6 +551,10 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             } while (type != null);
 
             return null;
+        }
+
+        if (hasSegments) {
+            // FIXME: Reduce. For now, assume there's one, and it matches.
         }
 
         if (methods.size() > 1) {
@@ -626,9 +584,52 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             inputBindings = newBindings;
         }
 
-        // FIXME: Convert the parameters if necessary (note: "this" param might have been
-        // prepended). Also check if any arguments which are T_NULL_ALLOWED are mapped to
-        // parameters which are T_NULL_DISALLOWED.
+        if (hasSegments) {
+            int offset = inputBindings.length;
+            BaseTupleType callInputType = callable.signature().inputType();
+            inputBindings = Arrays.copyOf(inputBindings, callInputType.numFields());
+
+            for (Statement segment : segments) {
+                Statement arg = segment;
+
+                BaseFieldItem inputItem = callInputType.field(offset);
+
+                if (arg instanceof PathStatement ps && ps.path.size() == 1 &&
+                    ps.path.getFirst().text.equals(inputItem.name()))
+                {
+                    if (ps instanceof LoadStatement ls) {
+                        // Consume the name.
+                        continue;
+                    }
+                    // Consume the name and use the params instead.
+                    arg = ((MethodCallStatement) ps).params;
+                }
+
+                BaseBinding argBinding;
+
+                if (!(inputItem.type() instanceof BaseFunctionType ft) ||
+                    ((arg instanceof TupleStatement ts) && ts.isUnevaluated()))
+                {
+                    argBinding = arg.accept(this);
+                } else {
+                    argBinding = visitLambda(null, arg);
+                }
+
+                if (argBinding == null) {
+                    // Error state.
+                    return null;
+                }
+
+                inputBindings[offset++] = argBinding;
+            }
+
+            if (offset != inputBindings.length) {
+                throw new AssertionError();
+            }
+        }
+
+        // FIXME: Convert the arguments if necessary (note: "this" argument might have been
+        // prepended).
 
         BaseBlock block = mScope.activeBlock(st);
 
@@ -1409,6 +1410,9 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
     /**
      * Pass a LambdaStatement or a single item to use in a simple lambda.
+     *
+     * @param lambda pass null if an item is provided
+     * @param item pass null if a lambda is provided
      */
     private BaseBinding visitLambda(LambdaStatement lambda, Statement item) {
         Statement st;
