@@ -2047,8 +2047,16 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        // FIXME
-        throw null;
+        BaseBinding ex = st.source.accept(this);
+
+        if (ex == null) {
+            // Error state.
+            return null;
+        }
+
+        mScope.activeBlock(st).throw_(ex);
+
+        return BaseBinding.Void.THE;
     }
 
     @Override
