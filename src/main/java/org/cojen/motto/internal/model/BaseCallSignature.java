@@ -91,7 +91,6 @@ public final class BaseCallSignature implements CallSignature {
 
     @Override
     public BaseCallSignature forMacro() {
-        /* FIXME
         BaseType bindingType = BaseType.from(Binding.class);
         BaseType blockType = BaseType.from(Block.class);
 
@@ -107,8 +106,6 @@ public final class BaseCallSignature implements CallSignature {
         var signature = new BaseCallSignature(blockType, mName, inputType);
 
         return InternSet.apply(signature);
-        */
-        throw null;
     }
 
     /**
