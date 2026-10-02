@@ -185,7 +185,7 @@ public abstract sealed class BaseItem implements Item
         Map<String, BaseClassTypeItem> outerMap = outer.innerClassesMap();
 
         String actualName = baseName;
-        int num = 1;
+        int num = 0;
 
         while (outerMap.containsKey(actualName)) {
             actualName = baseName + '_' + (++num);
