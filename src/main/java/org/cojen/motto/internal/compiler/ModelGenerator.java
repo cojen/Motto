@@ -1454,6 +1454,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             items = lambda.items;
         } else {
             inputType = BaseTupleType.EMPTY;
+            // FIXME: Inside the lambda code body, "this" must refer to the enclosing scope.
             callInputType = BaseTupleType.from(lambdaClass).withNames("this");
             items = List.of(item);
         }
@@ -1462,7 +1463,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         var sig = BaseCallSignature.from(deferredOutputType, "apply", callInputType);
         var callable = BaseCallableItem.from(PUBLIC | FINAL, lambdaClass, sig);
 
-        visitCode(null, callable, items);
+        enterScope(new ModelScope(this, mScope, lambdaClass));
+        try {
+            visitCode(null, callable, items);
+        } finally {
+            exitScope();
+        }
 
         BaseBlock code = callable.code();
 
@@ -2070,6 +2076,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         BaseTupleType tt = vt.type;
 
+        // FIXME: Consider doing this only for evaluated tuples.
         if (tt.numFields() == 1 && tt.fieldName(0) == null) {
             // A single element tuple is just a grouped expression. It can be converted into a
             // tuple easily enough by the receiver if necessary.
