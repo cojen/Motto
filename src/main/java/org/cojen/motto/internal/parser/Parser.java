@@ -478,7 +478,7 @@ public final class Parser implements Closeable {
 
                     List<Statement> items;
 
-                    if (body instanceof TupleStatement tuple && tuple.isUnevaluated()) {
+                    if (body instanceof TupleStatement tuple && tuple.isCode()) {
                         items = codeScopeItems(tuple.items);
                     } else {
                         items = codeScopeItems(List.of(body));
@@ -1201,7 +1201,7 @@ public final class Parser implements Closeable {
     private CodeScopeStatement parseCodeScope(String which) throws IOException, Abort {
         Statement st = parseStatement(which, ID_BASIC);
 
-        if (st instanceof TupleStatement tuple && tuple.isUnevaluated()) {
+        if (st instanceof TupleStatement tuple && tuple.isCode()) {
             return toCodeScope(tuple);
         }
 
@@ -1308,7 +1308,7 @@ public final class Parser implements Closeable {
                 }
                 if (segments.size() == 1) {
                     Statement seg = segments.getFirst();
-                    if (seg instanceof TupleStatement code && code.isUnevaluated()) {
+                    if (seg instanceof TupleStatement code && code.isCode()) {
                         return new NewClassDefinitionStatement(what.path, what.params, code);
                     }
                 }
@@ -1394,7 +1394,7 @@ public final class Parser implements Closeable {
             }
         }
 
-        TupleVarType paramType = params.asTupleVarType(this);
+        TupleVarType paramType = params.asParamType(this);
 
         return new MethodDefinitionStatement
             (modifiers, sname, clauses, code, returnType, paramType);
@@ -1423,7 +1423,7 @@ public final class Parser implements Closeable {
 
         Identifier sname = simpleName(qname, "constructor name");
 
-        TupleVarType paramType = params.asTupleVarType(this);
+        TupleVarType paramType = params.asParamType(this);
 
         pushDefinitionContext(qname, DefinitionContext.T_CONSTRUCTOR);
 
@@ -1718,7 +1718,7 @@ public final class Parser implements Closeable {
             }
 
             case TupleStatement tuple -> {
-                return tuple.isUnevaluated() ? toCodeScope(tuple) : tuple;
+                return tuple.isCode() ? toCodeScope(tuple) : tuple;
             }
 
             case LabeledStatement labeled -> {

@@ -608,11 +608,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 BaseBinding argBinding;
 
                 if (!(inputItem.type() instanceof BaseFunctionType ft) ||
-                    ((arg instanceof TupleStatement ts) && ts.isUnevaluated()))
+                    ((arg instanceof TupleStatement ts) && !ts.isCode()))
                 {
                     argBinding = arg.accept(this);
                 } else {
-                    argBinding = visitLambda(null, arg);
+                    // FIXME: code
+                    throw null;
                 }
 
                 if (argBinding == null) {
@@ -795,6 +796,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
+        if (st.isCode()) {
+            // FIXME: code
+            throw null;
+        }
+
         List<Statement> items = st.items;
         int numItems = items.size();
 
@@ -805,8 +811,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         var types = new BaseType[numItems];
         var names = new String[types.length];
         var inputs = new BaseBinding[types.length];
-
-        boolean lambdas = st.isUnevaluated();
 
         int i = 0;
         for (Statement item : items) {
@@ -819,7 +823,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 }
             }
 
-            BaseBinding input = lambdas ? visitLambda(null, item) : item.accept(this);
+            BaseBinding input = item.accept(this);
 
             if (input == null) {
                 // Error state.
@@ -1407,27 +1411,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
     @Override
     public BaseBinding visit(LambdaStatement st) {
-        return visitLambda(st, null);
-    }
-
-    /**
-     * Pass a LambdaStatement or a single item to use in a simple lambda.
-     *
-     * @param lambda pass null if an item is provided
-     * @param item pass null if a lambda is provided
-     */
-    private BaseBinding visitLambda(LambdaStatement lambda, Statement item) {
-        Statement st;
-
-        if (lambda != null) {
-            if (item != null) {
-                throw new IllegalArgumentException();
-            }
-            st = lambda;
-        } else {
-            st = item;
-        }
-
         if (checkUnreachable(st)) {
             return null;
         }
@@ -1439,27 +1422,14 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        BaseType inputType;
-        BaseTupleType callInputType;
-        List<Statement> items;
+        BaseType inputType = st.inputType.tryResolve(mEnv, lambdaClass);
 
-        if (lambda != null) {
-            inputType = lambda.inputType.tryResolve(mEnv, lambdaClass);
-
-            if (inputType == null) {
-                // Error state.
-                return null;
-            }
-
-            callInputType = lambda.inputType.tryResolve(mEnv, lambdaClass, lambdaClass);
-
-            items = lambda.items;
-        } else {
-            inputType = BaseTupleType.EMPTY;
-            // FIXME: Inside the lambda code body, "this" must refer to the enclosing scope.
-            callInputType = BaseTupleType.from(lambdaClass).withNames("this");
-            items = List.of(item);
+        if (inputType == null) {
+            // Error state.
+            return null;
         }
+
+        BaseTupleType callInputType = st.inputType.tryResolve(mEnv, lambdaClass, lambdaClass);
 
         var deferredOutputType = new BaseDeferredType();
         var sig = BaseCallSignature.from(deferredOutputType, "apply", callInputType);
@@ -1467,7 +1437,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         enterScope(new ModelScope(this, mScope, lambdaClass));
         try {
-            visitCode(null, callable, items);
+            visitCode(null, callable, st.items);
         } finally {
             exitScope();
         }

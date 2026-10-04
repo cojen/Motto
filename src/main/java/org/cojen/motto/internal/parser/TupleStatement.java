@@ -39,16 +39,9 @@ public final class TupleStatement extends EnclosedStatementList implements State
     }
 
     /**
-     * Returns true of the tuple starts with a `(`.
+     * Returns true of the tuple starts with a `{`, representing a code statements.
      */
-    public boolean isEvaluated() {
-        return open.type() == Token.T_LPAREN;
-    }
-
-    /**
-     * Returns true of the tuple starts with a `{`, representing a code scope.
-     */
-    public boolean isUnevaluated() {
+    public boolean isCode() {
         return open.type() == Token.T_LBRACE;
     }
 
@@ -57,7 +50,7 @@ public final class TupleStatement extends EnclosedStatementList implements State
         return asVarType(p, true);
     }
 
-    TupleVarType asTupleVarType(Parser p) {
+    TupleVarType asParamType(Parser p) {
         return (TupleVarType) asVarType(p, false);
     }
 
@@ -65,6 +58,10 @@ public final class TupleStatement extends EnclosedStatementList implements State
         int size = items.size();
 
         if (size == 0) {
+            if (isCode()) {
+                // What does "no code" mean as a parameter?
+                p.error(this, "illegal type");
+            }
             return new TupleVarType(open, List.of(), close);
         }
 
@@ -100,11 +97,11 @@ public final class TupleStatement extends EnclosedStatementList implements State
             return null;
         }
 
-        if (isUnevaluated()) {
-            // Convert type to a lambda. Need to define an empty tuple, but no parens were
-            // provided. Use the type itself to indicate the start/end tokens.
-            var noInput = new TupleVarType(type.start(), List.of(), type.end());
-            type = new LambdaVarType(noInput, type);
+        if (isCode()) {
+            if (type instanceof CodeVarType) {
+                p.error(this, "illegal type; code scope cannot yield a code result");
+            }
+            type = new CodeVarType(type);
         }
 
         return type;

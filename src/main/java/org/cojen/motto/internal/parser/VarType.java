@@ -30,7 +30,7 @@ import org.cojen.motto.internal.model.BaseType;
  * @author Brian S. O'Neill
  */
 public sealed interface VarType extends Element
-    permits ArrayVarType, LambdaVarType, NamedVarType, SimpleVarType, TupleVarType
+    permits ArrayVarType, CodeVarType, LambdaVarType, NamedVarType, SimpleVarType, TupleVarType
 {
     /**
      * Returns true if the type represents model.UnspecifiedType.

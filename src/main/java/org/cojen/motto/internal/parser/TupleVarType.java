@@ -39,8 +39,8 @@ public final class TupleVarType implements VarType {
     private final Token mClose;
 
     /**
-     * @param open usually T_LPAREN or T_LBRACE; see TupleStatement.asVarType for the exception
-     * @param close usually T_RPAREN or T_RBRACE; see TupleStatement.asVarType for the exception
+     * @param open T_LPAREN
+     * @param close T_RPAREN
      */
     TupleVarType(Token open, List<VarType> fieldTypes, Token close) {
         mOpen = open;
@@ -56,13 +56,6 @@ public final class TupleVarType implements VarType {
     @Override
     public Token end() {
         return mClose;
-    }
-
-    /**
-     * Returns true of the tuple starts with a `(`.
-     */
-    public boolean isEvaluated() {
-        return mOpen.type() == Token.T_LPAREN;
     }
 
     @Override
