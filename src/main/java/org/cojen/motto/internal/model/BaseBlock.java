@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.cojen.motto.internal.util.SimpleSet;
 
@@ -46,8 +47,29 @@ import org.cojen.motto.runtime.Math;
  * @author Brian S. O'Neill
  */
 public final class BaseBlock implements Block {
-    // This is a bit faster than the default identity hashcode.
-    private final int mHashCode = ThreadLocalRandom.current().nextInt();
+    private static final ScopedValue<Supplier<BaseBlock>> CONTEXT = ScopedValue.newInstance();
+
+    /**
+     * Call to allow newBlockFromScope to work within the given scope.
+     */
+    static <R> R inScope(Supplier<BaseBlock> factory, ScopedValue.CallableOp<R, Throwable> scope)
+        throws Throwable
+    {
+        return ScopedValue.where(CONTEXT, factory).call(scope);
+    }
+
+    /**
+     * @throws IllegalStateException if not called via inScope
+     */
+    public static BaseBlock newBlockFromScope() {
+        try {
+            return CONTEXT.get().get();
+        } catch (NoSuchElementException e) {
+            throw new IllegalStateException();
+        }
+    }
+
+    private final int mHashCode;
 
     private int mPosition;
 
@@ -66,6 +88,8 @@ public final class BaseBlock implements Block {
     private BaseBlock mIdom;
 
     public BaseBlock() {
+        // This is a bit faster than the default identity hashcode.
+        mHashCode = ThreadLocalRandom.current().nextInt();
     }
 
     @Override

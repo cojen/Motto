@@ -27,9 +27,11 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     /**
      * Returns a new block which isn't attached to anything until it becomes a destination for
      * a jump or branch action.
+     *
+     * @throws IllegalStateException if the current thread cannot create new blocks
      */
     public static Block newBlock() {
-        return new BaseBlock();
+        return BaseBlock.newBlockFromScope();
     }
 
     /**
@@ -69,7 +71,7 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
      * Append a copy action to the end of this block. If necessary, a widening conversion is
      * automatically applied. If the target and source are the same, then no copy is appended.
      *
-     * @param source a Binding or a constant
+     * @param source a {@link Binding Binding} or a constant
      * @throws TerminatedBlockException if this block is terminated
      */
     public void copy(Binding target, Object source);
@@ -78,7 +80,7 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
      * Append an action to the end of this block which performs a type cast and copy. If the
      * cast isn't necessary, then a copy action is appended instead.
      *
-     * @param source a Binding or a constant
+     * @param source a {@link Binding Binding} or a constant
      * @throws TerminatedBlockException if this block is terminated
      */
     public void cast(Binding target, Object source);
@@ -87,7 +89,7 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
      * Append an action to the end of this block which performs a type conversion and copy. If
      * the conversion isn't necessary, then a copy action is appended instead.
      *
-     * @param source a Binding or a constant
+     * @param source a {@link Binding Binding} or a constant
      * @throws TerminatedBlockException if this block is terminated
      */
     public void convert(Binding target, Object source);
@@ -114,12 +116,12 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     public Binding callVirtual(CallableItem callable, Object... inputs);
 
     /**
-     * Terminate a block and retuen a value, possibly void. A return exits the current context,
+     * Terminate a block and return a value, possibly void. A return exits the current context,
      * which might be a method, a constructor, or a macro. Returning from a macro doesn't exit
      * the calling method or constructor. Like a method, it returns control to the point after
      * the invocation.
      *
-     * @param result a Binding or a constant
+     * @param result a {@link Binding Binding} or a constant
      * @throws TerminatedBlockException if this block is terminated
      */
     public void return_(Object result);
@@ -141,7 +143,7 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     /**
      * Append a throw action to the end of this block, and then terminate it.
      *
-     * @param exception a Binding or a constant
+     * @param exception a {@link Binding Binding} or a constant
      * @throws TerminatedBlockException if this block is already terminated
      */
     public void throw_(Object exception);
@@ -166,15 +168,15 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     public Binding arrayNew(ArrayType type, Object... dims);
 
     /**
-     * @param index a Binding or a constant
+     * @param index a {@link Binding Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding arrayGet(Binding array, Object index);
 
     /**
-     * @param index a Binding or a constant
-     * @param value a Binding or a constant
+     * @param index a {@link Binding Binding} or a constant
+     * @param value a {@link Binding Binding} or a constant
      * @throws TerminatedBlockException if this block is terminated
      */
     public void arraySet(Binding array, Object index, Object value);
@@ -199,60 +201,60 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     public Binding tupleGet(Binding tuple, int index);
 
     /**
-     * @param value a Binding or a constant
+     * @param value a {@link Binding Binding} or a constant
      * @throws TerminatedBlockException if this block is terminated
      */
     public void tupleSet(Binding tuple, Binding index, Object value);
 
     /**
-     * @param value a Binding or a constant
+     * @param value a {@link Binding Binding} or a constant
      * @throws TerminatedBlockException if this block is terminated
      */
     public void tupleSet(Binding tuple, int index, Object value);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding add(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding sub(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding mul(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding div(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding rem(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
@@ -260,109 +262,109 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
 
     /**
 
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding shr(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding ushr(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding and(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding or(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding xor(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding eq(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding ne(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding lt(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding ge(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding gt(Object input1, Object input2);
 
     /**
-     * @param input1 a Binding or a constant
-     * @param input2 a Binding or a constant
+     * @param input1 a {@link Binding Binding} or a constant
+     * @param input2 a {@code Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding le(Object input1, Object input2);
 
     /**
-     * @param input a Binding or a constant
+     * @param input a {@link Binding Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding neg(Object input);
 
     /**
-     * @param input a Binding or a constant
+     * @param input a {@link Binding Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
     public Binding com(Object input);
 
     /**
-     * @param input a Binding or a constant
+     * @param input a {@link Binding Binding} or a constant
      * @return the result binding
      * @throws TerminatedBlockException if this block is terminated
      */
