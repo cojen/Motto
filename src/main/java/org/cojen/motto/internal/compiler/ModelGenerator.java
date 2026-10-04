@@ -2115,7 +2115,17 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        BaseBinding result = st.source == null ? BaseBinding.Void.THE : st.source.accept(this);
+        BaseBinding result;
+
+        if (st.source == null) {
+            result = BaseBinding.Void.THE;
+        } else {
+            result = st.source.accept(this);
+            if (result == null) {
+                // Error state.
+                return null;
+            }
+        }
 
         BaseDeferredType lrt = mScope.lambdaReturnType();
 
