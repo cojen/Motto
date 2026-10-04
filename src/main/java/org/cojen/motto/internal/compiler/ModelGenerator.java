@@ -725,7 +725,9 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             } else if (callable != null && mScope.isReachable()) {
                 // The scope must end with a return statement.
                 if (callable.isMacro() || callable.signature().outputType() != BaseVoidType.THE) {
-                    error(css.end(), "missing return statement");
+                    if (mEnv.numErrors() == 0) {
+                        error(css.end(), "missing return statement");
+                    }
                 }
             }
         } finally {
@@ -1927,13 +1929,24 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        BaseBinding result = st.source == null ? BaseBinding.Void.THE : st.source.accept(this);
+        BaseBinding result;
+
+        if (st.source == null) {
+            result = BaseBinding.Void.THE;
+        } else {
+            result = st.source.accept(this);
+            if (result == null) {
+                // Error state.
+                return null;
+            }
+        }
 
         BaseDeferredType lrt = mScope.lambdaReturnType();
 
         if (lrt != null) {
             // FIXME: Support FarReturnAction.
             error(st, "far return from a lambda function isn't allowed");
+            return null;
         }
 
         mScope.activeBlock(st).return_(result);
