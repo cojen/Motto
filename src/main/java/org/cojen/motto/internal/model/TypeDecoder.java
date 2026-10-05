@@ -242,6 +242,10 @@ public final class TypeDecoder {
                 return new DecodedType.FunctionT(decodeType(), decodeType());
             }
 
+            case EncodableType.T_CODE -> {
+                return new DecodedType.CodeT(decodeType());
+            }
+
             default -> {
                 if (code < EncodableType.T_INDEXED) {
                     throw new IllegalArgumentException();

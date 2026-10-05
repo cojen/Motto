@@ -26,7 +26,7 @@ import org.cojen.motto.model.Type;
  * @author Brian S. O'Neill
  */
 public abstract sealed class GeneratedType implements BaseType, EncodableType, ClassTypeItem
-    permits BaseCompositeType, BaseTupleType, BaseFunctionType
+    permits BaseCompositeType, BaseTupleType, BaseFunctionType, BaseCodeType
 {
     private static final BasePath PACKAGE_PATH = BasePath.from(EncodableType.GENERATED_PREFIX);
 

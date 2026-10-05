@@ -18,6 +18,7 @@ package org.cojen.motto.internal.parser;
 
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
+import org.cojen.motto.internal.model.BaseCodeType;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseType;
 
@@ -53,7 +54,7 @@ public final class CodeVarType implements VarType {
 
     @Override
     public BaseType tryResolve(CompilationEnv env, BaseItem scope) {
-        // FIXME: tryResolve
-        throw null;
+        BaseType result = resultType.tryResolve(env, scope);
+        return result == null ? null : BaseCodeType.from(result);
     }
 }

@@ -323,4 +323,22 @@ public abstract sealed class DecodedType implements EncodableType {
             return mInputType;
         }
     }
+
+    public final static class CodeT extends GeneratedT implements EncodableType.CodeT {
+        private final DecodedType mResultType;
+
+        CodeT(DecodedType resultType) {
+            mResultType = resultType;
+        }
+
+        @Override
+        public DecodedType.CodeT noFieldNames() {
+            return new DecodedType.CodeT(mResultType.noFieldNames());
+        }
+
+        @Override
+        public DecodedType resultType() {
+            return mResultType;
+        }
+    }
 }

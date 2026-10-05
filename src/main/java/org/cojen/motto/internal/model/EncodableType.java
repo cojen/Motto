@@ -32,8 +32,9 @@ public interface EncodableType extends Comparable<EncodableType> {
     public static final int T_UNSPECIFIED = 0, T_NULL = 1, T_VOID = 2, T_BOOLEAN = 3, T_CHAR = 4,
         T_BYTE = 5, T_SHORT = 6, T_INT = 7, T_LONG = 8, T_FLOAT = 9, T_DOUBLE = 10, T_OBJECT = 11,
         T_STRING = 12, T_ARRAY = 13, T_CLASS = 14, T_COMPOSITE = 15, T_TUPLE = 16, T_FUNCTION = 17,
+        T_CODE = 18,
 
-        // 18, 19: reserved for future use
+        // 19: reserved for future use
 
         T_INDEXED = 20; // not a real type code; real type codes must have a lower value
 
@@ -431,5 +432,38 @@ public interface EncodableType extends Comparable<EncodableType> {
         public EncodableType outputType();
 
         public EncodableType inputType();
+    }
+
+    /**
+     * Defines a pseudo type which indicates that a macro parameter is to receive code.
+     */
+    public static interface CodeT extends EncodableType {
+        @Override
+        public default int typeCode() {
+            return T_CODE;
+        }
+
+        @Override
+        public default void encodePrepare(TypeEncoder encoder) {
+            if (encoder.prepare(this)) {
+                resultType().encodePrepare(encoder);
+            }
+        }
+
+        @Override
+        public default void encode(TypeEncoder encoder) {
+            encoder.encodeByte(T_CODE);
+            resultType().encode(encoder);
+        }
+
+        @Override
+        public default int doCompare(EncodableType other) {
+            return resultType().compareTo(((CodeT) other).resultType());
+        }
+
+        /**
+         * Returns the type yielded by the code body.
+         */
+        public EncodableType resultType();
     }
 }
