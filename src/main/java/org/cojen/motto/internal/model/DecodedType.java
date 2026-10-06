@@ -16,9 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.constant.ClassDesc;
-import java.lang.constant.ConstantDescs;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,15 +27,6 @@ import java.util.List;
 public abstract sealed class DecodedType implements EncodableType {
     @Override
     public abstract DecodedType noFieldNames();
-
-    /**
-     * Force the class to be generated, unless it's not a generated type.
-     *
-     * @return null if not a generated type
-     */
-    Class<?> generate() {
-        return null;
-    }
 
     /**
      * Used when decoding the type table and a type is referenced which hasn't been decoded yet.
@@ -84,8 +72,8 @@ public abstract sealed class DecodedType implements EncodableType {
         }
 
         @Override
-        public ClassDesc asClassDesc() {
-            return mType.asClassDesc();
+        public org.cojen.maker.Type asMakerType() {
+            return mType.asMakerType();
         }
     }
 
@@ -118,36 +106,44 @@ public abstract sealed class DecodedType implements EncodableType {
         }
 
         @Override
-        public ClassDesc asClassDesc() {
-            // FIXME: Handling of T_UNSPECIFIED and T_NULL might be wrong. The ClassDesc is for
-            // generated types, and so that's an issue.
-            return switch (mCode) {
-                case T_UNSPECIFIED, T_NULL -> super.asClassDesc();
-                case T_VOID -> ConstantDescs.CD_void;
-                case T_BOOLEAN -> ConstantDescs.CD_boolean;
-                case T_CHAR -> ConstantDescs.CD_char;
-                case T_BYTE -> ConstantDescs.CD_byte;
-                case T_SHORT -> ConstantDescs.CD_short;
-                case T_INT -> ConstantDescs.CD_int;
-                case T_LONG -> ConstantDescs.CD_long;
-                case T_FLOAT -> ConstantDescs.CD_float;
-                case T_DOUBLE -> ConstantDescs.CD_double;
-                case T_OBJECT -> ConstantDescs.CD_Object;
-                case T_STRING -> ConstantDescs.CD_String;
+        public org.cojen.maker.Type asMakerType() {
+            Class<?> clazz;
+
+            switch (mCode) {
+                // FIXME: Handling of T_UNSPECIFIED and T_NULL might be wrong. The super maker
+                // type is for generated types, and so that's an issue.
+                case T_UNSPECIFIED, T_NULL -> {
+                    return super.asMakerType();
+                }
+
+                case T_VOID -> clazz = void.class;
+                case T_BOOLEAN -> clazz = boolean.class;
+                case T_CHAR -> clazz = char.class;
+                case T_BYTE -> clazz = byte.class;
+                case T_SHORT -> clazz = short.class;
+                case T_INT -> clazz = int.class;
+                case T_LONG -> clazz = long.class;
+                case T_FLOAT -> clazz = float.class;
+                case T_DOUBLE -> clazz = double.class;
+                case T_OBJECT -> clazz = Object.class;
+                case T_STRING -> clazz = String.class;
+
                 default -> {
                     throw new IllegalStateException();
                 }
             };
+
+            return org.cojen.maker.Type.from(clazz);
         }
     }
 
     public final static class ArrayT extends DecodedType implements EncodableType.ArrayT {
         private final DecodedType mElementType;
-        private final ClassDesc mClassDesc;
+        private final org.cojen.maker.Type mMakerType;
 
         ArrayT(DecodedType elementType) {
             mElementType = elementType;
-            mClassDesc = elementType.asClassDesc().arrayType();
+            mMakerType = elementType.asMakerType().asArray();
         }
 
         @Override
@@ -161,14 +157,14 @@ public abstract sealed class DecodedType implements EncodableType {
         }
 
         @Override
-        public ClassDesc asClassDesc() {
-            return mClassDesc;
+        public org.cojen.maker.Type asMakerType() {
+            return mMakerType;
         }
     }
 
     public final static class ClassT extends DecodedType implements EncodableType.ClassT {
         private final List<String> mPackagePath, mNamePath;
-        private ClassDesc mClassDesc;
+        private org.cojen.maker.Type mMakerType;
 
         ClassT(List<String> packagePath, List<String> namePath) {
             mPackagePath = packagePath;
@@ -207,32 +203,23 @@ public abstract sealed class DecodedType implements EncodableType {
         }
 
         @Override
-        public ClassDesc asClassDesc() {
-            if (mClassDesc == null) {
-                mClassDesc = EncodableType.ClassT.super.asClassDesc();
+        public org.cojen.maker.Type asMakerType() {
+            if (mMakerType == null) {
+                mMakerType = EncodableType.ClassT.super.asMakerType();
             }
-            return mClassDesc;
+            return mMakerType;
         }
     }
 
     public abstract sealed static class GeneratedT extends DecodedType {
-        private ClassDesc mClassDesc;
+        private org.cojen.maker.Type mMakerType;
 
         @Override
-        public ClassDesc asClassDesc() {
-            if (mClassDesc == null) {
-                mClassDesc = super.asClassDesc();
-                // Force the class to be generated, in case this type is a dependency of a
-                // class which is generated by TheTypeGenerator. Cyclic dependencies among
-                // generated types isn't expected.
-                generate();
+        public org.cojen.maker.Type asMakerType() {
+            if (mMakerType == null) {
+                mMakerType = super.asMakerType();
             }
-            return mClassDesc;
-        }
-
-        @Override
-        Class<?> generate() {
-            return TheTypeGenerator.generateFromEncoded(TypeEncoder.encodeBase64(this));
+            return mMakerType;
         }
     }
 

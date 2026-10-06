@@ -16,9 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.constant.ClassDesc;
-import java.lang.constant.ConstantDescs;
-
 import org.cojen.motto.model.DoubleType;
 
 /**
@@ -59,11 +56,6 @@ public final class BaseDoubleType extends BasePrimitiveType implements DoubleTyp
     @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.from(double.class);
-    }
-
-    @Override
-    public ClassDesc asClassDesc() {
-        return ConstantDescs.CD_double;
     }
 
     @Override

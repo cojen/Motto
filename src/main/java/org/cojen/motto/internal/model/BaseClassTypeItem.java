@@ -16,8 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.constant.ClassDesc;
-
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -58,11 +56,9 @@ import static org.cojen.motto.internal.model.Modifiers.*;
  */
 public abstract sealed class BaseClassTypeItem extends BaseItem
     implements BaseObjectType, ClassTypeItem, EncodableType.ClassT
-    permits ExternalClass, LoadedClass, NewClass
+    permits ExternalClass, LoadedClass, NewClass, TopClassTypeItem
 {
     private final BasePath mPackagePath, mNamePath;
-
-    private ClassDesc mClassDesc;
 
     private BaseClassTypeItem mSuperType;
     private Set<BaseClassTypeItem> mSuperInterfaces;
@@ -196,11 +192,8 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public final ClassDesc asClassDesc() {
-        if (mClassDesc == null) {
-            mClassDesc = EncodableType.ClassT.super.asClassDesc();
-        }
-        return mClassDesc;
+    public org.cojen.maker.Type asMakerType() {
+        return EncodableType.ClassT.super.asMakerType();
     }
 
     @Override

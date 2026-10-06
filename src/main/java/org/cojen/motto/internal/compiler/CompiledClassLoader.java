@@ -22,6 +22,8 @@ import java.util.Objects;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.cojen.motto.internal.model.TheTypeGenerator;
+
 /**
  * Allows newly compiled classes (represented as byte arrays) to be loaded. Newly compiled
  * classes have priority over existing classes, which are found by the parent ClassLoader.
@@ -84,6 +86,12 @@ public final class CompiledClassLoader extends ClassLoader {
                 mRegistered.remove(name, bytes);
                 return clazz;
             }
+        }
+
+        Class<?> clazz = TheTypeGenerator.tryGenerateFromPath(name);
+
+        if (clazz != null) {
+            return clazz;
         }
 
         return getParent().loadClass(name);

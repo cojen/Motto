@@ -488,7 +488,7 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
         }
     }
 
-    // Called by CodeGenerator
+    // Called by CodeGenerator.
     org.cojen.maker.Type generateType(GeneratedType type) {
         generateType(type.generatedName());
         return type.asMakerType();
@@ -500,6 +500,13 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
             mGeneratedTypeNames = new HashSet<>();
         }
         mGeneratedTypeNames.add(typeName);
+    }
+
+    // Called by GeneratedType subclasses.
+    void generateType(BaseType type) {
+        if (type instanceof GeneratedType generated) {
+            generateType(generated.generatedName());
+        }
     }
 
     @Override // BaseClassTypeItem

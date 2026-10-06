@@ -22,7 +22,7 @@ import java.util.Set;
 import org.cojen.motto.internal.util.InternSet;
 
 /**
- * 
+ * Defines a pseudo type, used by macro definitions.
  *
  * @author Brian S. O'Neill
  */
@@ -83,6 +83,23 @@ public final class BaseCodeType extends GeneratedType
     @Override
     public BaseType resultType() {
         return mResultType;
+    }
+
+    @Override
+    public org.cojen.maker.Type asMakerType() {
+        // Don't call NewClass.generateType for pseudo types.
+        return org.cojen.maker.Type.external(generatedName(), this);
+    }
+
+    @Override
+    void generateTypeDependencies(NewClass clazz) {
+        // None.
+    }
+
+    @Override
+    BaseClassTypeItem makeClassType() {
+        // Cannot make a pseudo type.
+        throw new UnsupportedOperationException();
     }
 
     @Override

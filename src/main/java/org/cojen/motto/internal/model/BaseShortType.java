@@ -16,9 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.constant.ClassDesc;
-import java.lang.constant.ConstantDescs;
-
 import org.cojen.motto.model.DoubleType;
 import org.cojen.motto.model.FloatType;
 import org.cojen.motto.model.IntType;
@@ -75,11 +72,6 @@ public final class BaseShortType extends BasePrimitiveType implements ShortType 
     @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.from(short.class);
-    }
-
-    @Override
-    public ClassDesc asClassDesc() {
-        return ConstantDescs.CD_short;
     }
 
     @Override

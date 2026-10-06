@@ -16,9 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.constant.ClassDesc;
-import java.lang.constant.ConstantDescs;
-
 import org.cojen.motto.model.VoidType;
 
 /**
@@ -57,11 +54,6 @@ public final class BaseVoidType extends BasePrimitiveType implements VoidType {
     @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.from(void.class);
-    }
-
-    @Override
-    public ClassDesc asClassDesc() {
-        return ConstantDescs.CD_void;
     }
 
     @Override

@@ -16,6 +16,8 @@
 
 package org.cojen.motto.internal.model;
 
+import org.cojen.maker.ClassMaker;
+
 import org.cojen.motto.model.ClassTypeItem;
 import org.cojen.motto.model.Item;
 import org.cojen.motto.model.Type;
@@ -25,7 +27,8 @@ import org.cojen.motto.model.Type;
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed class GeneratedType implements BaseType, EncodableType, ClassTypeItem
+public abstract sealed class GeneratedType
+    implements BaseType, EncodableType, ClassTypeItem
     permits BaseCompositeType, BaseTupleType, BaseFunctionType, BaseCodeType
 {
     private static final BasePath PACKAGE_PATH = BasePath.from(EncodableType.GENERATED_PREFIX);
@@ -36,7 +39,8 @@ public abstract sealed class GeneratedType implements BaseType, EncodableType, C
 
     private volatile BasePath mNamePath;
     private volatile String mGeneratedName;
-    private volatile LoadedClass mClassType;
+    private volatile org.cojen.maker.Type mMakerType;
+    private volatile BaseClassTypeItem mClassType;
 
     @Override
     public boolean isEquivalentTo(Type other) {
@@ -101,28 +105,6 @@ public abstract sealed class GeneratedType implements BaseType, EncodableType, C
         return this;
     }
 
-    @Override
-    public org.cojen.maker.Type asMakerType() {
-        var type = classType().asMakerType();
-
-        if (FOR_NEW_CLASS.isBound()) {
-            FOR_NEW_CLASS.get().generateType(generatedName());
-        }
-
-        return type;
-    }
-
-    public LoadedClass classType() {
-        LoadedClass classType = mClassType;
-
-        if (classType == null) {
-            Class<?> clazz = TheTypeGenerator.generateFromName(generatedName());
-            mClassType = classType = LoadedClass.classFrom(clazz);
-        }
-
-        return classType;
-    }
-
     String generatedName() {
         String name = mGeneratedName;
 
@@ -134,4 +116,47 @@ public abstract sealed class GeneratedType implements BaseType, EncodableType, C
 
         return name;
     }
+
+    @Override
+    public org.cojen.maker.Type asMakerType() {
+        String name = null;
+        org.cojen.maker.Type type = mMakerType;
+
+        if (type == null) {
+            name = generatedName();
+            mMakerType = type = org.cojen.maker.Type.external(name.replace('/', '.'), this);
+        }
+
+        if (FOR_NEW_CLASS.isBound()) {
+            if (name == null) {
+                name = generatedName();
+            }
+            NewClass clazz = FOR_NEW_CLASS.get();
+            clazz.generateType(name);
+            generateTypeDependencies(clazz);
+        }
+
+        return type;
+    }
+
+    /**
+     * Calls generateType for all generated dependencies of this type.
+     */
+    abstract void generateTypeDependencies(NewClass clazz);
+
+    public BaseClassTypeItem classType() {
+        BaseClassTypeItem classType = mClassType;
+
+        if (classType == null) {
+            mClassType = classType = makeClassType();
+        }
+
+        return classType;
+    }
+
+    /**
+     * The class defintion should match what TheTypeGenerator makes, although private members
+     * and code can be excluded.
+     */
+    abstract BaseClassTypeItem makeClassType();
 }

@@ -16,9 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.constant.ClassDesc;
-import java.lang.constant.ConstantDescs;
-
 import org.cojen.motto.model.BooleanType;
 
 /**
@@ -50,11 +47,6 @@ public final class BaseBooleanType extends BasePrimitiveType implements BooleanT
     @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.from(boolean.class);
-    }
-
-    @Override
-    public ClassDesc asClassDesc() {
-        return ConstantDescs.CD_boolean;
     }
 
     @Override

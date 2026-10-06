@@ -16,9 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.constant.ClassDesc;
-import java.lang.constant.ConstantDescs;
-
 import org.cojen.motto.model.LongType;
 
 /**
@@ -59,11 +56,6 @@ public final class BaseLongType extends BasePrimitiveType implements LongType {
     @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.from(long.class);
-    }
-
-    @Override
-    public ClassDesc asClassDesc() {
-        return ConstantDescs.CD_long;
     }
 
     @Override

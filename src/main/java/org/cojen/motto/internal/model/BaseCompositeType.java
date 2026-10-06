@@ -135,6 +135,27 @@ public final class BaseCompositeType extends GeneratedType implements
     }
 
     @Override
+    void generateTypeDependencies(NewClass clazz) {
+        BaseType[] fieldTypes = mFieldTypes;
+        for (int i=0; i<fieldTypes.length; i++) {
+            clazz.generateType(fieldTypes[i]);
+        }
+    }
+
+    @Override
+    BaseClassTypeItem makeClassType() {
+        var classType = new TopClassTypeItem(Modifiers.PUBLIC | Modifiers.CLASS, this);
+        classType.setSuperTypes(LoadedClass.classFrom(Object.class), Set.of());
+
+        BaseType[] fieldTypes = mFieldTypes;
+        for (int i=0; i<fieldTypes.length; i++) {
+            classType.tryAddField(Modifiers.PUBLIC, fieldTypes[i], String.valueOf(i));
+        }
+
+        return classType;
+    }
+
+    @Override
     public int hashCode() {
         return Arrays.hashCode(mFieldTypes);
     }

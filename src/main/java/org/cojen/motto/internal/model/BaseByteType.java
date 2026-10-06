@@ -16,9 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.constant.ClassDesc;
-import java.lang.constant.ConstantDescs;
-
 import org.cojen.motto.model.ByteType;
 import org.cojen.motto.model.DoubleType;
 import org.cojen.motto.model.FloatType;
@@ -76,11 +73,6 @@ public final class BaseByteType extends BasePrimitiveType implements ByteType {
     @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.from(byte.class);
-    }
-
-    @Override
-    public ClassDesc asClassDesc() {
-        return ConstantDescs.CD_byte;
     }
 
     @Override

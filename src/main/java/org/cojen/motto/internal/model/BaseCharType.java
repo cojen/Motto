@@ -16,9 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.constant.ClassDesc;
-import java.lang.constant.ConstantDescs;
-
 import org.cojen.motto.model.CharType;
 import org.cojen.motto.model.DoubleType;
 import org.cojen.motto.model.FloatType;
@@ -69,11 +66,6 @@ public final class BaseCharType extends BasePrimitiveType implements CharType {
     @Override
     public org.cojen.maker.Type asMakerType() {
         return org.cojen.maker.Type.from(char.class);
-    }
-
-    @Override
-    public ClassDesc asClassDesc() {
-        return ConstantDescs.CD_char;
     }
 
     @Override

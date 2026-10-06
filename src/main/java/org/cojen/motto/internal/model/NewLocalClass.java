@@ -56,7 +56,7 @@ public final class NewLocalClass extends NewClass {
 
         if (functionType != null) {
             // Classes which reference the functionType should attempt to generate it from the
-            // static initializer.
+            // static initializer. See GeneratedType.asMakerType().
             functionType.asMakerType();
         }
 

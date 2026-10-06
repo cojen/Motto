@@ -46,6 +46,11 @@ import org.cojen.motto.internal.util.InternSet;
 public sealed abstract class BaseTupleType extends GeneratedType
     implements BaseObjectType, TupleType, EncodableType.TupleT
 {
+    // Field name to use for the generated empty tuple class. When demangled, the name is just
+    // an underscore. By using an unnecessarily mangled name, the singleton name won't conflict
+    // with a real tuple field name.
+    public static final String SINGLETON_FIELD_NAME = "\\=_";
+
     public static final BaseTupleType EMPTY;
 
     static {
@@ -459,6 +464,9 @@ public sealed abstract class BaseTupleType extends GeneratedType
 
     public abstract BaseTupleType withTypes(BaseType[] types);
 
+    /**
+     * @throws IllegalArgumentException if has duplicate names and hasDupsRef is null
+     */
     private static Map<String, Integer> buildNameMap(TupleFieldItem[] fields, int[] hasDupsRef) {
         int numFields = fields.length;
 
@@ -483,6 +491,60 @@ public sealed abstract class BaseTupleType extends GeneratedType
         }
 
         return map;
+    }
+
+    @Override
+    void generateTypeDependencies(NewClass clazz) {
+        int num = numFields();
+        for (int i=0; i<num; i++) {
+            clazz.generateType(fieldType(i));
+        }
+    }
+
+    @Override
+    BaseClassTypeItem makeClassType() {
+        var classType = new TopClassTypeItem(Modifiers.PUBLIC | Modifiers.CLASS, this);
+
+        classType.setSuperTypes(LoadedClass.classFrom(Record.class),
+                                Set.of(LoadedClass.classFrom(motto.Tuple.class)));
+
+        int num = numFields();
+
+        for (int i=0; i<num; i++) {
+            var signature = BaseCallSignature.from
+                (fieldType(i), mangledFieldName(i),
+                 BaseTupleType.from(classType).withNames("this"));
+            classType.tryAddMethod(Modifiers.PUBLIC, signature);
+        }
+
+        if (num == 0) {
+            // Define an empty singleton.
+            classType.tryAddField(Modifiers.PUBLIC | Modifiers.STATIC, classType,
+                                  SINGLETON_FIELD_NAME);
+        }
+
+        return classType;
+    }
+
+    /**
+     * Returns this type with a named "this" field as the first one.
+     */
+    public final BaseTupleType prependThis(BaseType thisType) {
+        var fields = new TupleFieldItem[1 + numFields()];
+
+        fields[0] = new TupleFieldItem.Named(this, thisType, "this");
+
+        for (int i=1; i<fields.length; i++) {
+            BaseType fieldType = fieldType(i - 1);
+            String fieldName = fieldName(i - 1);
+            fields[i] = fieldName == null
+                ? new TupleFieldItem(this, fieldType)
+                : new TupleFieldItem.Named(this, fieldType, fieldName);
+        }
+
+        Map<String, Integer> nameMap = buildNameMap(fields, null);
+
+        return InternSet.apply(new WithNames(fields, nameMap));
     }
 
     private static final class NoNames extends BaseTupleType {

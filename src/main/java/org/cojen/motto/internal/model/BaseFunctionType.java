@@ -139,6 +139,32 @@ public final class BaseFunctionType extends GeneratedType
     }
 
     @Override
+    void generateTypeDependencies(NewClass clazz) {
+        clazz.generateType(mOutputType);
+        clazz.generateType(mInputType);
+    }
+
+    @Override
+    BaseClassTypeItem makeClassType() {
+        var classType = new TopClassTypeItem(Modifiers.PUBLIC | Modifiers.INTERFACE, this);
+        classType.setSuperTypes(LoadedClass.classFrom(Object.class), Set.of());
+
+        BaseTupleType inputType;
+
+        if (mInputType instanceof BaseTupleType tt) {
+            inputType = tt.prependThis(classType);
+        } else {
+            inputType = BaseTupleType.from(classType, mInputType).withNames("this");
+        }
+
+        var signature = BaseCallSignature.from(mOutputType, "apply", inputType);
+
+        classType.tryAddMethod(Modifiers.PUBLIC | Modifiers.ABSTRACT, signature);
+
+        return classType;
+    }
+
+    @Override
     public int hashCode() {
         return mOutputType.hashCode() * 31 + mInputType.hashCode();
     }

@@ -16,10 +16,9 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.constant.ClassDesc;
-
 import java.util.List;
 
+import org.cojen.maker.ClassMaker;
 import org.cojen.maker.Maker;
 
 import org.cojen.motto.internal.util.Utils;
@@ -28,7 +27,7 @@ import org.cojen.motto.internal.util.Utils;
  * @author Brian S. O'Neill
  * @see TypeEncoder
  */
-public interface EncodableType extends Comparable<EncodableType> {
+public interface EncodableType extends Comparable<EncodableType>, org.cojen.maker.Type.Provider {
     public static final int T_UNSPECIFIED = 0, T_NULL = 1, T_VOID = 2, T_BOOLEAN = 3, T_CHAR = 4,
         T_BYTE = 5, T_SHORT = 6, T_INT = 7, T_LONG = 8, T_FLOAT = 9, T_DOUBLE = 10, T_OBJECT = 11,
         T_STRING = 12, T_ARRAY = 13, T_CLASS = 14, T_COMPOSITE = 15, T_TUPLE = 16, T_FUNCTION = 17,
@@ -51,9 +50,9 @@ public interface EncodableType extends Comparable<EncodableType> {
      */
     public EncodableType noFieldNames();
 
-    public default ClassDesc asClassDesc() {
+    public default org.cojen.maker.Type asMakerType() {
         String desc = 'L' + GENERATED_PREFIX + '/' + TypeEncoder.encodeBase64(this) + ';';
-        return ClassDesc.ofDescriptor(desc);
+        return org.cojen.maker.Type.from(desc);
     }
 
     /**
@@ -87,6 +86,31 @@ public interface EncodableType extends Comparable<EncodableType> {
      */
     public int doCompare(EncodableType other);
 
+    @Override // Type.Provider
+    public default void init(ClassMaker cm) {
+        if (cm.superclass() == null) {
+            doInit(cm);
+        }
+    }
+
+    @Override // Type.Provider
+    public default void addFields(ClassMaker cm) {
+        init(cm);
+    }
+
+    @Override // Type.Provider
+    public default void addMethods(ClassMaker cm) {
+        init(cm);
+    }
+
+    @Override // Type.Provider
+    public default void addConstructors(ClassMaker cm) {
+        init(cm);
+    }
+
+    default void doInit(ClassMaker cm) {
+    }
+
     private static void encodeIndexed(EncodableType type, TypeEncoder encoder) {
         int index = encoder.lookup(type);
         if (index >= 0) {
@@ -103,8 +127,8 @@ public interface EncodableType extends Comparable<EncodableType> {
         }
 
         @Override
-        public default ClassDesc asClassDesc() {
-            return arrayElementType().asClassDesc().arrayType();
+        public default org.cojen.maker.Type asMakerType() {
+            return arrayElementType().asMakerType().asArray();
         }
 
         @Override
@@ -140,7 +164,7 @@ public interface EncodableType extends Comparable<EncodableType> {
         }
 
         @Override
-        public default ClassDesc asClassDesc() {
+        public default org.cojen.maker.Type asMakerType() {
             List<String> packagePath = packagePath();
             List<String> namePath = namePath();
 
@@ -162,7 +186,7 @@ public interface EncodableType extends Comparable<EncodableType> {
                 }
             }
 
-            return ClassDesc.ofDescriptor(b.append(';').toString());
+            return org.cojen.maker.Type.from(b.append(';').toString());
         }
 
         @Override
@@ -276,6 +300,11 @@ public interface EncodableType extends Comparable<EncodableType> {
         public int numFields();
 
         public EncodableType fieldType(int index);
+
+        @Override
+        public default void doInit(ClassMaker cm) {
+            TheTypeGenerator.makeCompositeClass(cm, this);
+        }
     }
 
     public static interface TupleT extends EncodableType {
@@ -382,6 +411,11 @@ public interface EncodableType extends Comparable<EncodableType> {
                 default -> false;
             };
         }
+
+        @Override
+        public default void doInit(ClassMaker cm) {
+            TheTypeGenerator.makeTupleClass(cm, this);
+        }
     }
 
     public static interface FunctionT extends EncodableType {
@@ -432,6 +466,12 @@ public interface EncodableType extends Comparable<EncodableType> {
         public EncodableType outputType();
 
         public EncodableType inputType();
+
+
+        @Override
+        public default void doInit(ClassMaker cm) {
+            TheTypeGenerator.makeFunctionClass(cm, this);
+        }
     }
 
     /**

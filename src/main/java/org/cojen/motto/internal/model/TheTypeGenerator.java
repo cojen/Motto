@@ -64,6 +64,17 @@ public final class TheTypeGenerator {
     }
 
     /**
+     * @param name generated class name with a dot separator
+     */
+    public static Class<?> tryGenerateFromPath(String name) {
+        String prefix = EncodableType.GENERATED_PREFIX;
+        if (!name.startsWith(prefix + '.')) {
+            return null;
+        }
+        return generateFromEncoded(name.substring(prefix.length() + 1));
+    }
+
+    /**
      * @param encoded base-64 string created by TypeEncoder
      */
     public static Class<?> generateFromEncoded(String encoded) {
@@ -80,6 +91,9 @@ public final class TheTypeGenerator {
             DecodedType type = new TypeDecoder().tryDecode(encoded);
 
             byte[] bytes;
+
+            // Note: The make methods should define classes which match what
+            // GeneratedType.makeClassType() returns, although more members are added here.
 
             switch (type) {
                 case DecodedType.CompositeT st -> {
@@ -113,20 +127,30 @@ public final class TheTypeGenerator {
         }
     }
 
-    private static byte[] makeCompositeClass(String className, DecodedType.CompositeT type) {
-        ClassMaker cm = ClassMaker.beginExternal(className).public_().final_().synthetic();
+    private static byte[] makeCompositeClass(String className, EncodableType.CompositeT type) {
+        ClassMaker cm = ClassMaker.beginExternal(className);
+        makeCompositeClass(cm, type);
+        return cm.finishBytes();
+    }
+
+    static void makeCompositeClass(ClassMaker cm, EncodableType.CompositeT type) {
+        cm.public_().final_().synthetic();
         cm.addConstructor().public_();
 
         int num = type.numFields();
 
         for (int i=0; i<num; i++) {
-            cm.addField(type.fieldType(i).asClassDesc(), String.valueOf(i)).public_();
+            cm.addField(type.fieldType(i).asMakerType(), String.valueOf(i)).public_();
         }
+    }
 
+    private static byte[] makeTupleClass(String className, EncodableType.TupleT type) {
+        ClassMaker cm = ClassMaker.beginExternal(className);
+        makeTupleClass(cm, type);
         return cm.finishBytes();
     }
 
-    private static byte[] makeTupleClass(String className, DecodedType.TupleT type) {
+    static void makeTupleClass(ClassMaker cm, EncodableType.TupleT type) {
         int num = type.numFields();
 
         if (num == 1 && type.fieldName(0) == null) {
@@ -137,8 +161,7 @@ public final class TheTypeGenerator {
             throw new IllegalArgumentException();
         }
 
-        ClassMaker cm = ClassMaker.beginExternal(className).public_().final_().synthetic();
-        cm.implement(motto.Tuple.class);
+        cm.public_().final_().synthetic().implement(motto.Tuple.class);
 
         boolean doValueClass = areValueClassesSupported();
 
@@ -151,13 +174,13 @@ public final class TheTypeGenerator {
         //cm.implement(Serializable.class);
 
         for (int i=0; i<num; i++) {
-            DecodedType dtype = type.fieldType(i);
-            FieldMaker fm = cm.addField(dtype.asClassDesc(), type.mangledFieldName(i));
+            EncodableType etype = type.fieldType(i);
+            FieldMaker fm = cm.addField(etype.asMakerType(), type.mangledFieldName(i));
             fm.private_().final_();
 
             if (doValueClass) {
                 org.cojen.maker.Type mtype = fm.type();
-                if (dtype instanceof DecodedType.TupleT || mtype.isValueClass()) {
+                if (etype instanceof EncodableType.TupleT || mtype.isValueClass()) {
                     cm.addLoadableType(mtype);
                 }
             }
@@ -173,37 +196,39 @@ public final class TheTypeGenerator {
         if (num == 0) {
             // Define an empty singleton.
             ctor.private_();
-            String instanceName = "\\=_";
+            String instanceName = BaseTupleType.SINGLETON_FIELD_NAME;
             cm.addField(cm, instanceName).public_().static_().final_();
             MethodMaker clinit = cm.addClinit();
             clinit.field(instanceName).set(clinit.new_(cm));
         }
+    }
 
+    private static byte[] makeFunctionClass(String className, EncodableType.FunctionT type) {
+        ClassMaker cm = ClassMaker.beginExternal(className);
+        makeFunctionClass(cm, type);
         return cm.finishBytes();
     }
 
-    private static byte[] makeFunctionClass(String className, DecodedType.FunctionT type) {
-        ClassMaker cm = ClassMaker.beginExternal(className).public_().interface_().synthetic();
+    static void makeFunctionClass(ClassMaker cm, EncodableType.FunctionT type) {
+        cm.public_().interface_().synthetic();
 
         // Not required, so don't make the class bigger than it needs to be.
         //cm.addAnnotation(FunctionalInterface.class, true);
 
-        DecodedType inputType = type.inputType();
+        EncodableType inputType = type.inputType();
         Object[] inputTypes;
 
-        if (inputType instanceof DecodedType.TupleT tt) {
+        if (inputType instanceof EncodableType.TupleT tt) {
             inputTypes = new Object[tt.numFields()];
             for (int i=0; i<inputTypes.length; i++) {
-                inputTypes[i] = tt.fieldType(i).asClassDesc();
+                inputTypes[i] = tt.fieldType(i).asMakerType();
             }
         } else {
-            inputTypes = new Object[] {inputType.asClassDesc()};
+            inputTypes = new Object[] {inputType.asMakerType()};
         }
 
-        MethodMaker mm = cm.addMethod(type.outputType().asClassDesc(), "apply", inputTypes);
+        MethodMaker mm = cm.addMethod(type.outputType().asMakerType(), "apply", inputTypes);
         mm.public_().abstract_();
-
-        return cm.finishBytes();
     }
 
     static boolean areValueClassesSupported() {

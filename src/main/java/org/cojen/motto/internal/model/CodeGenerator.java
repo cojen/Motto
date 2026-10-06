@@ -488,8 +488,9 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         Variable result;
 
         if (params.length == 0) {
-            // Obtain the empty singleton. See TypeGenerator.
-            result = mMethodMaker.var(action.type().asMakerType()).field("\\=_");
+            // Obtain the empty singleton. See TheTypeGenerator.
+            result = mMethodMaker.var(action.type().asMakerType())
+                .field(BaseTupleType.SINGLETON_FIELD_NAME);
         } else {
             result = mMethodMaker.new_(mNewClass.generateType(action.type()), params);
         }
