@@ -50,17 +50,10 @@ import static org.cojen.motto.internal.model.Modifiers.*;
  *
  * @author Brian S. O'Neill
  */
-final class ModelScope {
-    private final ModelGenerator mModGen;
-    private final ModelScope mParent;
-    private final BaseItem mItem;
-
-    private final BaseBlock mFirstBlock;
-    private BaseBlock mActiveBlock;
-
-    private Map<String, BaseBinding.Local> mLocals;
-
-    private Map<String, LabelTarget> mLabels;
+abstract sealed class ModelScope {
+    final ModelGenerator mModGen;
+    final ModelScope mParent;
+    final BaseItem mItem;
 
     private static final class LabelTarget {
         LabeledStatement statement;
@@ -76,19 +69,10 @@ final class ModelScope {
         }
     }
 
-    private int mReachabilityCheckFailures;
-
-    /**
-     * @param item expected to be a NewClass or a BaseCallableItem; if null, then a plain
-     * scoped item is generated which is enclosed by the parent item
-     */
     ModelScope(ModelGenerator modGen, ModelScope parent, BaseItem item) {
         mModGen = modGen;
         mParent = parent;
-        mItem = item != null ? item : new BaseScopeItem(parent.mItem);
-        mFirstBlock = mActiveBlock = new BaseBlock();
-        mLocals = Map.of();
-        mLabels = Map.of();
+        mItem = item;
     }
 
     ModelScope parent() {
@@ -101,9 +85,9 @@ final class ModelScope {
 
     /**
      * Returns the nearest enclosing callable, which is null if enclosed by something other
-     * than a callable or a plain scope.
+     * than a callable or a plain nested scope.
      */
-    BaseCallableItem callableItem() {
+    private BaseCallableItem callableItem() {
         BaseItem item = mItem;
         while (true) {
             if (item instanceof BaseCallableItem callable) {
@@ -129,7 +113,7 @@ final class ModelScope {
         return null;
     }
 
-    private CompilationEnv env() {
+    CompilationEnv env() {
         return mModGen.env();
     }
 
@@ -137,22 +121,7 @@ final class ModelScope {
      * Add parameters before adding any named local variables.
      */
     void addParameters(BaseCallableItem callable) {
-        BaseTupleType inputType = callable.signature().inputType();
-        int num = inputType.numFields();
-
-        for (int i=0; i<num; i++) {
-            BaseType type = inputType.fieldType(i);
-            String name = inputType.fieldName(i);
-            var param = BaseBinding.Parameter.from(type, name, i);
-            if (mLocals.isEmpty()) {
-                mLocals = new LinkedHashMap<>();
-            }
-            // Duplicates should have been checked when the tuple was created. Also, no named
-            // local variables should be defined yet.
-            if (name != null && mLocals.putIfAbsent(name, param) != null) {
-                throw new AssertionError();
-            }
-        }
+        throw new UnsupportedOperationException();
     }
 
     /**
@@ -161,57 +130,7 @@ final class ModelScope {
      *
      * @return false if an error was reported
      */
-    boolean addDeclaration(DeclarationStatement ds) {
-        CompilationEnv env = env();
-
-        ModelScope scope = this;
-        BaseItem item = scope.mItem;
-
-        if (item instanceof NewClass clazz) {
-            ClassFieldItem field = ds.addToClass(env, clazz);
-            // If null, an error should have been reported already.
-            return field != null;
-        }
-
-        // If this point is reached, then the declaration is a local variable.
-
-        int modifierBits = ds.modifierBits(env);
-
-        if ((modifierBits & STATIC) != 0) {
-            env.error(ds, "local variable cannot be static");
-        }
-
-        String name = ds.name.text;
-
-        if (item instanceof BaseCallableItem ci && ci.signature().inputType().fieldExists(name)) {
-            env.error(ds.name, "a variable with the same name is declared as a parameter");
-            return false;
-        }
-
-        do {
-            if (scope.mLocals.containsKey(name)) {
-                dupError(ds.name, "a variable with the same name", scope);
-                return false;
-            }
-        } while ((scope = scope.mParent) != null);
-
-        // FIXME: check modifiers
-
-        BaseType type = ds.type().tryResolve(env, mItem);
-
-        if (type == null) {
-            // An error should have been reported already.
-            return false;
-        }
-
-        if (mLocals.isEmpty()) {
-            mLocals = new LinkedHashMap<>();
-        }
-
-        mLocals.put(name, BaseBinding.Named.from(type, name));
-
-        return true;
-    }
+    abstract boolean addDeclaration(DeclarationStatement ds);
 
     /**
      * Replace a local variable which had an unspecified type.
@@ -219,70 +138,18 @@ final class ModelScope {
      * @return null if the variable doesn't exist
      */
     BaseBinding.Local tryReplaceLocalDeclaration(BaseType type, String name) {
-        if (mLocals.isEmpty()) {
-            return null;
-        }
-        var local = BaseBinding.Named.from(type, name);
-        if (mLocals.replace(name, local) == null) {
-            return null;
-        }
-        return local;
-    }
-
-    private void dupError(Token.Identifier name, String message, ModelScope scope) {
-        if (scope == this) {
-            message += " is already declared";
-        } else {
-            message += " is declared in a parent scope";
-        }
-
-        env().error(name, message);
-    }
-
-    BaseCallableItem addConstructor(ConstructorDefinitionStatement st) {
-        if (mItem instanceof NewClass clazz) {
-            return st.addToClass(env(), clazz);
-        }
-
-        env().error(st, "local constructor not supported");
         return null;
     }
 
     /**
      * Returns null if no method was added and an error was reported.
      */
-    BaseCallableItem addMethod(MethodDefinitionStatement st) {
-        BaseCallableItem callable;
+    abstract BaseCallableItem addConstructor(ConstructorDefinitionStatement st);
 
-        if (mItem instanceof NewClass clazz) {
-            callable = st.addToClass(env(), clazz);
-        } else {
-            // FIXME: local method requires a special checks and transforms
-            env().error(st, "local method not supported");
-            return null;
-        }
-
-        if (callable == null) {
-            // An error should have been reported already.
-            return null;
-        }
-
-        BaseTupleType inputType = callable.signature().inputType();
-        int num = inputType.numFields();
-
-        for (int i=0; i<num; i++) {
-            // FIXME: check modifiers
-
-            BaseType type = inputType.fieldType(i);
-
-            if (type == BaseUnspecifiedType.THE && !callable.isMacro()) {
-                Element e = st.paramType.fieldTypes().get(i);
-                env().error(e, "parameter type cannot be unspecified");
-            }
-        }
-
-        return callable;
-    }
+    /**
+     * Returns null if no method was added and an error was reported.
+     */
+    abstract BaseCallableItem addMethod(MethodDefinitionStatement st);
 
     /**
      * Adds a local inner class as defined by the given statement, and also recursively adds
@@ -358,35 +225,14 @@ final class ModelScope {
      * @return false if label is a duplicate
      */
     boolean addLabel(LabeledStatement st) {
-        Map<String, LabelTarget> labels = mLabels;
-        if (labels.isEmpty()) {
-            mLabels = labels = new LinkedHashMap<>();
-        }
-        var block = new BaseBlock();
-        block.sourcePosition(st.start().position());
-        return labels.putIfAbsent(st.label.text, new LabelTarget(st, block)) == null;
+        throw new UnsupportedOperationException();
     }
 
     /**
      * @return false if the label wasn't found
      */
     boolean labelVisited(LabeledStatement st) {
-        LabelTarget target = mLabels.get(st.label.text);
-
-        if (target == null) {
-            return false;
-        }
-
-        BaseBlock block = target.block;
-
-        if (!mActiveBlock.isTerminated()) {
-            target.reached();
-            activeBlock(st).jump(block);
-        }
-
-        mActiveBlock = block;
-
-        return true;
+        return false;
     }
 
     /**
@@ -396,18 +242,7 @@ final class ModelScope {
      * @return null if the label isn't found
      */
     BaseBlock findBlockForJump(String label) {
-        ModelScope scope = this;
-
-        while (true) {
-            LabelTarget target = scope.mLabels.get(label);
-            if (target != null) {
-                target.reached();
-                return target.block;
-            }
-            if ((scope = scope.mParent) == null) {
-                return null;
-            }
-        }
+        return null;
     }
 
     /**
@@ -415,7 +250,7 @@ final class ModelScope {
      * this method doesn't alter the reachability check failure count.
      */
     boolean isReachable() {
-        return !mActiveBlock.isTerminated();
+        return true;
     }
 
     /**
@@ -424,7 +259,7 @@ final class ModelScope {
      * isReachable returned false.
      */
     int checkReachability() {
-        return isReachable() ? 0 : ++mReachabilityCheckFailures;
+        return 0;
     }
 
     /**
@@ -433,16 +268,6 @@ final class ModelScope {
      * reported against it.
      */
     LabeledStatement checkLabelReachability() {
-        if (mReachabilityCheckFailures == 0) {
-            for (LabelTarget target : mLabels.values()) {
-                LabeledStatement st = target.statement;
-                if (st != null) {
-                    mReachabilityCheckFailures++;
-                    return st;
-                }
-            }
-        }
-
         return null;
     }
 
@@ -451,65 +276,6 @@ final class ModelScope {
      * enclosing method.
      */
     public BaseBinding tryFindLocalVariable(String name) {
-        ModelScope scope = this;
-
-        ModelScope parent;
-        BaseItem item;
-
-        while (true) {
-            BaseBinding.Local local = scope.mLocals.get(name);
-
-            if (local != null) {
-                return local.type() == BaseUnspecifiedType.THE ? null : local;
-            }
-
-            parent = scope.mParent;
-
-            if (parent == null) {
-                return null;
-            }
-
-            item = scope.mItem;
-
-            if (item instanceof BaseScopeItem) {
-                scope = parent;
-            } else {
-                break;
-            }
-        }
-
-        // Try to capture a variable from an enclosing method.
-
-        if (!(item instanceof BaseCallableItem callable) ||
-            !(parent.mItem instanceof NewLocalClass localClass))
-        {
-            return null;
-        }
-
-        parent = parent.mParent;
-
-        if (parent == null || !(parent.mItem instanceof BaseCallableItem enclosing)) {
-            return null;
-        }
-
-        // Any accessible fields in the local inner class will shadow a variable declared by
-        // the enclosing method. If a field is found, then return null. The caller will look
-        // for the field if necessary, when it's the right time.
-
-        if (!localClass.findField(name, localClass).isEmpty()) {
-            return null;
-        }
-
-        BaseBinding captured = parent.tryFindLocalVariable(name);
-
-        if (captured != null) {
-            if (captured instanceof BaseBinding.Named n) {
-                return enclosing.capture(n.type(), name, localClass);
-            } else if (captured instanceof BaseBinding.Captured c) {
-                return c;
-            }
-        }
-
         return null;
     }
 
@@ -538,13 +304,11 @@ final class ModelScope {
      * @throws NullPointerException if actions cannot be added to the current scope
      */
     BaseBlock activeBlock(int position) {
-        BaseBlock block = mActiveBlock;
-        block.sourcePosition(position);
-        return block;
+        throw new UnsupportedOperationException();
     }
 
     void setActiveBlock(BaseBlock block) {
-        mActiveBlock = Objects.requireNonNull(block);
+        throw new UnsupportedOperationException();
     }
 
     /**
@@ -554,18 +318,401 @@ final class ModelScope {
      * @return the parent scope
      * @throws NullPointerException if code exists, the item isn't BaseCallableItem, and no
      * parent exists
-     * @throws tupl.model.TerminatedBlockException if attempting to add code to the parent, but
-     * the active parent block is terminated
+     * @throws TerminatedBlockException if attempting to add code to the parent, but the active
+     * parent block is terminated
      */
     ModelScope finish() {
-        if (!mFirstBlock.isEmpty()) {
-            if (mItem instanceof BaseCallableItem callable) {
-                callable.assignCode(mFirstBlock);
-            } else {
-                mParent.mActiveBlock.addAll(mFirstBlock);
+        return mParent;
+    }
+
+    /**
+     * Scope for a class definition.
+     */
+    static sealed class ClassDef extends ModelScope {
+        ClassDef(ModelGenerator modGen, ModelScope parent, NewClass item) {
+            super(modGen, parent, item);
+        }
+
+        @Override
+        boolean addDeclaration(DeclarationStatement ds) {
+            // If null is returned, an error should have been reported already.
+            return ds.addToClass(env(), (NewClass) mItem) != null;
+        }
+
+        @Override
+        BaseCallableItem addConstructor(ConstructorDefinitionStatement st) {
+            return st.addToClass(env(), (NewClass) mItem);
+        }
+
+        @Override
+        BaseCallableItem addMethod(MethodDefinitionStatement st) {
+            BaseCallableItem callable = st.addToClass(env(), (NewClass) mItem);
+
+            if (callable == null) {
+                // An error should have been reported already.
+                return null;
+            }
+
+            BaseTupleType inputType = callable.signature().inputType();
+            int num = inputType.numFields();
+
+            for (int i=0; i<num; i++) {
+                // FIXME: check modifiers
+
+                BaseType type = inputType.fieldType(i);
+
+                if (type == BaseUnspecifiedType.THE && !callable.isMacro()) {
+                    Element e = st.paramType.fieldTypes().get(i);
+                    env().error(e, "parameter type cannot be unspecified");
+                }
+            }
+
+            return callable;
+        }
+    }
+
+    /**
+     * Scope for a lambda class definition. Another method scope is needed for the body.
+     */
+    static final class Lambda extends ClassDef {
+        Lambda(ModelGenerator modGen, ModelScope parent, NewLocalClass item) {
+            super(modGen, parent, item);
+        }
+    }
+
+    /**
+     * Scope which has code blocks, local variables, and labels.
+     */
+    static abstract sealed class Code extends ModelScope {
+        final BaseBlock mFirstBlock;
+        BaseBlock mActiveBlock;
+
+        Map<String, BaseBinding.Local> mLocals;
+
+        Map<String, LabelTarget> mLabels;
+
+        int mReachabilityCheckFailures;
+
+        Code(ModelGenerator modGen, ModelScope parent, BaseItem item) {
+            super(modGen, parent, item);
+
+            mFirstBlock = mActiveBlock = new BaseBlock();
+            mLocals = Map.of();
+            mLabels = Map.of();
+        }
+
+        @Override
+        void addParameters(BaseCallableItem callable) {
+            BaseTupleType inputType = callable.signature().inputType();
+            int num = inputType.numFields();
+
+            for (int i=0; i<num; i++) {
+                BaseType type = inputType.fieldType(i);
+                String name = inputType.fieldName(i);
+                var param = BaseBinding.Parameter.from(type, name, i);
+                if (mLocals.isEmpty()) {
+                    mLocals = new LinkedHashMap<>();
+                }
+                // Duplicates should have been checked when the tuple was created. Also, no
+                // named local variables should be defined yet.
+                if (name != null && mLocals.putIfAbsent(name, param) != null) {
+                    throw new AssertionError();
+                }
             }
         }
 
-        return mParent;
+        @Override
+        boolean addDeclaration(DeclarationStatement ds) {
+            CompilationEnv env = env();
+            int modifierBits = ds.modifierBits(env);
+
+            if ((modifierBits & STATIC) != 0) {
+                env.error(ds, "local variable cannot be static");
+            }
+
+            String name = ds.name.text;
+
+            if (mItem instanceof BaseCallableItem ci &&
+                ci.signature().inputType().fieldExists(name))
+            {
+                env.error(ds.name, "a variable with the same name is declared as a parameter");
+                return false;
+            }
+
+            {
+                ModelScope.Code scope = this;
+
+                while (true) {
+                    if (scope.mLocals.containsKey(name)) {
+                        String message = "a variable with the same name";
+
+                        if (scope == this) {
+                            message += " is already declared";
+                        } else {
+                            message += " is declared in a parent scope";
+                        }
+
+                        env.error(ds.name, message);
+
+                        return false;
+                    }
+
+                    ModelScope parent = scope.mParent;
+
+                    if (parent instanceof ModelScope.Code pc) {
+                        scope = pc;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            // FIXME: check modifiers
+
+            BaseType type = ds.type().tryResolve(env, mItem);
+
+            if (type == null) {
+                // An error should have been reported already.
+                return false;
+            }
+
+            if (mLocals.isEmpty()) {
+                mLocals = new LinkedHashMap<>();
+            }
+
+            mLocals.put(name, BaseBinding.Named.from(type, name));
+
+            return true;
+        }
+
+        @Override
+        BaseBinding.Local tryReplaceLocalDeclaration(BaseType type, String name) {
+            if (mLocals.isEmpty()) {
+                return null;
+            }
+            var local = BaseBinding.Named.from(type, name);
+            if (mLocals.replace(name, local) == null) {
+                return null;
+            }
+            return local;
+        }
+
+        @Override
+        BaseCallableItem addConstructor(ConstructorDefinitionStatement st) {
+            env().error(st, "local constructor not supported");
+            return null;
+        }
+
+        @Override
+        BaseCallableItem addMethod(MethodDefinitionStatement st) {
+            // FIXME: local method requires a special checks and transforms
+            env().error(st, "local method not supported");
+            return null;
+        }
+
+        @Override
+        boolean addLabel(LabeledStatement st) {
+            Map<String, LabelTarget> labels = mLabels;
+            if (labels.isEmpty()) {
+                mLabels = labels = new LinkedHashMap<>();
+            }
+            var block = new BaseBlock();
+            block.sourcePosition(st.start().position());
+            return labels.putIfAbsent(st.label.text, new LabelTarget(st, block)) == null;
+        }
+
+        @Override
+        boolean labelVisited(LabeledStatement st) {
+            LabelTarget target = mLabels.get(st.label.text);
+
+            if (target == null) {
+                return false;
+            }
+
+            BaseBlock block = target.block;
+
+            if (!mActiveBlock.isTerminated()) {
+                target.reached();
+                activeBlock(st).jump(block);
+            }
+
+            mActiveBlock = block;
+
+            return true;
+        }
+
+        @Override
+        BaseBlock findBlockForJump(String label) {
+            ModelScope.Code scope = this;
+
+            while (true) {
+                LabelTarget target = scope.mLabels.get(label);
+
+                if (target != null) {
+                    target.reached();
+                    return target.block;
+                }
+
+                ModelScope parent = scope.mParent;
+
+                if (parent instanceof ModelScope.Code pc) {
+                    scope = pc;
+                } else {
+                    return null;
+                }
+            }
+        }
+
+        @Override
+        boolean isReachable() {
+            return !mActiveBlock.isTerminated();
+        }
+
+        @Override
+        int checkReachability() {
+            return isReachable() ? 0 : ++mReachabilityCheckFailures;
+        }
+
+        @Override
+        LabeledStatement checkLabelReachability() {
+            if (mReachabilityCheckFailures == 0) {
+                for (LabelTarget target : mLabels.values()) {
+                    LabeledStatement st = target.statement;
+                    if (st != null) {
+                        mReachabilityCheckFailures++;
+                        return st;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        @Override
+        public BaseBinding tryFindLocalVariable(String name) {
+            ModelScope.Code scope = this;
+
+            ModelScope parent;
+            BaseItem item;
+
+            while (true) {
+                BaseBinding.Local local = scope.mLocals.get(name);
+
+                if (local != null) {
+                    return local.type() == BaseUnspecifiedType.THE ? null : local;
+                }
+
+                parent = scope.mParent;
+
+                if (parent == null) {
+                    return null;
+                }
+
+                item = scope.mItem;
+
+                if (parent instanceof ModelScope.Code pc) {
+                    scope = pc;
+                } else {
+                    break;
+                }
+            }
+
+            // Try to capture a variable from an enclosing method.
+
+            if (!(item instanceof BaseCallableItem callable) ||
+                !(parent.mItem instanceof NewLocalClass localClass))
+            {
+                return null;
+            }
+
+            parent = parent.mParent;
+
+            if (parent == null || !(parent.mItem instanceof BaseCallableItem enclosing)) {
+                return null;
+            }
+
+            // Any accessible fields in the local inner class will shadow a variable declared
+            // by the enclosing method. If a field is found, then return null. The caller will
+            // look for the field if necessary, when it's the right time.
+
+            if (!localClass.findField(name, localClass).isEmpty()) {
+                return null;
+            }
+
+            BaseBinding captured = parent.tryFindLocalVariable(name);
+
+            if (captured != null) {
+                if (captured instanceof BaseBinding.Named n) {
+                    return enclosing.capture(n.type(), name, localClass);
+                } else if (captured instanceof BaseBinding.Captured c) {
+                    return c;
+                }
+            }
+
+            return null;
+        }
+
+        @Override
+        BaseBlock activeBlock(int position) {
+            BaseBlock block = mActiveBlock;
+            block.sourcePosition(position);
+            return block;
+        }
+
+        @Override
+        void setActiveBlock(BaseBlock block) {
+            mActiveBlock = Objects.requireNonNull(block);
+        }
+    }
+
+    /**
+     * Scope for a method body.
+     */
+    static final class Method extends Code {
+        Method(ModelGenerator modGen, ModelScope parent, BaseCallableItem item) {
+            if (!(parent instanceof ClassDef)) {
+                throw new IllegalArgumentException();
+            }
+            super(modGen, parent, item);
+        }
+
+        @Override
+        ModelScope finish() {
+            if (!mFirstBlock.isEmpty()) {
+                ((BaseCallableItem) mItem).assignCode(mFirstBlock);
+            }
+
+            return mParent;
+        }
+    }
+
+    /**
+     * Scope for plain nested code.
+     */
+    static sealed class Nested extends Code {
+        Nested(ModelGenerator modGen, ModelScope parent) {
+            if (!(parent instanceof Code)) {
+                throw new IllegalArgumentException();
+            }
+            super(modGen, parent, new BaseScopeItem(parent.mItem));
+        }
+
+        @Override
+        ModelScope finish() {
+            if (!mFirstBlock.isEmpty()) {
+                ((Code) mParent).mActiveBlock.addAll(mFirstBlock);
+            }
+
+            return mParent;
+        }
+    }
+
+    /**
+     * Scope for a code tuple item.
+     */
+    static final class CodeTuple extends Nested {
+        CodeTuple(ModelGenerator modGen, ModelScope parent) {
+            super(modGen, parent);
+        }
     }
 }

@@ -643,7 +643,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
     /**
      * @param callable can pass null if code isn't directly referenced by a callable (the code
-     * is enclosed within a plain scope)
+     * is enclosed within a plain nested scope)
      */
     private void visitCode(CodeScopeStatement css, BaseCallableItem callable) {
         visitCode(css, callable, css.items);
@@ -652,14 +652,18 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
     /**
      * @param css can pass null if items are for a LambdaStatement
      * @param callable can pass null if code isn't directly referenced by a callable (the code
-     * is enclosed within a plain scope)
+     * is enclosed within a plain nested scope)
      */
     private void visitCode(CodeScopeStatement css, BaseCallableItem callable,
                            List<Statement> items)
     {
-        var newScope = new ModelScope(this, mScope, callable);
+        ModelScope newScope;
 
-        if (callable != null) {
+        if (callable == null) {
+            newScope = new ModelScope.Nested(this, mScope);
+        } else {
+            newScope = new ModelScope.Method(this, mScope, callable);
+
             // Parameters must be added before named local variables.
             newScope.addParameters(callable);
         }
@@ -870,7 +874,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         checkForInheritanceCycle(st, null, clazz, clazz);
 
-        enterScope(new ModelScope(this, mScope, clazz));
+        enterScope(new ModelScope.ClassDef(this, mScope, clazz));
 
         boolean hasCtor = false;
         boolean hasInstanceMembers = false;
@@ -1435,7 +1439,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         var sig = BaseCallSignature.from(deferredOutputType, "apply", callInputType);
         var callable = BaseCallableItem.from(PUBLIC | FINAL, lambdaClass, sig);
 
-        enterScope(new ModelScope(this, mScope, lambdaClass));
+        enterScope(new ModelScope.Lambda(this, mScope, lambdaClass));
         try {
             visitCode(null, callable, st.items);
         } finally {
