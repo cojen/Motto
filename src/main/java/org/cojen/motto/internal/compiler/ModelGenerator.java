@@ -648,7 +648,21 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
     /**
      * @param st used for error reporting
      */
-    private void visitCode(Statement st, List<Statement> items, ModelScope newScope) {
+    private void visitCode(Statement st, List<Statement> items, ModelScope scope) {
+        enterScope(scope);
+        try {
+            doVisitCode(st, items, scope);
+        } finally {
+            exitScope();
+        }
+    }
+
+    /**
+     * Note: Caller must enter/exit the scope.
+     *
+     * @param st used for error reporting
+     */
+    private void doVisitCode(Statement st, List<Statement> items, ModelScope scope) {
         // Add all the symbols first, allowing them to be accessed in any order. The exception
         // is for declarations with an unspecified type. They cannot be accessed until the
         // DeclarationStatement assigns it a type and value.
@@ -657,7 +671,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             switch (item) {
                 case LabeledStatement ls -> {
                     while (true) {
-                        if (!newScope.addLabel(ls)) {
+                        if (!scope.addLabel(ls)) {
                             error(ls.label, "duplicate label");
                         }
                         if (ls.source instanceof LabeledStatement source) {
@@ -669,11 +683,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 }
 
                 case DeclarationStatement ds -> {
-                    newScope.addDeclaration(ds);
+                    scope.addDeclaration(ds);
                 }
 
                 case ClassDefinitionStatement cds -> {
-                    newScope.addLocalInnerClass(cds);
+                    scope.addLocalInnerClass(cds);
                 }
 
                 // FIXME: MethodDefinitionStatement too
@@ -683,26 +697,18 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             }
         }
 
-        int size = items.size();
+        BaseBinding lastResult = null;
 
-        enterScope(newScope);
+        for (Statement item : items) {
+            lastResult = item.accept(this);
+        }
 
-        try {
-            BaseBinding lastResult = null;
+        LabeledStatement ls = scope.checkLabelReachability();
 
-            for (Statement item : items) {
-                lastResult = item.accept(this);
-            }
-
-            LabeledStatement ls = newScope.checkLabelReachability();
-
-            if (ls != null) {
-                error(ls, "unreachable");
-            } else {
-                newScope.afterVisitCode(st, items, lastResult);
-            }
-        } finally {
-            exitScope();
+        if (ls != null) {
+            error(ls, "unreachable");
+        } else {
+            scope.afterVisitCode(st, items, lastResult);
         }
     }
 
