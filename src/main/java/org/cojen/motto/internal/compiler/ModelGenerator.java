@@ -641,33 +641,14 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         }
     }
 
-    /**
-     * @param callable can pass null if code isn't directly referenced by a callable (the code
-     * is enclosed within a plain nested scope)
-     */
     private void visitCode(CodeScopeStatement css, BaseCallableItem callable) {
-        visitCode(css, callable, css.items);
+        visitCode(css, css.items, new ModelScope.Callable(this, mScope, callable));
     }
 
     /**
-     * @param css can pass null if items are for a LambdaStatement
-     * @param callable can pass null if code isn't directly referenced by a callable (the code
-     * is enclosed within a plain nested scope)
+     * @param st used for error reporting
      */
-    private void visitCode(CodeScopeStatement css, BaseCallableItem callable,
-                           List<Statement> items)
-    {
-        ModelScope newScope;
-
-        if (callable == null) {
-            newScope = new ModelScope.Nested(this, mScope);
-        } else {
-            newScope = new ModelScope.Method(this, mScope, callable);
-
-            // Parameters must be added before named local variables.
-            newScope.addParameters(callable);
-        }
-
+    private void visitCode(Statement st, List<Statement> items, ModelScope newScope) {
         // Add all the symbols first, allowing them to be accessed in any order. The exception
         // is for declarations with an unspecified type. They cannot be accessed until the
         // DeclarationStatement assigns it a type and value.
@@ -709,31 +690,16 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         try {
             BaseBinding lastResult = null;
 
-            for (Statement st : items) {
-                lastResult = st.accept(this);
+            for (Statement item : items) {
+                lastResult = item.accept(this);
             }
 
-            LabeledStatement ls = mScope.checkLabelReachability();
+            LabeledStatement ls = newScope.checkLabelReachability();
 
             if (ls != null) {
                 error(ls, "unreachable");
-            } else if (css == null) {
-                // If necessary, specialize the output type of a LambdaStatement.
-                if (items.size() == 1 && lastResult != null) {
-                    Statement first = items.getFirst();
-                    if (!(first instanceof YieldStatement)) {
-                        BaseType type = lastResult.type();
-                        ((BaseDeferredType) callable.signature().outputType()).specialize(type);
-                        mScope.activeBlock(first).return_(lastResult);
-                    }
-                }
-            } else if (callable != null && mScope.isReachable()) {
-                // The scope must end with a return statement.
-                if (callable.isMacro() || callable.signature().outputType() != BaseVoidType.THE) {
-                    if (mEnv.numErrors() == 0) {
-                        error(css.end(), "missing return statement");
-                    }
-                }
+            } else {
+                newScope.afterVisitCode(st, items, lastResult);
             }
         } finally {
             exitScope();
@@ -986,7 +952,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        visitCode(st, null);
+        visitCode(st, st.items, new ModelScope.Nested(this, mScope));
 
         return BaseBinding.Void.THE;
     }
@@ -1439,9 +1405,9 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         var sig = BaseCallSignature.from(deferredOutputType, "apply", callInputType);
         var callable = BaseCallableItem.from(PUBLIC | FINAL, lambdaClass, sig);
 
-        enterScope(new ModelScope.Lambda(this, mScope, lambdaClass));
+        enterScope(new ModelScope.ClassDef(this, mScope, lambdaClass));
         try {
-            visitCode(null, callable, st.items);
+            visitCode(st, st.items, new ModelScope.Lambda(this, mScope, callable));
         } finally {
             exitScope();
         }
@@ -1915,15 +1881,10 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             }
         }
 
-        BaseDeferredType lrt = mScope.lambdaReturnType();
-
-        if (lrt != null) {
-            // FIXME: Support FarReturnAction.
-            error(st, "far return from a lambda function isn't allowed");
+        if (!mScope.addReturn(st, result)) {
+            // Error state.
             return null;
         }
-
-        mScope.activeBlock(st).return_(result);
 
         return BaseBinding.Void.THE;
     }
@@ -2101,24 +2062,11 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             }
         }
 
-        BaseDeferredType lrt = mScope.lambdaReturnType();
-
-        BaseBinding finalResult = BaseBinding.Void.THE;
-
-        if (lrt == null) {
-            error(st, "yield is not permitted here");
-            finalResult = null;
-        } else {
-            BaseType conflict = lrt.specialize(result.type());
-            if (conflict != null) {
-                error(st, "return type of " + result.type().displayName() +
-                      " conflicts with earlier return type of " + conflict.displayName());
-                finalResult = null;
-            }
+        if (!mScope.addYield(st, result)) {
+            // Error state.
+            return null;
         }
 
-        mScope.activeBlock(st).return_(result);
-
-        return finalResult;
+        return BaseBinding.Void.THE;
     }
 }

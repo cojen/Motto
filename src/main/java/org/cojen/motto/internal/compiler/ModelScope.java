@@ -17,6 +17,7 @@
 package org.cojen.motto.internal.compiler;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -29,6 +30,7 @@ import org.cojen.motto.internal.model.BaseScopeItem;
 import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
+import org.cojen.motto.internal.model.BaseVoidType;
 import org.cojen.motto.internal.model.ClassFieldItem;
 import org.cojen.motto.internal.model.NewClass;
 import org.cojen.motto.internal.model.NewLocalClass;
@@ -40,8 +42,10 @@ import org.cojen.motto.internal.parser.Element;
 import org.cojen.motto.internal.parser.LabeledStatement;
 import org.cojen.motto.internal.parser.LambdaStatement;
 import org.cojen.motto.internal.parser.MethodDefinitionStatement;
+import org.cojen.motto.internal.parser.ReturnStatement;
 import org.cojen.motto.internal.parser.Statement;
 import org.cojen.motto.internal.parser.Token;
+import org.cojen.motto.internal.parser.YieldStatement;
 
 import static org.cojen.motto.internal.model.Modifiers.*;
 
@@ -83,45 +87,8 @@ abstract sealed class ModelScope {
         return mItem;
     }
 
-    /**
-     * Returns the nearest enclosing callable, which is null if enclosed by something other
-     * than a callable or a plain nested scope.
-     */
-    private BaseCallableItem callableItem() {
-        BaseItem item = mItem;
-        while (true) {
-            if (item instanceof BaseCallableItem callable) {
-                return callable;
-            }
-            if (item instanceof BaseScopeItem scopeItem) {
-                item = scopeItem.enclosingItem();
-            } else {
-                return null;
-            }
-        }
-    }
-
-    /**
-     * If the scope is directly or indirectly a lambda function, then return the deferred type
-     * for it. Otherwise, return null.
-     */
-    BaseDeferredType lambdaReturnType() {
-        BaseCallableItem item = callableItem();
-        if (item != null && item.signature().outputType() instanceof BaseDeferredType deferred) {
-            return deferred;
-        }
-        return null;
-    }
-
     CompilationEnv env() {
         return mModGen.env();
-    }
-
-    /**
-     * Add parameters before adding any named local variables.
-     */
-    void addParameters(BaseCallableItem callable) {
-        throw new UnsupportedOperationException();
     }
 
     /**
@@ -223,6 +190,8 @@ abstract sealed class ModelScope {
 
     /**
      * @return false if label is a duplicate
+     *
+     * @throws UnsupportedOperationException if not supported by this scope
      */
     boolean addLabel(LabeledStatement st) {
         throw new UnsupportedOperationException();
@@ -280,9 +249,45 @@ abstract sealed class ModelScope {
     }
 
     /**
+     * Try to add a return statement.
+     *
+     * @param st used for error reporting
+     * @return false if an error was reported
+     * @throws UnsupportedOperationException if not supported by this scope
+     */
+    boolean addReturn(ReturnStatement st, BaseBinding result) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Try to add a yield statement.
+     *
+     * @param st used for error reporting
+     * @return false if an error was reported
+     * @throws UnsupportedOperationException if not supported by this scope
+     */
+    boolean addYield(YieldStatement st, BaseBinding result) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Called after code items have been visited, adding additional actions at the end if
+     * necessary.
+     *
+     * @param st used for error reporting
+     * @param items code items which were just visited
+     * @param lastResult is non-null if at least one item exists and it didn't produce an error
+     * @return false if an error was reported
+     */
+    boolean afterVisitCode(Statement st, List<Statement> items, BaseBinding lastResult) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
      * Returns the block for adding new actions to.
      *
      * @param element provides the source code position
+     * @throws UnsupportedOperationException if not supported by this scope
      */
     BaseBlock activeBlock(Element element) {
         return activeBlock(element.start());
@@ -292,6 +297,7 @@ abstract sealed class ModelScope {
      * Returns the block for adding new actions to.
      *
      * @param start provides the source code position
+     * @throws UnsupportedOperationException if not supported by this scope
      */
     BaseBlock activeBlock(Token start) {
         return activeBlock(start.position());
@@ -302,11 +308,15 @@ abstract sealed class ModelScope {
      *
      * @param position source code position to be associated with newly appended actions
      * @throws NullPointerException if actions cannot be added to the current scope
+     * @throws UnsupportedOperationException if not supported by this scope
      */
     BaseBlock activeBlock(int position) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException if not supported by this scope
+     */
     void setActiveBlock(BaseBlock block) {
         throw new UnsupportedOperationException();
     }
@@ -328,7 +338,7 @@ abstract sealed class ModelScope {
     /**
      * Scope for a class definition.
      */
-    static sealed class ClassDef extends ModelScope {
+    static final class ClassDef extends ModelScope {
         ClassDef(ModelGenerator modGen, ModelScope parent, NewClass item) {
             super(modGen, parent, item);
         }
@@ -372,15 +382,6 @@ abstract sealed class ModelScope {
     }
 
     /**
-     * Scope for a lambda class definition. Another method scope is needed for the body.
-     */
-    static final class Lambda extends ClassDef {
-        Lambda(ModelGenerator modGen, ModelScope parent, NewLocalClass item) {
-            super(modGen, parent, item);
-        }
-    }
-
-    /**
      * Scope which has code blocks, local variables, and labels.
      */
     static abstract sealed class Code extends ModelScope {
@@ -393,6 +394,9 @@ abstract sealed class ModelScope {
 
         int mReachabilityCheckFailures;
 
+        /**
+         * Constructor for callables.
+         */
         Code(ModelGenerator modGen, ModelScope parent, BaseItem item) {
             super(modGen, parent, item);
 
@@ -401,24 +405,14 @@ abstract sealed class ModelScope {
             mLabels = Map.of();
         }
 
-        @Override
-        void addParameters(BaseCallableItem callable) {
-            BaseTupleType inputType = callable.signature().inputType();
-            int num = inputType.numFields();
-
-            for (int i=0; i<num; i++) {
-                BaseType type = inputType.fieldType(i);
-                String name = inputType.fieldName(i);
-                var param = BaseBinding.Parameter.from(type, name, i);
-                if (mLocals.isEmpty()) {
-                    mLocals = new LinkedHashMap<>();
-                }
-                // Duplicates should have been checked when the tuple was created. Also, no
-                // named local variables should be defined yet.
-                if (name != null && mLocals.putIfAbsent(name, param) != null) {
-                    throw new AssertionError();
-                }
+        /**
+         * Constructor for nested code scopes.
+         */
+        Code(ModelGenerator modGen, ModelScope parent) {
+            if (!(parent instanceof Code)) {
+                throw new IllegalArgumentException();
             }
+            this(modGen, parent, new BaseScopeItem(parent.mItem));
         }
 
         @Override
@@ -666,14 +660,62 @@ abstract sealed class ModelScope {
     }
 
     /**
-     * Scope for a method body.
+     * Scope for a callable code body.
      */
-    static final class Method extends Code {
-        Method(ModelGenerator modGen, ModelScope parent, BaseCallableItem item) {
+    static sealed class Callable extends Code {
+        Callable(ModelGenerator modGen, ModelScope parent, BaseCallableItem item) {
             if (!(parent instanceof ClassDef)) {
                 throw new IllegalArgumentException();
             }
+
             super(modGen, parent, item);
+
+            // Parameters must be added before named local variables.
+
+            BaseTupleType inputType = item.signature().inputType();
+            int num = inputType.numFields();
+
+            for (int i=0; i<num; i++) {
+                BaseType type = inputType.fieldType(i);
+                String name = inputType.fieldName(i);
+                var param = BaseBinding.Parameter.from(type, name, i);
+                if (mLocals.isEmpty()) {
+                    mLocals = new LinkedHashMap<>();
+                }
+                // Duplicates should have been checked when the tuple was created. Also, no
+                // named local variables should be defined yet.
+                if (name != null && mLocals.putIfAbsent(name, param) != null) {
+                    throw new AssertionError();
+                }
+            }
+        }
+
+        @Override
+        boolean addReturn(ReturnStatement st, BaseBinding result) {
+            activeBlock(st).return_(result);
+            return true;
+        }
+
+        @Override
+        boolean addYield(YieldStatement st, BaseBinding result) {
+            env().error(st, "yield isn't permitted here");
+            return false;
+        }
+
+        @Override
+        boolean afterVisitCode(Statement st, List<Statement> items, BaseBinding lastResult) {
+            if (isReachable()) {
+                // The scope must end with a return statement.
+                var callable = (BaseCallableItem) mItem;
+                if (callable.isMacro() || callable.signature().outputType() != BaseVoidType.THE) {
+                    if (env().numErrors() == 0) {
+                        env().error(st.end(), "missing return statement");
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         @Override
@@ -687,14 +729,87 @@ abstract sealed class ModelScope {
     }
 
     /**
+     * Scope for a lambda function body.
+     */
+    static final class Lambda extends Callable {
+        Lambda(ModelGenerator modGen, ModelScope parent, BaseCallableItem item) {
+            super(modGen, parent, item);
+        }
+
+        @Override
+        boolean addReturn(ReturnStatement st, BaseBinding result) {
+            // FIXME: Support FarReturnAction.
+            env().error(st, "far return from a lambda function isn't allowed");
+            return false;
+        }
+
+        @Override
+        boolean addYield(YieldStatement st, BaseBinding result) {
+            if (!specializeResult(st, result)) {
+                return false;
+            }
+
+            activeBlock(st).return_(result);
+
+            return true;
+        }
+
+        @Override
+        boolean afterVisitCode(Statement st, List<Statement> items, BaseBinding lastResult) {
+            if (isReachable() && items.size() == 1 && lastResult != null) {
+                // If only one item was visited, automatically add a yield statement.
+                Statement first = items.getFirst();
+                if (!(first instanceof YieldStatement) && specializeResult(first, lastResult)) {
+                    activeBlock(first).return_(lastResult);
+                }
+            }
+
+            return true;
+        }
+
+        /**
+         * @param st used for error reporting
+         * @return false if an error was reported
+         */
+        private boolean specializeResult(Statement st, BaseBinding result) {
+            var outputType = ((BaseCallableItem) mItem).signature().outputType();
+
+            if (outputType instanceof BaseDeferredType deferred) {
+                BaseType conflict = deferred.specialize(result.type());
+
+                if (conflict != null) {
+                    env().error(st, "return type of " + result.type().displayName() +
+                                " conflicts with earlier return type of " + conflict.displayName());
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    }
+
+    /**
      * Scope for plain nested code.
      */
-    static sealed class Nested extends Code {
+    static final class Nested extends Code {
         Nested(ModelGenerator modGen, ModelScope parent) {
-            if (!(parent instanceof Code)) {
-                throw new IllegalArgumentException();
-            }
-            super(modGen, parent, new BaseScopeItem(parent.mItem));
+            super(modGen, parent);
+        }
+
+        @Override
+        boolean addReturn(ReturnStatement st, BaseBinding result) {
+            return ((Code) mParent).addReturn(st, result);
+        }
+
+        @Override
+        boolean addYield(YieldStatement st, BaseBinding result) {
+            return ((Code) mParent).addYield(st, result);
+        }
+
+        @Override
+        boolean afterVisitCode(Statement st, List<Statement> items, BaseBinding lastResult) {
+            // Nothing to do.
+            return true;
         }
 
         @Override
@@ -710,9 +825,27 @@ abstract sealed class ModelScope {
     /**
      * Scope for a code tuple item.
      */
-    static final class CodeTuple extends Nested {
+    static final class CodeTuple extends Code {
         CodeTuple(ModelGenerator modGen, ModelScope parent) {
             super(modGen, parent);
+        }
+
+        @Override
+        boolean addReturn(ReturnStatement st, BaseBinding result) {
+            activeBlock(st).return_(result);
+            return true;
+        }
+
+        @Override
+        boolean addYield(YieldStatement st, BaseBinding result) {
+            // FIXME: Copy the result to a common binding and jump to exit.
+            throw null;
+        }
+
+        @Override
+        boolean afterVisitCode(Statement st, List<Statement> items, BaseBinding lastResult) {
+            // FIXME: Add a yield if necessary, specializing the result type too.
+            throw null;
         }
     }
 }
