@@ -35,9 +35,9 @@ import org.cojen.motto.internal.model.BaseBooleanType;
 import org.cojen.motto.internal.model.BaseCallSignature;
 import org.cojen.motto.internal.model.BaseCallableItem;
 import org.cojen.motto.internal.model.BaseClassTypeItem;
-import org.cojen.motto.internal.model.BaseDeferredType;
 import org.cojen.motto.internal.model.BaseFieldItem;
 import org.cojen.motto.internal.model.BaseFunctionType;
+import org.cojen.motto.internal.model.BaseInferredType;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseNullType;
 import org.cojen.motto.internal.model.BasePath;
@@ -1401,8 +1401,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         BaseTupleType callInputType = st.inputType.tryResolve(mEnv, lambdaClass, lambdaClass);
 
-        var deferredOutputType = new BaseDeferredType();
-        var sig = BaseCallSignature.from(deferredOutputType, "apply", callInputType);
+        var inferredOutputType = new BaseInferredType();
+        var sig = BaseCallSignature.from(inferredOutputType, "apply", callInputType);
         var callable = BaseCallableItem.from(PUBLIC | FINAL, lambdaClass, sig);
 
         enterScope(new ModelScope.ClassDef(this, mScope, lambdaClass));
@@ -1414,7 +1414,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         BaseBlock code = callable.code();
 
-        BaseType outputType = deferredOutputType.current();
+        BaseType outputType = inferredOutputType.current();
 
         if (outputType == BaseUnspecifiedType.THE) {
             outputType = BaseVoidType.THE;

@@ -38,7 +38,7 @@ import org.cojen.motto.model.Type;
  * @author Brian S. O'Neill
  */
 public sealed interface BaseType extends Type, EncodableType
-    permits BaseObjectType, BasePrimitiveType, BaseUnspecifiedType, BaseDeferredType, GeneratedType
+    permits BaseObjectType, BasePrimitiveType, BaseUnspecifiedType, BaseInferredType, GeneratedType
 {
     public static BaseType from(Class<?> clazz) {
         return LoadedClass.from(clazz);

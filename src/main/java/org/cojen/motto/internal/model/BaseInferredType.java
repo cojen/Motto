@@ -27,14 +27,14 @@ import org.cojen.motto.model.Type;
  *
  * @author Brian S. O'Neill
  */
-public final class BaseDeferredType implements BaseType {
+public final class BaseInferredType implements BaseType {
     private BaseType mCurrent;
 
-    public BaseDeferredType() {
+    public BaseInferredType() {
         mCurrent = BaseUnspecifiedType.THE;
     }
 
-    public BaseDeferredType(BaseType initialType) {
+    public BaseInferredType(BaseType initialType) {
         mCurrent = Objects.requireNonNull(initialType);
     }
 
@@ -51,8 +51,8 @@ public final class BaseDeferredType implements BaseType {
      * @return null if successful, or else returns the conflicting type
      */
     public BaseType specialize(BaseType other) {
-        if (other instanceof BaseDeferredType deferred) {
-            other = deferred.mCurrent;
+        if (other instanceof BaseInferredType inferred) {
+            other = inferred.mCurrent;
         }
         BaseType newType = mCurrent.inferredType(other);
         if (newType == null) {
@@ -90,20 +90,20 @@ public final class BaseDeferredType implements BaseType {
     @Override
     public BaseType noFieldNames() {
         BaseType noFieldNames = mCurrent.noFieldNames();
-        return noFieldNames.equals(mCurrent) ? this : new BaseDeferredType(noFieldNames);
+        return noFieldNames.equals(mCurrent) ? this : new BaseInferredType(noFieldNames);
     }
 
     @Override
     public boolean isEquivalentTo(Type other) {
         // Always return false to be symmetric. If mCurrent was called, then all other Type
-        // implementations would need to be aware of BaseDeferredType to remain symmetric.
+        // implementations would need to be aware of BaseInferredType to remain symmetric.
         return false;
     }
 
     @Override
     public boolean isAssignableFrom(Type other) {
-        if (other instanceof BaseDeferredType deferred) {
-            other = deferred.mCurrent;
+        if (other instanceof BaseInferredType inferred) {
+            other = inferred.mCurrent;
         }
         return mCurrent.isAssignableFrom(other);
     }
@@ -115,8 +115,8 @@ public final class BaseDeferredType implements BaseType {
 
     @Override
     public BaseType inferredType(BaseType other) {
-        if (other instanceof BaseDeferredType deferred) {
-            other = deferred.mCurrent;
+        if (other instanceof BaseInferredType inferred) {
+            other = inferred.mCurrent;
         }
         return mCurrent.inferredType(other);
     }
@@ -128,8 +128,8 @@ public final class BaseDeferredType implements BaseType {
 
     @Override
     public int canConvertTo(Type to) {
-        if (to instanceof BaseDeferredType deferred) {
-            to = deferred.mCurrent;
+        if (to instanceof BaseInferredType inferred) {
+            to = inferred.mCurrent;
         }
         return mCurrent.canConvertTo(to);
     }
@@ -146,6 +146,6 @@ public final class BaseDeferredType implements BaseType {
 
     @Override
     public int doCompare(EncodableType other) {
-        return mCurrent.doCompare(((BaseDeferredType) other).mCurrent);
+        return mCurrent.doCompare(((BaseInferredType) other).mCurrent);
     }
 }

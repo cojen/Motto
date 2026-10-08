@@ -24,14 +24,13 @@ import java.util.Objects;
 import org.cojen.motto.internal.model.BaseBinding;
 import org.cojen.motto.internal.model.BaseBlock;
 import org.cojen.motto.internal.model.BaseCallableItem;
-import org.cojen.motto.internal.model.BaseDeferredType;
+import org.cojen.motto.internal.model.BaseInferredType;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseScopeItem;
 import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
-import org.cojen.motto.internal.model.ClassFieldItem;
 import org.cojen.motto.internal.model.NewClass;
 import org.cojen.motto.internal.model.NewLocalClass;
 
@@ -40,7 +39,6 @@ import org.cojen.motto.internal.parser.ConstructorDefinitionStatement;
 import org.cojen.motto.internal.parser.DeclarationStatement;
 import org.cojen.motto.internal.parser.Element;
 import org.cojen.motto.internal.parser.LabeledStatement;
-import org.cojen.motto.internal.parser.LambdaStatement;
 import org.cojen.motto.internal.parser.MethodDefinitionStatement;
 import org.cojen.motto.internal.parser.ReturnStatement;
 import org.cojen.motto.internal.parser.Statement;
@@ -774,8 +772,8 @@ abstract sealed class ModelScope {
         private boolean specializeResult(Statement st, BaseBinding result) {
             var outputType = ((BaseCallableItem) mItem).signature().outputType();
 
-            if (outputType instanceof BaseDeferredType deferred) {
-                BaseType conflict = deferred.specialize(result.type());
+            if (outputType instanceof BaseInferredType inferred) {
+                BaseType conflict = inferred.specialize(result.type());
 
                 if (conflict != null) {
                     env().error(st, "return type of " + result.type().displayName() +
