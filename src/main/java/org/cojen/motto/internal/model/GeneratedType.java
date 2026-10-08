@@ -127,7 +127,7 @@ public abstract sealed class GeneratedType
             mMakerType = type = org.cojen.maker.Type.external(name.replace('/', '.'), this);
         }
 
-        if (FOR_NEW_CLASS.isBound()) {
+        if (!isPseudo() && FOR_NEW_CLASS.isBound()) {
             if (name == null) {
                 name = generatedName();
             }
@@ -137,6 +137,13 @@ public abstract sealed class GeneratedType
         }
 
         return type;
+    }
+
+    /**
+     * @see BaseCodeType
+     */
+    boolean isPseudo() {
+        return false;
     }
 
     /**

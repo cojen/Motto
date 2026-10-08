@@ -16,17 +16,24 @@
 
 package org.cojen.motto.internal.model;
 
-import org.cojen.motto.model.TerminalAction;
+import java.util.Map;
 
 /**
- * 
+ * Defines a special no-op terminating action, only intended to be used during code generation.
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed class BaseTerminalAction extends BaseAction implements TerminalAction
-    permits BaseBranchAction, BaseJumpAction, BaseReturnAction, BaseThrowAction, StubAction
-{
-    BaseTerminalAction(int position) {
+final class StubAction extends BaseTerminalAction {
+    StubAction(int position) {
         super(position);
+    }
+
+    @Override
+    public <R> R accept(ActionVisitor<R> visitor) {
+        return visitor.visit(this);
+    }
+
+    @Override
+    void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
     }
 }

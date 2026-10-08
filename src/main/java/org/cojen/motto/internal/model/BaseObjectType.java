@@ -20,6 +20,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.cojen.motto.model.ObjectType;
+import org.cojen.motto.model.PrimitiveType;
+import org.cojen.motto.model.Type;
 
 /**
  * 
@@ -50,6 +52,45 @@ public sealed interface BaseObjectType extends BaseType, ObjectType
 
     @Override
     public Set<? extends BaseClassTypeItem> interfaces();
+
+    @Override
+    public default int canConvertTo(Type to) {
+        int code = BaseType.super.canConvertTo(to);
+
+        if (code != Integer.MAX_VALUE) {
+            return code;
+        }
+
+        BaseClassTypeItem superType = superType();
+
+        if (superType != null && to.isAssignableFrom(superType)) {
+            return 0;
+        }
+
+        for (BaseClassTypeItem iface : interfaces()) {
+            if (to.isAssignableFrom(iface)) {
+                return 0;
+            }
+        }
+
+        BasePrimitiveType thisUnboxed;
+        PrimitiveType toUnboxed;
+
+        if ((thisUnboxed = unbox()) == null || (toUnboxed = to.unbox()) == null) {
+            return Integer.MAX_VALUE;
+        }
+
+        // This point is reached when converting boxed primitives.
+
+        // Expect 0..6 or max
+        code = thisUnboxed.canConvertTo(toUnboxed);
+
+        if (code != Integer.MAX_VALUE) {
+            code += to instanceof ObjectType ? 14 : 21;
+        }
+
+        return code;
+    }
 
     @Override
     public default BaseType inferredType(BaseType other) {

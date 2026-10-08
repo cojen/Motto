@@ -63,6 +63,8 @@ public final class CompilationEnv {
 
     private Map<String, BaseClassTypeItem> mFoundImports, mFoundImportsByMember;
 
+    private boolean mRecompile;
+
     /**
      * @param sourceFile optional
      */
@@ -102,6 +104,30 @@ public final class CompilationEnv {
     public synchronized void uncaught(Throwable ex) {
         mNumErrors++;
         mCompiler.uncaught(mSourceFile, ex);
+    }
+
+    /**
+     * Returns a ClassLoader suitable for loading classes which contained compiled macros.
+     */
+    public ClassLoader macroClassLoader() {
+        return mCompiler.macroClassLoader();
+    }
+
+    /**
+     * Call to indicate that the file should be recompiled, although not necessarily from
+     * scratch.
+     */
+    public void recompile() {
+        mRecompile = true;
+    }
+
+    /**
+     * Check if recompile was called, and clear it a side effect.
+     */
+    boolean mustRecompile() {
+        boolean recompile = mRecompile;
+        mRecompile = false;
+        return recompile;
     }
 
     /**

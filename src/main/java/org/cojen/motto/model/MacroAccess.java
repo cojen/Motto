@@ -14,19 +14,22 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.internal.model;
+package org.cojen.motto.model;
 
-import org.cojen.motto.model.TerminalAction;
+import org.cojen.motto.internal.model.BaseMacroAccess;
 
 /**
- * 
+ * Defines a special object used by macro implementations for performing access checks.
  *
+ * @hidden
  * @author Brian S. O'Neill
  */
-public abstract sealed class BaseTerminalAction extends BaseAction implements TerminalAction
-    permits BaseBranchAction, BaseJumpAction, BaseReturnAction, BaseThrowAction, StubAction
-{
-    BaseTerminalAction(int position) {
-        super(position);
+public sealed interface MacroAccess permits BaseMacroAccess {
+    /**
+     * @throws IllegalCallerException
+     * @hidden
+     */
+    public static MacroAccess obtain(Class<?> macroImpl) {
+        return BaseMacroAccess.obtainLocal(macroImpl);
     }
 }

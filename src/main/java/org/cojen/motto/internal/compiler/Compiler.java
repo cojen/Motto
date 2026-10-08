@@ -53,6 +53,11 @@ public final class Compiler implements ErrorListener, Closeable {
 
     private final ConcurrentHashMap<File, Map<String, byte[]>> mCompleted;
 
+    private volatile ArrayList<NewClass> mToRecompile;
+
+    private volatile ClassLoader mMacroClassLoader;
+    private volatile CompiledClassLoader mNextMacroClassLoader;
+
     private volatile int mNumErrors;
 
     public Compiler(ErrorListener el, ClassRegistry registry) {
@@ -143,6 +148,32 @@ public final class Compiler implements ErrorListener, Closeable {
 
         for (CompileTask task : mCompileTasks.values()) {
             task.waitUntilFinished();
+        }
+
+        ArrayList<NewClass> toRecompile;
+
+        // FIXME: Need some way to detect forward progress, in case macro expansion isn't doing
+        // anything. Perhaps look at mCompleted size? How can a decent error be reported?
+        while (numErrors() == 0 && (toRecompile = mToRecompile) != null) {
+            mToRecompile = null;
+            mMacroClassLoader = mNextMacroClassLoader;
+            mNextMacroClassLoader = null;
+
+            for (NewClass clazz : toRecompile) {
+                clazz.reset();
+            }
+
+            for (NewClass clazz : toRecompile) {
+                try {
+                    mExecutor.submit(() -> generateCode(clazz)).get();
+                } catch (ExecutionException e) {
+                    Throwable cause = e.getCause();
+                    if (cause == null) {
+                        cause = e;
+                    }
+                    uncaught(clazz.env().sourceFile(), cause);
+                }
+            }
         }
 
         return mCompleted;
@@ -260,6 +291,21 @@ public final class Compiler implements ErrorListener, Closeable {
         return null;
     }
 
+    ClassLoader macroClassLoader() {
+        ClassLoader loader = mMacroClassLoader;
+
+        if (loader == null) {
+            synchronized (this) {
+                loader = mMacroClassLoader;
+                if (loader == null) {
+                    mMacroClassLoader = loader = mClassRegistry.newClassLoader();
+                }
+            }
+        }
+
+        return loader;
+    }
+
     /**
      * Called by CompileTask.run.
      */
@@ -357,7 +403,30 @@ public final class Compiler implements ErrorListener, Closeable {
             return;
         }
 
-        mCompleted.put(env.sourceFile(), classes);
+        if (!env.mustRecompile()) {
+            mCompleted.put(env.sourceFile(), classes);
+            return;
+        }
+
+        ArrayList<NewClass> toRecompile = mToRecompile;
+        CompiledClassLoader nextLoader = mNextMacroClassLoader;
+
+        if (toRecompile == null) {
+            synchronized (this) {
+                toRecompile = mToRecompile;
+                if (toRecompile == null) {
+                    mToRecompile = toRecompile = new ArrayList<>();
+                    ClassLoader currentLoader = macroClassLoader();
+                    mNextMacroClassLoader = nextLoader = new CompiledClassLoader(currentLoader);
+                }
+            }
+        }
+
+        synchronized (toRecompile) {
+            toRecompile.add(clazz);
+        }
+
+        nextLoader.register(classes);
     }
 
     private final class CompileTask implements Runnable {

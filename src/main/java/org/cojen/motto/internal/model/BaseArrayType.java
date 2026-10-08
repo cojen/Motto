@@ -37,7 +37,7 @@ public final class BaseArrayType implements BaseObjectType, ArrayType, Encodable
 
     private final BaseType mElementType;
 
-    private volatile BaseArrayType mNoFieldNames;
+    private volatile BaseArrayType mNoFieldNames, mForMacro;
 
     BaseArrayType(BaseType elementType) {
         mElementType = elementType;
@@ -80,6 +80,25 @@ public final class BaseArrayType implements BaseObjectType, ArrayType, Encodable
         }
 
         return noFieldNames;
+    }
+
+    @Override
+    public BaseArrayType forMacro() {
+        BaseArrayType forMacro = mForMacro;
+
+        if (forMacro == null) {
+            BaseType forMacroElement = mElementType.forMacro();
+
+            if (forMacroElement.equals(mElementType)) {
+                forMacro = this;
+            } else {
+                forMacro = InternSet.apply(new BaseArrayType(forMacroElement));
+            }
+
+            mForMacro = forMacro;
+        }
+
+        return forMacro;
     }
 
     @Override

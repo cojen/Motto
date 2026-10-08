@@ -24,6 +24,8 @@ import java.util.Objects;
 import org.cojen.motto.internal.model.BaseBinding;
 import org.cojen.motto.internal.model.BaseBlock;
 import org.cojen.motto.internal.model.BaseCallableItem;
+import org.cojen.motto.internal.model.BaseCallSignature;
+import org.cojen.motto.internal.model.BaseCode;
 import org.cojen.motto.internal.model.BaseInferredType;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseScopeItem;
@@ -253,7 +255,7 @@ abstract sealed class ModelScope {
      * @return false if an error was reported
      * @throws UnsupportedOperationException if not supported by this scope
      */
-    boolean addReturn(ReturnStatement st, BaseBinding result) {
+    boolean addReturn(Statement st, BaseBinding result) {
         throw new UnsupportedOperationException();
     }
 
@@ -264,7 +266,7 @@ abstract sealed class ModelScope {
      * @return false if an error was reported
      * @throws UnsupportedOperationException if not supported by this scope
      */
-    boolean addYield(YieldStatement st, BaseBinding result) {
+    boolean addYield(Statement st, BaseBinding result) {
         throw new UnsupportedOperationException();
     }
 
@@ -361,7 +363,7 @@ abstract sealed class ModelScope {
                 return null;
             }
 
-            BaseTupleType inputType = callable.signature().inputType();
+            BaseTupleType inputType = callable.implSignature().inputType();
             int num = inputType.numFields();
 
             for (int i=0; i<num; i++) {
@@ -383,7 +385,7 @@ abstract sealed class ModelScope {
      * Scope which has code blocks, local variables, and labels.
      */
     static abstract sealed class Code extends ModelScope {
-        final BaseBlock mFirstBlock;
+        BaseBlock mEntryBlock;
         BaseBlock mActiveBlock;
 
         Map<String, BaseBinding.Local> mLocals;
@@ -398,7 +400,7 @@ abstract sealed class ModelScope {
         Code(ModelGenerator modGen, ModelScope parent, BaseItem item) {
             super(modGen, parent, item);
 
-            mFirstBlock = mActiveBlock = new BaseBlock();
+            mEntryBlock = mActiveBlock = new BaseBlock();
             mLocals = Map.of();
             mLabels = Map.of();
         }
@@ -425,7 +427,7 @@ abstract sealed class ModelScope {
             String name = ds.name.text;
 
             if (mItem instanceof BaseCallableItem ci &&
-                ci.signature().inputType().fieldExists(name))
+                ci.implSignature().inputType().fieldExists(name))
             {
                 env.error(ds.name, "a variable with the same name is declared as a parameter");
                 return false;
@@ -655,6 +657,22 @@ abstract sealed class ModelScope {
         void setActiveBlock(BaseBlock block) {
             mActiveBlock = Objects.requireNonNull(block);
         }
+
+        /**
+         * @param st used for error reporting
+         * @return false if an error was reported
+         */
+        boolean specializeResult(Statement st, BaseInferredType inferred, BaseBinding result) {
+            BaseType conflict = inferred.specialize(result.type());
+
+            if (conflict != null) {
+                env().error(st, "yield type of " + result.type().displayName() +
+                            " conflicts with an earlier yield type of " + conflict.displayName());
+                return false;
+            }
+
+            return true;
+        }
     }
 
     /**
@@ -670,7 +688,7 @@ abstract sealed class ModelScope {
 
             // Parameters must be added before named local variables.
 
-            BaseTupleType inputType = item.signature().inputType();
+            BaseTupleType inputType = item.implSignature().inputType();
             int num = inputType.numFields();
 
             for (int i=0; i<num; i++) {
@@ -689,13 +707,13 @@ abstract sealed class ModelScope {
         }
 
         @Override
-        boolean addReturn(ReturnStatement st, BaseBinding result) {
+        boolean addReturn(Statement st, BaseBinding result) {
             activeBlock(st).return_(result);
             return true;
         }
 
         @Override
-        boolean addYield(YieldStatement st, BaseBinding result) {
+        boolean addYield(Statement st, BaseBinding result) {
             env().error(st, "yield isn't permitted here");
             return false;
         }
@@ -705,7 +723,7 @@ abstract sealed class ModelScope {
             if (isReachable()) {
                 // The scope must end with a return statement.
                 var callable = (BaseCallableItem) mItem;
-                if (callable.isMacro() || callable.signature().outputType() != BaseVoidType.THE) {
+                if (callable.implSignature().outputType() != BaseVoidType.THE) {
                     if (env().numErrors() == 0) {
                         env().error(st.end(), "missing return statement");
                         return false;
@@ -718,8 +736,8 @@ abstract sealed class ModelScope {
 
         @Override
         ModelScope finish() {
-            if (!mFirstBlock.isEmpty()) {
-                ((BaseCallableItem) mItem).assignCode(mFirstBlock);
+            if (!mEntryBlock.isEmpty()) {
+                ((BaseCallableItem) mItem).assignCode(mEntryBlock);
             }
 
             return mParent;
@@ -735,14 +753,14 @@ abstract sealed class ModelScope {
         }
 
         @Override
-        boolean addReturn(ReturnStatement st, BaseBinding result) {
+        boolean addReturn(Statement st, BaseBinding result) {
             // FIXME: Support FarReturnAction.
             env().error(st, "far return from a lambda function isn't allowed");
             return false;
         }
 
         @Override
-        boolean addYield(YieldStatement st, BaseBinding result) {
+        boolean addYield(Statement st, BaseBinding result) {
             if (!specializeResult(st, result)) {
                 return false;
             }
@@ -770,16 +788,10 @@ abstract sealed class ModelScope {
          * @return false if an error was reported
          */
         private boolean specializeResult(Statement st, BaseBinding result) {
-            var outputType = ((BaseCallableItem) mItem).signature().outputType();
+            var outputType = ((BaseCallableItem) mItem).implSignature().outputType();
 
             if (outputType instanceof BaseInferredType inferred) {
-                BaseType conflict = inferred.specialize(result.type());
-
-                if (conflict != null) {
-                    env().error(st, "return type of " + result.type().displayName() +
-                                " conflicts with earlier return type of " + conflict.displayName());
-                    return false;
-                }
+                return specializeResult(st, inferred, result);
             }
 
             return true;
@@ -795,12 +807,12 @@ abstract sealed class ModelScope {
         }
 
         @Override
-        boolean addReturn(ReturnStatement st, BaseBinding result) {
+        boolean addReturn(Statement st, BaseBinding result) {
             return ((Code) mParent).addReturn(st, result);
         }
 
         @Override
-        boolean addYield(YieldStatement st, BaseBinding result) {
+        boolean addYield(Statement st, BaseBinding result) {
             return ((Code) mParent).addYield(st, result);
         }
 
@@ -812,8 +824,8 @@ abstract sealed class ModelScope {
 
         @Override
         ModelScope finish() {
-            if (!mFirstBlock.isEmpty()) {
-                ((Code) mParent).mActiveBlock.addAll(mFirstBlock);
+            if (!mEntryBlock.isEmpty()) {
+                ((Code) mParent).mActiveBlock.addAll(mEntryBlock);
             }
 
             return mParent;
@@ -823,27 +835,66 @@ abstract sealed class ModelScope {
     /**
      * Scope for a code tuple item.
      */
-    static final class CodeTuple extends Code {
-        CodeTuple(ModelGenerator modGen, ModelScope parent) {
+    static final class CodeItem extends Code {
+        private BaseInferredType mResultType;
+        private BaseBinding mResult;
+        private BaseBlock mYieldBlock;
+
+        CodeItem(ModelGenerator modGen, ModelScope parent) {
             super(modGen, parent);
         }
 
+        void prepare() {
+            if (mEntryBlock == null) {
+                mEntryBlock = mActiveBlock = new BaseBlock();
+            }
+            mResultType = new BaseInferredType();
+            mResult = new BaseBinding.Anonymous(mResultType);
+            mYieldBlock = null;
+        }
+
         @Override
-        boolean addReturn(ReturnStatement st, BaseBinding result) {
+        boolean addReturn(Statement st, BaseBinding result) {
             activeBlock(st).return_(result);
             return true;
         }
 
         @Override
-        boolean addYield(YieldStatement st, BaseBinding result) {
-            // FIXME: Copy the result to a common binding and jump to exit.
-            throw null;
+        boolean addYield(Statement st, BaseBinding result) {
+            if (!specializeResult(st, mResultType, result)) {
+                return false;
+            }
+
+            BaseBlock block = activeBlock(st);
+            block.copy(mResult, result);
+
+            if (mYieldBlock == null) {
+                mYieldBlock = new BaseBlock();
+            }
+
+            block.jump(mYieldBlock);
+
+            return true;
         }
 
         @Override
         boolean afterVisitCode(Statement st, List<Statement> items, BaseBinding lastResult) {
-            // FIXME: Add a yield if necessary, specializing the result type too.
-            throw null;
+            if (isReachable() && items.size() == 1 && lastResult != null) {
+                // If only one item was visited, automatically add a yield statement.
+                Statement first = items.getFirst();
+                if (!(first instanceof YieldStatement)) {
+                    return addYield(first, lastResult);
+                }
+            }
+
+            return true;
+        }
+
+        BaseCode extractCode() {
+            // Note: Only the code is extracted, but the locals and labels are shared.
+            var code = new BaseCode(mEntryBlock, mResult);
+            mEntryBlock = null;
+            return code;
         }
     }
 }

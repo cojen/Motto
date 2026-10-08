@@ -35,6 +35,7 @@ import org.cojen.motto.internal.model.BaseBooleanType;
 import org.cojen.motto.internal.model.BaseCallSignature;
 import org.cojen.motto.internal.model.BaseCallableItem;
 import org.cojen.motto.internal.model.BaseClassTypeItem;
+import org.cojen.motto.internal.model.BaseCode;
 import org.cojen.motto.internal.model.BaseFieldItem;
 import org.cojen.motto.internal.model.BaseFunctionType;
 import org.cojen.motto.internal.model.BaseInferredType;
@@ -486,6 +487,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
     }
 
     /**
+     * @param st required
      * @param item pass non-null to make a static call
      * @param instance pass non-null to make an instance call
      * @param direct pass true to always make a direct method call, not a virtual method call
@@ -650,19 +652,16 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
      */
     private void visitCode(Statement st, List<Statement> items, ModelScope scope) {
         enterScope(scope);
-        try {
-            doVisitCode(st, items, scope);
-        } finally {
-            exitScope();
-        }
+        doVisitCode(st, items);
+        exitScope();
     }
 
     /**
-     * Note: Caller must enter/exit the scope.
-     *
      * @param st used for error reporting
      */
-    private void doVisitCode(Statement st, List<Statement> items, ModelScope scope) {
+    private void doVisitCode(Statement st, List<Statement> items) {
+        final ModelScope scope = mScope;
+
         // Add all the symbols first, allowing them to be accessed in any order. The exception
         // is for declarations with an unspecified type. They cannot be accessed until the
         // DeclarationStatement assigns it a type and value.
@@ -772,51 +771,100 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             return null;
         }
 
-        if (st.isCode()) {
-            // FIXME: code
-            throw null;
-        }
-
         List<Statement> items = st.items;
         int numItems = items.size();
 
-        if (numItems == 0) {
-            return new VisitedTuple(BaseTupleType.EMPTY, new BaseBinding[0]);
-        }
+        BaseType[] types;
+        String[] names;
+        BaseBinding[] inputs;
 
-        var types = new BaseType[numItems];
-        var names = new String[types.length];
-        var inputs = new BaseBinding[types.length];
+        if (st.isCode()) {
+            if (numItems == 0) {
+                // Create an empty code block. This special case isn't all that unusual
+                // considering that {} is an illegal type anyhow. See TupleStatement.asVarType.
+                var code = new BaseCode(new BaseBlock(), BaseBinding.Void.THE);
+                var input = new BaseBinding.CodeBinding(code);
+                var tt = BaseTupleType.from(input.type());
+                return new VisitedTuple(tt, new BaseBinding[] {input});
+            }
 
-        int i = 0;
-        for (Statement item : items) {
-            while (item instanceof LabeledStatement ls) {
-                if (names[i] == null) {
-                    names[i] = ls.label.text;
-                    item = ls.source;
-                } else {
-                    item = ls.noLabel(mEnv);
+            types = new BaseType[numItems];
+            names = new String[types.length];
+            inputs = new BaseBinding[types.length];
+
+            final var scope = new ModelScope.CodeItem(this, mScope);
+            enterScope(scope);
+
+            int i = 0;
+            for (Statement item : items) {
+                item = removeLabel(names, i, item);
+
+                scope.prepare();
+                doVisitCode(item, List.of(item));
+                var input = new BaseBinding.CodeBinding(scope.extractCode());
+
+                types[i] = input.type();
+                inputs[i] = input;
+
+                i++;
+            }
+
+            if (i != types.length) {
+                throw new AssertionError();
+            }
+
+            mScope = scope.parent();
+        } else {
+            if (numItems == 0) {
+                return new VisitedTuple(BaseTupleType.EMPTY, new BaseBinding[0]);
+            }
+
+            types = new BaseType[numItems];
+            names = new String[types.length];
+            inputs = new BaseBinding[types.length];
+
+            int i = 0;
+            for (Statement item : items) {
+                item = removeLabel(names, i, item);
+
+                BaseBinding input = item.accept(this);
+
+                if (input == null) {
+                    // Error state.
+                    return null;
                 }
+
+                types[i] = input.type();
+                inputs[i] = input;
+
+                i++;
             }
 
-            BaseBinding input = item.accept(this);
-
-            if (input == null) {
-                // Error state.
-                return null;
+            if (i != types.length) {
+                throw new AssertionError();
             }
-
-            types[i] = input.type();
-            inputs[i] = input;
-
-            i++;
-        }
-
-        if (i != types.length) {
-            throw new AssertionError();
         }
 
         return new VisitedTuple(BaseTupleType.from(types).withNames(names), inputs);
+    }
+
+    /**
+     * @param names if the item is labeled, a name is stored here
+     * @param i index into the names array
+     * @param item item to have a label removed (if defined)
+     * @return the item without a label
+     */
+    private Statement removeLabel(String[] names, int i, Statement item) {
+        while (item instanceof LabeledStatement ls) {
+            if (names[i] == null) {
+                names[i] = ls.label.text;
+                item = ls.source;
+            } else {
+                // This reports an error. Duplicate labels aren't allowed.
+                item = ls.noLabel(mEnv);
+            }
+        }
+        return item;
     }
 
     // Visit methods: Null is returned if an error was reported. Void is returned if the
@@ -1412,11 +1460,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         var callable = BaseCallableItem.from(PUBLIC | FINAL, lambdaClass, sig);
 
         enterScope(new ModelScope.ClassDef(this, mScope, lambdaClass));
-        try {
-            visitCode(st, st.items, new ModelScope.Lambda(this, mScope, callable));
-        } finally {
-            exitScope();
-        }
+        visitCode(st, st.items, new ModelScope.Lambda(this, mScope, callable));
+        exitScope();
 
         BaseBlock code = callable.code();
 

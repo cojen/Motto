@@ -16,17 +16,39 @@
 
 package org.cojen.motto.internal.model;
 
-import org.cojen.motto.model.TerminalAction;
+import java.util.Objects;
+
+import org.cojen.motto.model.Binding;
+import org.cojen.motto.model.Block;
+import org.cojen.motto.model.Code;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed class BaseTerminalAction extends BaseAction implements TerminalAction
-    permits BaseBranchAction, BaseJumpAction, BaseReturnAction, BaseThrowAction, StubAction
-{
-    BaseTerminalAction(int position) {
-        super(position);
+public final class BaseCode implements Code {
+    private final BaseBlock mEntry, mExit;
+    private final BaseBinding mResult;
+
+    public BaseCode(BaseBlock entry, BaseBinding result) {
+        mEntry = entry;
+        mExit = entry.merge();
+        mResult = Objects.requireNonNull(result);
+    }
+
+    @Override
+    public BaseBlock entry() {
+        return mEntry;
+    }
+
+    @Override
+    public BaseBlock exit() {
+        return mExit;
+    }
+
+    @Override
+    public BaseBinding result() {
+        return mResult;
     }
 }

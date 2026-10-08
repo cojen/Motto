@@ -54,6 +54,18 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     public Block merge();
 
     /**
+     * Returns a {@link Code Code} object with this block as the entry, and a void result
+     * binding.
+     */
+    public Code asCode();
+
+    /**
+     * Returns a {@link Code Code} object with this block as the entry, and the given result
+     * binding.
+     */
+    public Code asCode(Binding result);
+
+    /**
      * Return a new anonymous local variable binding which is visible to all actions within the
      * code body.
      */

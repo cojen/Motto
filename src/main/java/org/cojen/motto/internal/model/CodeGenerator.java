@@ -16,6 +16,9 @@
 
 package org.cojen.motto.internal.model;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -23,13 +26,20 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
+
+import java.util.function.Supplier;
 
 import org.cojen.maker.Label;
 import org.cojen.maker.Maker;
 import org.cojen.maker.MethodMaker;
 import org.cojen.maker.Variable;
 
+import org.cojen.motto.model.UnresolvedMacroException;
+
 import org.cojen.motto.runtime.ConstantBootstraps;
+
+import org.cojen.motto.internal.compiler.CompilationEnv;
 
 /**
  * 
@@ -254,15 +264,12 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         BaseCallableItem callable = action.callable();
 
         if (callable.isMacro()) {
-            /* FIXME: macro
             if (!makeMacroCall(action)) {
                 // Will need to recompile this file and try again later.
-                mEnv.recompile();
+                env().recompile();
                 mMethodMaker.new_(UnresolvedMacroException.class).throw_();
             }
             return action.next;
-            */
-            throw null;
         }
 
         BaseClassTypeItem objType = callable.nearestClass();
@@ -333,6 +340,93 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         }
 
         forStore(action.output()).set(resultVar);
+
+        return true;
+    }
+
+    /**
+     * @return false if recompilation is required
+     */
+    private boolean makeMacroCall(BaseCallAction.Direct action) {
+        BaseCallableItem callable = action.callable();
+        MethodHandle impl = callable.findMacroImpl(env());
+
+        if (impl == null) {
+            // Macro hasn't been compiled yet.
+            return false;
+        }
+
+        Class<?> macroImpl = MethodHandles.publicLookup().revealDirect(impl).getDeclaringClass();
+
+        var params = new Object[action.numInputs()];
+        for (int i=0; i<params.length; i++) {
+            Object input = action.input(i);
+            if (input instanceof BaseBinding.CodeBinding cb) {
+                input = cb.code();
+            }
+            params[i] = input;
+        }
+
+        BlockState retState = new BlockState(mMethodMaker.label());
+        retState.mNonDependents = List.of();
+        // By indicating that retDestination has been visited, visitCode won't position the
+        // label in the wrong place. The label will be positioned at the very end.
+        retState.mVisited = true;
+
+        var retDestination = new BaseBlock();
+        retDestination.addAction(new StubAction(0));
+        mBlockStateMap.put(retDestination, retState);
+
+        Supplier<BaseBlock> factory = () -> {
+            // When the macro adds a return action, it will instead jump to retDestination.
+            return new BaseBlock.RetJump(action.output(), retDestination);
+        };
+
+        BaseCode code;
+
+        try {
+            BaseMacroAccess.setLocal(new BaseMacroAccess(macroImpl));
+
+            // It would be nice if javac was a bit smarter here. The params variable cannot be
+            // modified again at this point.
+            final var fparams = params;
+
+            code = BaseBlock.inScope(factory, () -> {
+                return (BaseCode) impl.invokeWithArguments(fparams);
+            });
+
+            // FIXME: report a proper exception
+            Objects.requireNonNull(code);
+        } catch (UnresolvedMacroException e) {
+            return false;
+        } catch (Throwable e) {
+            // FIXME: Should call a method which accepts the called macro (for error reporting)
+            env().uncaught(e);
+            return false;
+        } finally {
+            BaseMacroAccess.removeLocal();
+        }
+
+        // FIXME: handle code.result()
+
+        BaseBlock entry = code.entry();
+
+        if (!entry.isFullyTerminated()) {
+            if (callable.signature().outputType().isVoid()) {
+                // Add a return automatically. Note that this doesn't return from the method
+                // being built, but instead it jumps to retDestination. See BaseBlock.RetJump.
+                entry.merge().return_(BaseBinding.Void.THE);
+            } else {
+                // FIXME: report a proper exception
+                env().uncaught(new Exception("not terminated"));
+            }
+        }
+
+        buildBlockStateMap(entry);
+        visitCode(entry);
+
+        // Position the retState label here, in order to flow into the next action.
+        retState.mLabel.here();
 
         return true;
     }
@@ -448,16 +542,11 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
     @Override
     public BaseAction visit(BaseReturnAction action) {
-        if (mItem.isMacro()) {
-            // FIXME: macro
-            throw null;
+        BaseBinding result = action.result();
+        if (result.type() == BaseVoidType.THE) {
+            mMethodMaker.return_();
         } else {
-            BaseBinding result = action.result();
-            if (result.type() == BaseVoidType.THE) {
-                mMethodMaker.return_();
-            } else {
-                mMethodMaker.return_(forLoad(result));
-            }
+            mMethodMaker.return_(forLoad(result));
         }
 
         return null;
@@ -510,6 +599,15 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     public BaseAction visit(BaseTupleAction.Set action) {
         // FIXME
         throw null;
+    }
+
+    @Override
+    public BaseAction visit(StubAction action) {
+        return null;
+    }
+
+    private CompilationEnv env() {
+        return mNewClass.env();
     }
 
     /**
@@ -594,7 +692,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
                 throw null;
             }
 
-            case BaseBinding.Code b -> {
+            case BaseBinding.CodeBinding b -> {
                 throw new IllegalArgumentException();
             }
         }

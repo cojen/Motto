@@ -485,9 +485,7 @@ public interface EncodableType extends Comparable<EncodableType>, org.cojen.make
 
         @Override
         public default void encodePrepare(TypeEncoder encoder) {
-            if (encoder.prepare(this)) {
-                resultType().encodePrepare(encoder);
-            }
+            resultType().encodePrepare(encoder);
         }
 
         @Override

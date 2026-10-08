@@ -24,6 +24,7 @@ import java.util.function.Predicate;
 
 import java.util.stream.Stream;
 
+import org.cojen.motto.model.Binding;
 import org.cojen.motto.model.CallableItem;
 import org.cojen.motto.model.CallSignature;
 import org.cojen.motto.model.ClassTypeItem;
@@ -42,6 +43,10 @@ public sealed interface BaseType extends Type, EncodableType
 {
     public static BaseType from(Class<?> clazz) {
         return LoadedClass.from(clazz);
+    }
+
+    public default boolean isVoid() {
+        return false;
     }
 
     @Override
@@ -235,6 +240,13 @@ public sealed interface BaseType extends Type, EncodableType
 
     @Override
     public BaseType noFieldNames();
+
+    /**
+     * @see BaseCallSignature#forMacro
+     */
+    public default BaseType forMacro() {
+        return BaseType.from(Binding.class);
+    }
 
     /**
      * If this is a tuple type consisting of one unnamed field, return the field type, also

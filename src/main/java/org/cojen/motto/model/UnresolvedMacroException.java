@@ -14,19 +14,21 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.internal.model;
-
-import org.cojen.motto.model.TerminalAction;
+package org.cojen.motto.model;
 
 /**
  * 
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed class BaseTerminalAction extends BaseAction implements TerminalAction
-    permits BaseBranchAction, BaseJumpAction, BaseReturnAction, BaseThrowAction, StubAction
-{
-    BaseTerminalAction(int position) {
-        super(position);
+public final class UnresolvedMacroException extends Exception {
+    public UnresolvedMacroException() {
     }
+
+    public UnresolvedMacroException(String message) {
+        super(message);
+    }
+
+    // FIXME: Consider eliding the stack trace.
 }
+

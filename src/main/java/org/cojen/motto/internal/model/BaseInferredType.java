@@ -38,6 +38,11 @@ public final class BaseInferredType implements BaseType {
         mCurrent = Objects.requireNonNull(initialType);
     }
 
+    @Override
+    public boolean isVoid() {
+        return mCurrent.isVoid();
+    }
+
     /**
      * Returns the currently inferred type.
      */

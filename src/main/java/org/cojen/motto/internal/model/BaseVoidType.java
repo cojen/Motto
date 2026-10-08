@@ -30,6 +30,11 @@ public final class BaseVoidType extends BasePrimitiveType implements VoidType {
     }
 
     @Override
+    public boolean isVoid() {
+        return true;
+    }
+
+    @Override
     public StringBuilder appendDisplayNameTo(StringBuilder b) {
         return b.append("void");
     }

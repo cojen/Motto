@@ -16,23 +16,28 @@
 
 package org.cojen.motto.model;
 
-import org.cojen.motto.internal.model.BaseCallSignature;
+import org.cojen.motto.internal.model.BaseCode;
 
 /**
- * 
+ * Defines code which can be passed to a macro.
  *
  * @author Brian S. O'Neill
  */
-public sealed interface CallSignature permits BaseCallSignature {
-    public Type outputType();
-
-    public String name();
-
-    public TupleType inputType();
+public sealed interface Code permits BaseCode {
+    /**
+     * Returns the entry block into the code. All blocks except for the exit block are
+     * terminated.
+     */
+    public Block entry();
 
     /**
-     * Returns a version of this signature in which the output and input types don't have any
-     * names.
+     * Returns the optional exit block, which is non-terminated. If applicable, the result
+     * value is guaranteed to have been assigned before the exit block is reached.
      */
-    public CallSignature noFieldNames();
+    public Block exit();
+
+    /**
+     * Returns the result value binding, which might be {@code Binding#void_ void}.
+     */
+    public Binding result();
 }

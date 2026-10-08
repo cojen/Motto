@@ -733,45 +733,6 @@ public abstract sealed class BaseClassTypeItem extends BaseItem
     }
 
     @Override
-    public final int canConvertTo(Type to) {
-        int code = BaseObjectType.super.canConvertTo(to);
-
-        if (code != Integer.MAX_VALUE) {
-            return code;
-        }
-
-        BaseClassTypeItem superType = superType();
-
-        if (superType != null && to.isAssignableFrom(superType)) {
-            return 0;
-        }
-
-        for (BaseClassTypeItem iface : interfaces()) {
-            if (to.isAssignableFrom(iface)) {
-                return 0;
-            }
-        }
-
-        BasePrimitiveType thisUnboxed;
-        PrimitiveType toUnboxed;
-
-        if ((thisUnboxed = unbox()) == null || (toUnboxed = to.unbox()) == null) {
-            return Integer.MAX_VALUE;
-        }
-
-        // This point is reached when converting boxed primitives.
-
-        // Expect 0..6 or max
-        code = thisUnboxed.canConvertTo(toUnboxed);
-
-        if (code != Integer.MAX_VALUE) {
-            code += to instanceof ObjectType ? 14 : 21;
-        }
-
-        return code;
-    }
-
-    @Override
     public final boolean isJavaLangObject() {
         BasePath namePath;
         return packagePath().equals(BasePath.JAVA_LANG)

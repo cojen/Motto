@@ -17,7 +17,6 @@
 package org.cojen.motto.internal.model;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +25,7 @@ import java.util.Objects;
 import org.cojen.motto.model.Binding;
 import org.cojen.motto.model.Block;
 import org.cojen.motto.model.CallSignature;
+import org.cojen.motto.model.Code;
 
 import org.cojen.motto.internal.util.InternSet;
 
@@ -89,22 +89,14 @@ public final class BaseCallSignature implements CallSignature {
         return noFieldNames;
     }
 
-    @Override
+    /**
+     * Returns a signature in which normal input types are {@link Binding Binding}, code input
+     * types are {@link Code Code}, and the output type is {@code Code}. Input types which are
+     * tuples and arrays have their element types replaced by recursively calling forMacro.
+     */
     public BaseCallSignature forMacro() {
-        BaseType bindingType = BaseType.from(Binding.class);
-        BaseType blockType = BaseType.from(Block.class);
-
-        BaseTupleType inputType = mInputType;
-
-        int num = inputType.numFields();
-        if (num != 0) {
-            var types = new BaseType[num];
-            Arrays.fill(types, bindingType);
-            inputType = inputType.withTypes(types);
-        }
-
-        var signature = new BaseCallSignature(blockType, mName, inputType);
-
+        BaseTupleType inputType = mInputType.forMacro();
+        var signature = new BaseCallSignature(BaseType.from(Code.class), mName, inputType);
         return InternSet.apply(signature);
     }
 

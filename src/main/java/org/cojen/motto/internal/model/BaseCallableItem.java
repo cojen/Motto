@@ -16,12 +16,19 @@
 
 package org.cojen.motto.internal.model;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+
 import java.util.Objects;
 
 import org.cojen.maker.MethodMaker;
 
 import org.cojen.motto.model.CallableItem;
+import org.cojen.motto.model.Code;
 import org.cojen.motto.model.Item;
+
+import org.cojen.motto.internal.compiler.CompilationEnv;
 
 /**
  * 
@@ -82,9 +89,28 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
     }
 
     /**
-     * @see CallSignature#forMacro
+     * @see BaseCallSignature#forMacro
      */
     public BaseCallSignature macroSignature() {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Returns this signature if not a macro, or else returns the macro signature.
+     */
+    public BaseCallSignature implSignature() {
+        return mSignature;
+    }
+
+    void setMacroImpl(String className, String methodName) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * @return MethodHandle with a macro method signature
+     * @see BaseCallSignature#forMacro
+     */
+    public MethodHandle findMacroImpl(CompilationEnv env) {
         throw new UnsupportedOperationException();
     }
 
@@ -150,6 +176,11 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
     public static final class Macro extends BaseCallableItem {
         private final BaseCallSignature mMacroSignature;
 
+        private String mImplClassName, mImplMethodName;
+
+        private CompilationEnv mMacroEnv;
+        private MethodHandle mMacroHandle;
+
         private Macro(int modifierBits, BaseClassTypeItem enclosingClass,
                       BaseCallSignature signature)
         {
@@ -158,11 +189,77 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
         }
 
         /**
-         * @see CallSignature#forMacro
+         * @see BaseCallSignature#forMacro
          */
         @Override
         public BaseCallSignature macroSignature() {
             return mMacroSignature;
+        }
+
+        @Override
+        public BaseCallSignature implSignature() {
+            return mMacroSignature;
+        }
+
+        @Override
+        synchronized void setMacroImpl(String className, String methodName) {
+            mImplClassName = className;
+            mImplMethodName = methodName;
+        }
+
+        @Override
+        public synchronized MethodHandle findMacroImpl(CompilationEnv env) {
+            if (env == mMacroEnv && mMacroHandle != null) {
+                return mMacroHandle;
+            }
+
+            mMacroEnv = null;
+            mMacroHandle = null;
+
+            if (mImplClassName == null || mImplMethodName == null) {
+                return null;
+            }
+
+            Class<?> clazz;
+
+            try {
+                clazz = env.macroClassLoader().loadClass(mImplClassName);
+            } catch (ClassNotFoundException e) {
+                return null;
+            }
+
+            BaseTupleType inputType = mMacroSignature.inputType();
+            var paramTypes = new Class[inputType.numFields()];
+
+            for (int i=0; i<paramTypes.length; i++) {
+                org.cojen.maker.Type type = inputType.fieldType(i).asMakerType();
+                Class<?> typeClass = type.classType();
+                if (typeClass == null) {
+                    try {
+                        typeClass = Class.forName(type.name());
+                    } catch (ClassNotFoundException e) {
+                        env.uncaught(e);
+                        return null;
+                    }
+                }
+                paramTypes[i] = typeClass;
+            }
+
+            MethodType mt = MethodType.methodType(Code.class, paramTypes);
+
+            MethodHandle mh;
+
+            try {
+                mh = MethodHandles.publicLookup().findStatic(clazz, mImplMethodName, mt);
+            } catch (NoSuchMethodException | IllegalAccessException e) {
+                env.uncaught(e);
+                return null;
+            }
+
+            mMacroEnv = env;
+            mMacroHandle = mh;
+
+            return mh;
         }
     }
 }

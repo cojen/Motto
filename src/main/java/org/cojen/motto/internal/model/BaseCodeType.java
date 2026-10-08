@@ -21,6 +21,9 @@ import java.util.Set;
 
 import org.cojen.motto.internal.util.InternSet;
 
+import org.cojen.motto.model.Code;
+import org.cojen.motto.model.Type;
+
 /**
  * Defines a pseudo type, used by macro definitions.
  *
@@ -81,6 +84,19 @@ public final class BaseCodeType extends GeneratedType
     }
 
     @Override
+    public BaseType forMacro() {
+        return BaseType.from(Code.class);
+    }
+
+    @Override
+    public int canConvertTo(Type to) {
+        if (to instanceof BaseCodeType other) {
+            return mResultType.canConvertTo(other.mResultType);
+        }
+        return BaseObjectType.super.canConvertTo(to);
+    }
+
+    @Override
     public BaseType resultType() {
         return mResultType;
     }
@@ -89,6 +105,11 @@ public final class BaseCodeType extends GeneratedType
     public org.cojen.maker.Type asMakerType() {
         // Don't call NewClass.generateType for pseudo types.
         return org.cojen.maker.Type.external(generatedName(), this);
+    }
+
+    @Override
+    boolean isPseudo() {
+        return true;
     }
 
     @Override

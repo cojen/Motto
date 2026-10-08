@@ -46,7 +46,7 @@ import org.cojen.motto.runtime.Math;
  *
  * @author Brian S. O'Neill
  */
-public final class BaseBlock implements Block {
+public sealed class BaseBlock implements Block {
     private static final ScopedValue<Supplier<BaseBlock>> CONTEXT = ScopedValue.newInstance();
 
     /**
@@ -95,6 +95,10 @@ public final class BaseBlock implements Block {
     @Override
     public int hashCode() {
         return mHashCode;
+    }
+
+    protected BaseBlock newBaseBlock() {
+        return new BaseBlock();
     }
 
     // FIXME: Need stricter checks that objects passed into these methods belong to the same
@@ -235,7 +239,10 @@ public final class BaseBlock implements Block {
 
             if (last == null || !(last instanceof TerminalAction)) {
                 if (common == null) {
-                    common = new BaseBlock();
+                    // Must call newBaseBlock from the block that initiated the merge, not the
+                    // block participating in the merge. This ensures that a merge against a
+                    // RetJump block creates a new RetJump block.
+                    common = this.newBaseBlock();
                 }
                 block.jump(common);
                 break;
@@ -252,6 +259,20 @@ public final class BaseBlock implements Block {
         }
 
         return common;
+    }
+
+    @Override
+    public BaseCode asCode() {
+        return asCode(BaseBinding.Void.THE);
+    }
+
+    @Override
+    public BaseCode asCode(Binding result) {
+        return asCode((BaseBinding) result);
+    }
+
+    public BaseCode asCode(BaseBinding result) {
+        return new BaseCode(this, result);
     }
 
     @Override
@@ -278,7 +299,7 @@ public final class BaseBlock implements Block {
     }
 
     public void copy(BaseBinding target, BaseBinding source) {
-        if (target != source && target != BaseBinding.Void.THE) {
+        if (target != source && !target.type().isVoid()) {
             addAction(new BaseCopyAction(mPosition, target, source));
         }
     }
@@ -1046,5 +1067,45 @@ public final class BaseBlock implements Block {
 
     private static boolean sameCondition(BaseBinding a, BaseBinding b) {
         return a == b && a.isStable();
+    }
+
+    /**
+     * With this kind of block, return actions don't actually return. Instead they copy to a
+     * custom binding and jump to a destination block. This is used by CodeGenerator when
+     * calling macros.
+     */
+    static final class RetJump extends BaseBlock {
+        private final BaseBinding mRetBinding;
+        private final BaseBlock mRetDestination;
+
+        RetJump(BaseBinding retBinding, BaseBlock retDestination) {
+            super();
+            mRetBinding = retBinding;
+            mRetDestination = retDestination;
+        }
+
+        @Override
+        protected RetJump newBaseBlock() {
+            return new RetJump(mRetBinding, mRetDestination);
+        }
+
+        @Override
+        public void return_(BaseBinding result) {
+            BaseType type = mRetBinding.type();
+
+            // FIXME: type check
+
+            if (type != BaseVoidType.THE) {
+                copy(mRetBinding, result);
+            }
+
+            jump(mRetDestination);
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public Iterator iterator() {
+            return baseIterator();
+        }
     }
 }

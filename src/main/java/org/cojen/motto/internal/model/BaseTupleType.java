@@ -114,7 +114,7 @@ public sealed abstract class BaseTupleType extends GeneratedType
         return InternSet.apply(new NoNames(fieldTypes));
     }
 
-    private volatile BaseTupleType mNoFieldNames, mTrimmed;
+    private volatile BaseTupleType mNoFieldNames, mForMacro, mTrimmed;
 
     BaseTupleType() {
     }
@@ -214,6 +214,29 @@ public sealed abstract class BaseTupleType extends GeneratedType
         }
 
         return noFieldNames;
+    }
+
+    @Override
+    public BaseTupleType forMacro() {
+        BaseTupleType forMacro = mForMacro;
+
+        if (forMacro == null) {
+            int numFields = numFields();
+
+            if (numFields == 0) {
+                forMacro = this;
+            } else {
+                var newFieldTypes = new BaseType[numFields];
+                for (int i=0; i<numFields; i++) {
+                    newFieldTypes[i] = fieldType(i).forMacro();
+                }
+                forMacro = withTypes(newFieldTypes);
+            }
+
+            mForMacro = forMacro;
+        }
+
+        return forMacro;
     }
 
     /**

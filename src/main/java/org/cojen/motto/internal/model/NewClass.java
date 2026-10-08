@@ -37,8 +37,11 @@ import org.cojen.maker.MethodMaker;
 
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
+import org.cojen.motto.model.Block;
 import org.cojen.motto.model.CallableItem;
 import org.cojen.motto.model.CallSignature;
+import org.cojen.motto.model.Code;
+import org.cojen.motto.model.MacroAccess;
 
 import static org.cojen.motto.internal.model.Modifiers.*;
 
@@ -67,7 +70,9 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
 
     private Set<String> mGeneratedTypeNames;
 
-    private ClassMaker mMacroMaker;
+    private ClassMaker mMacrosMaker;
+
+    private HashMap<String, Integer> mMacroMethodNames;
 
     /**
      * @param outerClass is null for top-level classes
@@ -87,6 +92,25 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
         mEnv = env;
         mOuterClass = outerClass;
         mOrigin = origin;
+    }
+
+    /**
+     * Resets this NewClass such that the finish method can be called again.
+     */
+    public void reset() {
+        ((NewClass) nestType()).doReset();
+    }
+
+    private void doReset() {
+        mClassMaker = null;
+        mCodeGenerators = null;
+        mGeneratedTypeNames = null;
+        mMacrosMaker = null;
+        mMacroMethodNames = null;
+
+        for (BaseClassTypeItem inner : innerClassesMap().values()) {
+            ((NewClass) inner).doReset();
+        }
     }
 
     @Override
@@ -179,8 +203,8 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
             finished = ((NewClass) inner).finish(finished);
         }
 
-        if (mMacroMaker != null) {
-            finished = finish(finished, mMacroMaker);
+        if (mMacrosMaker != null) {
+            finished = finish(finished, mMacrosMaker);
         }
 
         finished = finish(finished, cm);
@@ -416,7 +440,7 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
 
             MethodMaker mm;
 
-            if (!method.isMacro()) {
+            {
                 BaseCallSignature signature = method.signature();
                 Object[] paramTypes = makerParamsFor(method, signature);
 
@@ -425,13 +449,54 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
 
                 method.applyModifiers(mm);
                 applyParamNames(mm, method, signature);
-            } else {
+            }
+
+            if (method.isMacro()) {
+                if (method.code() != null) {
+                    mm.new_(UnsupportedOperationException.class).throw_();
+                }
+
                 BaseCallSignature signature = method.macroSignature();
 
-                ClassMaker macroMaker = macroMaker();
+                HashMap<String, Integer> names = mMacroMethodNames;
 
-                // FIXME: macro
-                throw null;
+                if (names == null) {
+                    mMacroMethodNames = names = new HashMap<>();
+                }
+
+                String methodName = signature.name();
+
+                while (true) {
+                    methodName = Maker.mangle(methodName);
+                    Integer count = names.putIfAbsent(methodName, 0);
+                    if (count == null) {
+                        break;
+                    }
+                    count++;
+                    names.put(methodName, count);
+                    methodName = signature.name() + '_' + count;
+                }
+
+                ClassMaker macrosMaker = macrosMaker();
+
+                // Set the implementation location so that it can be called later.
+                method.setMacroImpl(macrosMaker.type().name(), methodName);
+
+                // FIXME: Because the scope is a different class, FOR_NEW_CLASS must be cleared
+                // when calling makerParamsFor. Otherwise, it calls generateType for types
+                // which are only needed by the macros class.
+                Object[] paramTypes = makerParamsFor(method, signature);
+
+                mm = macrosMaker.addMethod(Code.class, methodName, paramTypes);
+                method.applyModifiers(mm);
+                applyParamNames(mm, method, signature);
+                mm.public_();
+
+                // Perform an access check. The class is provided to guard against a macro
+                // which has been recompiled to skip the check. If it then calls another macro,
+                // the thread-local access object still exists, but access is rejected because
+                // the class doesn't match.
+                mm.var(MacroAccess.class).invoke("obtain", mm.class_());
             }
 
             addCodeGenerator(mm, method);
@@ -452,20 +517,20 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
      * method should only be called after all user declared inner classes have been added, to
      * prevent naming collisions.
      */
-    private ClassMaker macroMaker() {
-        ClassMaker cm = mMacroMaker;
+    private ClassMaker macrosMaker() {
+        ClassMaker cm = mMacrosMaker;
 
         if (cm == null) {
             Map<String, BaseClassTypeItem> innerClassesMap = innerClassesMap();
 
-            String className = "Macro";
+            String className = "Macros";
             int num = 0;
 
             while (innerClassesMap.containsKey(className)) {
-                className = "Macro" + (++num);
+                className = "Macros" + (++num);
             }
 
-            mMacroMaker = cm = mClassMaker.addInnerClass(className);
+            mMacrosMaker = cm = mClassMaker.addInnerClass(className);
             cm.public_().final_().synthetic();
 
             if (origin() instanceof File file) {
@@ -504,7 +569,7 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
 
     // Called by GeneratedType subclasses.
     void generateType(BaseType type) {
-        if (type instanceof GeneratedType generated) {
+        if (type instanceof GeneratedType generated && !generated.isPseudo()) {
             generateType(generated.generatedName());
         }
     }
