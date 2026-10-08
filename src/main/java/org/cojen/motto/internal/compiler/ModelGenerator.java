@@ -800,7 +800,17 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 item = removeLabel(names, i, item);
 
                 scope.prepare();
-                doVisitCode(item, List.of(item));
+
+                List<Statement> subItems;
+                if (item instanceof SequenceStatement ss) {
+                    // Expand the items early, in order for afterVisitCode to be effective.
+                    subItems = ss.items;
+                } else {
+                    subItems = List.of(item);
+                }
+
+                doVisitCode(item, subItems);
+
                 var input = new BaseBinding.CodeBinding(scope.extractCode());
 
                 types[i] = input.type();
@@ -1942,14 +1952,19 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
     @Override
     public BaseBinding visit(SequenceStatement st) {
-        if (checkUnreachable(st)) {
-            return null;
+        // A SequenceStatement must have at least two items.
+
+        Iterator<Statement> it = st.items.iterator();
+        Statement item = it.next();
+
+        while (true) {
+            item.accept(this);
+            item = it.next();
+            if (!it.hasNext()) {
+                BaseBinding result = item.accept(this);
+                return item instanceof YieldStatement ? result : BaseBinding.Void.THE;
+            }
         }
-
-        // FIXME: Yield void (using a goto) unless the last item is a yield.
-
-        // FIXME
-        throw null;
     }
 
     @Override
