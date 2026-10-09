@@ -723,7 +723,7 @@ abstract sealed class ModelScope {
             if (isReachable()) {
                 // The scope must end with a return statement.
                 var callable = (BaseCallableItem) mItem;
-                if (callable.implSignature().outputType() != BaseVoidType.THE) {
+                if (!callable.implSignature().outputType().isVoid()) {
                     if (env().numErrors() == 0) {
                         env().error(st.end(), "missing return statement");
                         return false;

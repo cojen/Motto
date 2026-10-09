@@ -98,7 +98,7 @@ public sealed interface BaseObjectType extends BaseType, ObjectType
             return this;
         }
 
-        if (other == BaseVoidType.THE) {
+        if (other.isVoid()) {
             return null;
         }
 

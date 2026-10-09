@@ -512,7 +512,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             // which cannot always be optimized away by the Maker library. This happens when
             // the method has multiple return locations, and so the output variable is
             // determined to be shared because accurate liveness analysis isn't performed.
-            if (!mItem.isMacro() && mItem.signature().outputType() == BaseVoidType.THE) {
+            if (!mItem.isMacro() && mItem.signature().outputType().isVoid()) {
                 mMethodMaker.return_();
             } else {
                 mMethodMaker.return_(forLoad(action.source()));
@@ -543,7 +543,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     @Override
     public BaseAction visit(BaseReturnAction action) {
         BaseBinding result = action.result();
-        if (result.type() == BaseVoidType.THE) {
+        if (result.type().isVoid()) {
             mMethodMaker.return_();
         } else {
             mMethodMaker.return_(forLoad(result));
@@ -839,7 +839,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             // Instance is a constant, so use a temporary variable.
             BaseType type = fieldItem.type();
             instanceVar = mMethodMaker.var(type.asMakerType());
-            if (type != BaseVoidType.THE) {
+            if (!type.isVoid()) {
                 instanceVar.set(instance);
             }
         }
@@ -870,7 +870,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
                 BaseType type = binding.type();
 
                 Variable v;
-                if (type == BaseVoidType.THE) {
+                if (type.isVoid()) {
                     // For storing Void.TYPE, which is a Class.
                     v = mMethodMaker.var(Class.class);
                 } else {

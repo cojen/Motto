@@ -1098,7 +1098,7 @@ public sealed class BaseBlock implements Block {
 
             // FIXME: type check
 
-            if (type != BaseVoidType.THE) {
+            if (!type.isVoid()) {
                 copy(mRetBinding, result);
             }
 
