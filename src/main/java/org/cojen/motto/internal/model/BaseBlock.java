@@ -137,6 +137,9 @@ public sealed class BaseBlock implements Block {
 
             if (action instanceof FlowAction flow) {
                 action = flow.next;
+                if (action == null) {
+                    break;
+                }
             } else {
                 break;
             }
