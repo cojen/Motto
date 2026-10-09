@@ -110,6 +110,7 @@ public sealed class BaseBlock implements Block {
         baseForEach(true, consumer);
     }
 
+    // FIXME: remove or drop skipAny feature (rely on predecessors to remove blocks)
     void baseForEach(Consumer<? super BaseAction> consumer) {
         baseForEach(true, consumer);
     }

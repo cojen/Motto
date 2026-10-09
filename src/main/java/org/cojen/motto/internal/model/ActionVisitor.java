@@ -53,6 +53,4 @@ public interface ActionVisitor<R> {
     public R visit(BaseTupleAction.Get action);
 
     public R visit(BaseTupleAction.Set action);
-
-    public R visit(StubAction action);
 }

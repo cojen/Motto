@@ -129,7 +129,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
         var anonBindings = new HashMap<BaseBinding.Anonymous, Boolean>(2);
 
-        code.baseForEach(action -> {
+        code.baseForEach(false, action -> {
             action.trackBlockLocalBindings(anonBindings);
 
             if (action instanceof BaseJumpAction jump) {
@@ -264,11 +264,12 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         BaseCallableItem callable = action.callable();
 
         if (callable.isMacro()) {
-            if (!makeMacroCall(action)) {
-                // Will need to recompile this file and try again later.
-                env().recompile();
-                mMethodMaker.new_(UnresolvedMacroException.class).throw_();
+            if (makeMacroCall(action)) {
+                return null;
             }
+            // Will need to recompile this file and try again later.
+            env().recompile();
+            mMethodMaker.new_(UnresolvedMacroException.class).throw_();
             return action.next;
         }
 
@@ -369,12 +370,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
         BlockState retState = new BlockState(mMethodMaker.label());
         retState.mNonDependents = List.of();
-        // By indicating that retDestination has been visited, visitCode won't position the
-        // label in the wrong place. The label will be positioned at the very end.
-        retState.mVisited = true;
-
         var retDestination = new BaseBlock();
-        retDestination.addAction(new StubAction(0));
         mBlockStateMap.put(retDestination, retState);
 
         Supplier<BaseBlock> factory = () -> {
@@ -413,20 +409,21 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
         if (!entry.isFullyTerminated()) {
             if (callable.signature().outputType().isVoid()) {
-                // Add a return automatically. Note that this doesn't return from the method
-                // being built, but instead it jumps to retDestination. See BaseBlock.RetJump.
-                entry.merge().return_(BaseBinding.Void.THE);
+                entry.merge().jump(retDestination);
             } else {
                 // FIXME: report a proper exception
                 env().uncaught(new Exception("not terminated"));
             }
         }
 
+        {
+            var nextBlock = new BaseBlock();
+            nextBlock.addAction(action.next);
+            retDestination.jump(nextBlock);
+        }
+
         buildBlockStateMap(entry);
         visitCode(entry);
-
-        // Position the retState label here, in order to flow into the next action.
-        retState.mLabel.here();
 
         return true;
     }
@@ -599,11 +596,6 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     public BaseAction visit(BaseTupleAction.Set action) {
         // FIXME
         throw null;
-    }
-
-    @Override
-    public BaseAction visit(StubAction action) {
-        return null;
     }
 
     private CompilationEnv env() {
