@@ -63,6 +63,16 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
     }
 
     @Override
+    boolean changeDestination(BaseBlock origin, BaseBlock oldDest, BaseBlock newDest) {
+        if (mDestination == oldDest) {
+            setDestination(origin, newDest);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
     void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
         // Nothing to do.
     }

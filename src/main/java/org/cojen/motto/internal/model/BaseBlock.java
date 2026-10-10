@@ -76,8 +76,6 @@ public sealed class BaseBlock implements Block {
     private BaseAction mFirstAction;
     private BaseAction mLastAction;
 
-    private boolean mReduced;
-
     // Can be null, a BaseBlock, or a SimpleSet<BaseBlock>.
     private Object mPredecessors;
 
@@ -107,40 +105,16 @@ public sealed class BaseBlock implements Block {
 
     @Override
     public void forEach(Consumer<? super Action> consumer) {
-        baseForEach(true, consumer);
+        baseForEach(consumer);
     }
 
-    // FIXME: remove or drop skipAny feature (rely on predecessors to remove blocks)
     void baseForEach(Consumer<? super BaseAction> consumer) {
-        baseForEach(true, consumer);
-    }
-
-    /**
-     * @param skipAny when true, skip any simple jumps (the block contains one action which
-     * jumps to another block)
-     */
-    void baseForEach(boolean skipAny, Consumer<? super BaseAction> consumer) {
         BaseAction action = mFirstAction;
 
-        if (action == null) {
-            return;
-        }
-
-        while (true) {
-            if (skipAny) {
-                action = skipSimpleJumps(action);
-                if (action == null) {
-                    break;
-                }
-            }
-
+        while (action != null) {
             consumer.accept(action);
-
             if (action instanceof FlowAction flow) {
                 action = flow.next;
-                if (action == null) {
-                    break;
-                }
             } else {
                 break;
             }
@@ -402,7 +376,44 @@ public sealed class BaseBlock implements Block {
         jump((BaseBlock) destination);
     }
 
+    @SuppressWarnings("unchecked")
     public void jump(BaseBlock destination) {
+        skip: if (mFirstAction == null) {
+            // If possible, don't make a simple jump block. Instead, update the predecessors to
+            // jump to the given destination.
+
+            // FIXME: Cannot skip if the exception handlers don't match.
+
+            Object predecessors = mPredecessors;
+
+            if (predecessors == null) {
+                break skip;
+            }
+
+            if (predecessors instanceof BaseBlock pred) {
+                if (pred.mLastAction.changeDestination(pred, this, destination)) {
+                    return;
+                }
+            } else {
+                var set = (SimpleSet<BaseBlock>) predecessors;
+                int amount = set.size();
+
+                if (amount == 0) {
+                    break skip;
+                }
+
+                for (BaseBlock pred : set) {
+                    if (pred.mLastAction.changeDestination(pred, this, destination)) {
+                        amount--;
+                    }
+                }
+
+                if (amount == 0) {
+                    return;
+                }
+            }
+        }
+
         addAction(new BaseJumpAction(this, mPosition, destination));
     }
 
@@ -415,7 +426,7 @@ public sealed class BaseBlock implements Block {
         if (condition instanceof BaseBinding.Constant constant &&
             constant.value() instanceof Boolean b)
         {
-            addAction(new BaseJumpAction(this, mPosition, b ? whenTrue : whenFalse));
+            jump(b ? whenTrue : whenFalse);
             return;
         }
 
@@ -957,120 +968,6 @@ public sealed class BaseBlock implements Block {
         }
 
         return index;
-    }
-
-    /**
-     * Reduces this block and detects blocks which are only reached once. When iterating over
-     * the actions, simple jumps are skipped for blocks which are reached once.
-     *
-     * @return false if the block isn't fully terminated
-     */
-    boolean finish() {
-        return reduce();
-    }
-
-    /**
-     * Reduces this block by attempting to shorten jump/branch paths.
-     *
-     * @return false if the block isn't fully terminated
-     */
-    boolean reduce() {
-        if (mReduced) {
-            return true;
-        }
-
-        if (!isTerminated()) {
-            return false;
-        }
-
-        // Mark early to handle loop paths.
-        mReduced = true;
-
-        BaseAction last = mLastAction;
-
-        // FIXME: Cannot use a direct destination when the exception handlers don't match.
-
-        if (last instanceof BaseJumpAction jump) {
-            BaseBlock destination = jump.destination();
-
-            if (!destination.reduce()) {
-                return false;
-            }
-
-            while (true) {
-                if (destination.mFirstAction instanceof BaseJumpAction jump2) {
-                    // Use a more direct destination.
-                    destination = jump2.destination();
-                    if (!jump.setDestination(this, destination)) {
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            }
-        } else if (last instanceof BaseBranchAction branch) {
-            BaseBlock whenTrue = branch.whenTrue();
-
-            if (!whenTrue.reduce()) {
-                return false;
-            }
-
-            while (true) {
-                if (whenTrue.mFirstAction instanceof BaseJumpAction jump) {
-                    // Use a more direct destination.
-                    whenTrue = jump.destination();
-                    if (!branch.setWhenTrue(this, whenTrue)) {
-                        break;
-                    }
-                } else if (whenTrue.mFirstAction instanceof BaseBranchAction branch2 &&
-                           sameCondition(branch, branch2))
-                {
-                    // Use a more direct destination.
-                    whenTrue = branch2.whenTrue();
-                    if (!branch.setWhenTrue(this, whenTrue)) {
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            }
-
-            BaseBlock whenFalse = branch.whenFalse();
-
-            if (!whenFalse.reduce()) {
-                return false;
-            }
-
-            while (true) {
-                if (whenFalse.mFirstAction instanceof BaseJumpAction jump) {
-                    // Use a more direct destination.
-                    whenFalse = jump.destination();
-                    if (!branch.setWhenFalse(this, whenFalse)) {
-                        break;
-                    }
-                } else if (whenFalse.mFirstAction instanceof BaseBranchAction branch2 &&
-                           sameCondition(branch, branch2))
-                {
-                    // Use a more direct destination.
-                    whenFalse = branch2.whenFalse();
-                    if (!branch.setWhenFalse(this, whenFalse)) {
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            }
-        }
-
-        return true;
-    }
-
-    private static boolean sameCondition(BaseBranchAction a, BaseBranchAction b) {
-        return sameCondition(a.condition(), b.condition());
-    }
-
-    private static boolean sameCondition(BaseBinding a, BaseBinding b) {
-        return a == b && a.isStable();
     }
 
     /**

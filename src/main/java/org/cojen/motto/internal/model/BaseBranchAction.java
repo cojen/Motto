@@ -95,6 +95,22 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
     }
 
     @Override
+    boolean changeDestination(BaseBlock origin, BaseBlock oldDest, BaseBlock newDest) {
+        if (mWhenTrue == oldDest) {
+            setWhenTrue(origin, newDest);
+            if (mWhenFalse == oldDest) {
+                setWhenFalse(origin, newDest);
+            }
+            return true;
+        } else if (mWhenFalse == oldDest) {
+            setWhenFalse(origin, newDest);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
     void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
         mCondition.trackBlockLocalSource(map);
     }

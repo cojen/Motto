@@ -141,9 +141,6 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
     }
 
     public final void assignCode(BaseBlock code) {
-        if (code != null) {
-            code.finish();
-        }
         mCode = code;
     }
 

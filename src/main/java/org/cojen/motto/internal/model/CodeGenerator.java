@@ -129,7 +129,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
         var anonBindings = new HashMap<BaseBinding.Anonymous, Boolean>(2);
 
-        code.baseForEach(false, action -> {
+        code.baseForEach(action -> {
             action.trackBlockLocalBindings(anonBindings);
 
             if (action instanceof BaseJumpAction jump) {
