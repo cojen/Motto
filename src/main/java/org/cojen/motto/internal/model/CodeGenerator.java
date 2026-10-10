@@ -406,14 +406,10 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         // FIXME: handle code.result()
 
         BaseBlock entry = code.entry();
+        BaseBlock exit = code.exit();
 
-        if (!entry.isFullyTerminated()) {
-            if (callable.signature().outputType().isVoid()) {
-                entry.merge().jump(retDestination);
-            } else {
-                // FIXME: report a proper exception
-                env().uncaught(new Exception("not terminated"));
-            }
+        if (exit != null && !exit.isTerminated()) {
+            exit.jump(retDestination);
         }
 
         {
