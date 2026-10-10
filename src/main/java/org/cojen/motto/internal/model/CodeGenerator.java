@@ -368,14 +368,11 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             params[i] = input;
         }
 
-        BlockState retState = new BlockState(mMethodMaker.label());
-        retState.mNonDependents = List.of();
-        var retDestination = new BaseBlock();
-        mBlockStateMap.put(retDestination, retState);
+        var nextBlock = new BaseBlock();
 
         Supplier<BaseBlock> factory = () -> {
-            // When the macro adds a return action, it will instead jump to retDestination.
-            return new BaseBlock.RetJump(action.output(), retDestination);
+            // When the macro adds a return action, it will instead jump to nextBlock.
+            return new BaseBlock.RetJump(action.output(), nextBlock);
         };
 
         BaseCode code;
@@ -408,10 +405,10 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
         if (exit != null && !exit.isTerminated()) {
             exit.copy(action.output(), code.result());
-            exit.jump(retDestination);
+            exit.jump(nextBlock);
         }
 
-        retDestination.addAction(action.next);
+        nextBlock.addAction(action.next);
 
         buildBlockStateMap(entry);
         visitCode(entry);
