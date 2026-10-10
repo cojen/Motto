@@ -380,12 +380,8 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         try {
             BaseMacroAccess.setLocal(new BaseMacroAccess(macroImpl));
 
-            // It would be nice if javac was a bit smarter here. The params variable cannot be
-            // modified again at this point.
-            final var fparams = params;
-
             code = BaseBlock.inScope(factory, () -> {
-                return (BaseCode) impl.invokeWithArguments(fparams);
+                return (BaseCode) impl.invokeWithArguments(params);
             });
 
             // FIXME: report a proper exception
