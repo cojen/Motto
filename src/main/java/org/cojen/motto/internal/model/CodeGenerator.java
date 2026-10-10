@@ -403,12 +403,11 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             BaseMacroAccess.removeLocal();
         }
 
-        // FIXME: handle code.result()
-
         BaseBlock entry = code.entry();
         BaseBlock exit = code.exit();
 
         if (exit != null && !exit.isTerminated()) {
+            exit.copy(action.output(), code.result());
             exit.jump(retDestination);
         }
 
