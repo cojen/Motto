@@ -411,11 +411,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             exit.jump(retDestination);
         }
 
-        {
-            var nextBlock = new BaseBlock();
-            nextBlock.addAction(action.next);
-            retDestination.jump(nextBlock);
-        }
+        retDestination.addAction(action.next);
 
         buildBlockStateMap(entry);
         visitCode(entry);
