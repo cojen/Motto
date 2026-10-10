@@ -186,17 +186,22 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
         BaseAction action = block.firstAction();
 
-        while (action != null) {
-            int lineNum = action.line();
-            if (lineNum != 0 && lineNum != mLineNum) {
-                mMethodMaker.lineNum(lineNum);
-                mLineNum = lineNum;
+        if (action != null) {
+            while (true) {
+                int lineNum = action.line();
+                if (lineNum != 0 && lineNum != mLineNum) {
+                    mMethodMaker.lineNum(lineNum);
+                    mLineNum = lineNum;
+                }
+                BaseAction next = action.accept(this);
+                if (next == null) {
+                    break;
+                }
+                action = next;
             }
-
-            action = action.accept(this);
         }
 
-        if (!block.isTerminated()) {
+        if (!(action instanceof BaseTerminalAction)) {
             mMethodMaker.return_();
         }
     }
@@ -264,9 +269,12 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         BaseCallableItem callable = action.callable();
 
         if (callable.isMacro()) {
-            if (makeMacroCall(action)) {
-                return null;
+            BaseBlock entry = applyMacroCall(action);
+
+            if (entry != null) {
+                return entry.firstAction();
             }
+
             // Will need to recompile this file and try again later.
             env().recompile();
             mMethodMaker.new_(UnresolvedMacroException.class).throw_();
@@ -346,15 +354,15 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     /**
-     * @return false if recompilation is required
+     * @return an entry block or else return null if recompilation is required
      */
-    private boolean makeMacroCall(BaseCallAction.Direct action) {
+    private BaseBlock applyMacroCall(BaseCallAction.Direct action) {
         BaseCallableItem callable = action.callable();
         MethodHandle impl = callable.findMacroImpl(env());
 
         if (impl == null) {
             // Macro hasn't been compiled yet.
-            return false;
+            return null;
         }
 
         Class<?> macroImpl = MethodHandles.publicLookup().revealDirect(impl).getDeclaringClass();
@@ -369,6 +377,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         }
 
         var nextBlock = new BaseBlock();
+        nextBlock.addAction(action.next);
 
         Supplier<BaseBlock> factory = () -> {
             // When the macro adds a return action, it will instead jump to nextBlock.
@@ -387,11 +396,11 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             // FIXME: report a proper exception
             Objects.requireNonNull(code);
         } catch (UnresolvedMacroException e) {
-            return false;
+            return null;
         } catch (Throwable e) {
             // FIXME: Should call a method which accepts the called macro (for error reporting)
             env().uncaught(e);
-            return false;
+            return null;
         } finally {
             BaseMacroAccess.removeLocal();
         }
@@ -404,12 +413,9 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             exit.jump(nextBlock);
         }
 
-        nextBlock.addAction(action.next);
-
         buildBlockStateMap(entry);
-        visitCode(entry);
 
-        return true;
+        return entry;
     }
 
     @Override
