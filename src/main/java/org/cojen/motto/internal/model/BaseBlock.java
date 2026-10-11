@@ -127,21 +127,8 @@ public sealed class BaseBlock implements Block {
         return baseIterator();
     }
 
-    private static BaseAction skipSimpleJumps(BaseAction action) {
-        while (action instanceof BaseJumpAction jump) {
-            BaseBlock destination = jump.destination();
-            if (destination.isReachedOnce()) {
-                // Flow into the next block as if it was inlined.
-                action = destination.mFirstAction;
-            } else {
-                break;
-            }
-        }
-        return action;
-    }
-
     Iterator<BaseAction> baseIterator() {
-        BaseAction action = skipSimpleJumps(mFirstAction);
+        BaseAction action = mFirstAction;
 
         return new Iterator<>() {
             BaseAction mAction = action;
@@ -158,7 +145,7 @@ public sealed class BaseBlock implements Block {
                     throw new NoSuchElementException();
                 }
                 if (next instanceof FlowAction flow) {
-                    mAction = skipSimpleJumps(flow.next);
+                    mAction = flow.next;
                 } else {
                     mAction = null;
                 }
