@@ -35,8 +35,6 @@ import org.cojen.maker.Maker;
 import org.cojen.maker.MethodMaker;
 import org.cojen.maker.Variable;
 
-import org.cojen.motto.model.UnresolvedMacroException;
-
 import org.cojen.motto.runtime.ConstantBootstraps;
 
 import org.cojen.motto.internal.compiler.CompilationEnv;
@@ -277,6 +275,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
             // Will need to recompile this file and try again later.
             env().recompile();
+            // FIXME: Assign target and call a method. Prevents dead code.
             mMethodMaker.new_(UnresolvedMacroException.class).throw_();
             return action.next;
         }

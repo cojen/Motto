@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.model;
+package org.cojen.motto.internal.model;
 
 /**
  * 
@@ -25,10 +25,9 @@ public final class UnresolvedMacroException extends Exception {
     public UnresolvedMacroException() {
     }
 
-    public UnresolvedMacroException(String message) {
-        super(message);
+    @Override
+    public Throwable fillInStackTrace() {
+        return this;
     }
-
-    // FIXME: Consider eliding the stack trace.
 }
 
