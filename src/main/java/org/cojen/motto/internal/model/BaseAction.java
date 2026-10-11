@@ -56,7 +56,7 @@ public abstract sealed class BaseAction implements Action permits FlowAction, Ba
      * If this is a jump or branch action, then change the destination(s).
      *
      * @param origin the block that this action resides in
-     * @return false if nothing changed
+     * @return true if fully changed
      */
     boolean changeDestination(BaseBlock origin, BaseBlock oldDest, BaseBlock newDest) {
         return false;
