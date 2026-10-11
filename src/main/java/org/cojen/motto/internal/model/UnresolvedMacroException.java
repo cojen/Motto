@@ -22,12 +22,18 @@ package org.cojen.motto.internal.model;
  * @author Brian S. O'Neill
  */
 public final class UnresolvedMacroException extends Exception {
-    public UnresolvedMacroException() {
+    private static final UnresolvedMacroException THE = new UnresolvedMacroException();
+
+    private UnresolvedMacroException() {
     }
 
     @Override
     public Throwable fillInStackTrace() {
         return this;
+    }
+
+    public static void throwIt() throws UnresolvedMacroException {
+        throw THE;
     }
 }
 

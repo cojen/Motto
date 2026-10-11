@@ -275,8 +275,18 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
 
             // Will need to recompile this file and try again later.
             env().recompile();
-            // FIXME: Assign target and call a method. Prevents dead code.
-            mMethodMaker.new_(UnresolvedMacroException.class).throw_();
+
+            // Throw an UnresolvedMacroException. Throwing it directly is simpler, but then the
+            // remaining code would be treated as unreachable. Instead, throw the exception
+            // indirectly and clear the output.
+
+            mMethodMaker.var(UnresolvedMacroException.class).invoke("throwIt");
+
+            BaseBinding output = action.output();
+            if (!output.type().isVoid()) {
+                forStore(output).clear();
+            }
+
             return action.next;
         }
 
