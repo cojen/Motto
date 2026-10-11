@@ -64,12 +64,7 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
 
     @Override
     boolean changeDestination(BaseBlock origin, BaseBlock oldDest, BaseBlock newDest) {
-        if (mDestination == oldDest) {
-            setDestination(origin, newDest);
-            return true;
-        } else {
-            return false;
-        }
+        return mDestination == oldDest && setDestination(origin, newDest);
     }
 
     @Override

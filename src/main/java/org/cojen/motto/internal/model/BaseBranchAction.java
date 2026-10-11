@@ -96,18 +96,9 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
 
     @Override
     boolean changeDestination(BaseBlock origin, BaseBlock oldDest, BaseBlock newDest) {
-        if (mWhenTrue == oldDest) {
-            setWhenTrue(origin, newDest);
-            if (mWhenFalse == oldDest) {
-                setWhenFalse(origin, newDest);
-            }
-            return true;
-        } else if (mWhenFalse == oldDest) {
-            setWhenFalse(origin, newDest);
-            return true;
-        } else {
-            return false;
-        }
+        return (mWhenTrue == oldDest && setWhenTrue(origin, newDest))
+            // Note: Must not be a short-circuit "or".
+            | (mWhenFalse == oldDest && setWhenFalse(origin, newDest));
     }
 
     @Override
