@@ -873,6 +873,32 @@ public final class Parser implements Closeable {
             }
 
             segments.add(st);
+
+            if (st instanceof LoadStatement && peekToken().type() == T_IDENTIFIER) {
+                /*
+                  Stop gathering more segments for this MethodCall when encountering
+                  consecutive segment names. Consider this case:
+
+                    if (a) b() else if (c) d()
+
+                  Without the rule, "if (c)" and "d()" would be treated as segments of the
+                  first "if" statement. With the rule in place, the statement is parsed
+                  correctly, similar to this:
+
+                    if (a) b() else { if (c) d() }
+
+                  The rule could also check if the LoadStatement has one path element, although
+                  that can make things more confusing. To prevent a LoadStatement from being
+                  interpreted as segment name, it must always be wrapped in a tuple statement.
+                 */
+                st = tryParseStatement(ID_SEGMENTS);
+
+                if (st != null) {
+                    segments.add(st);
+                }
+
+                break;
+            }
         }
 
         return segments;
