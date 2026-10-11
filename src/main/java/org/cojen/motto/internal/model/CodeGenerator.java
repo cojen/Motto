@@ -386,7 +386,6 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         }
 
         var nextBlock = new BaseBlock();
-        nextBlock.addAction(action.next);
 
         Supplier<BaseBlock> factory = () -> {
             // When the macro adds a return action, it will instead jump to nextBlock.
@@ -415,12 +414,16 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         }
 
         BaseBlock entry = code.entry();
-        BaseBlock exit = code.exit();
+        BaseBlock exit = entry.merge();
 
-        if (exit != null && !exit.isTerminated()) {
-            exit.copy(action.output(), code.result());
-            exit.jump(nextBlock);
+        if (exit != null) {
+            // The exit block should be a RetJump, and so the return jumps to nextBlock.
+            exit.return_(code.result());
         }
+
+        // The next action should be added after merging, to prevent it from being visited
+        // multiple times.
+        nextBlock.addAction(action.next);
 
         buildBlockStateMap(entry);
 

@@ -25,16 +25,9 @@ import org.cojen.motto.internal.model.BaseCode;
  */
 public sealed interface Code permits BaseCode {
     /**
-     * Returns the entry block into the code. All blocks except for the exit block are
-     * terminated.
+     * Returns the entry block into the code.
      */
     public Block entry();
-
-    /**
-     * Returns the optional exit block, which is non-terminated. If applicable, the result
-     * value is guaranteed to have been assigned before the exit block is reached.
-     */
-    public Block exit();
 
     /**
      * Returns the result value binding, which might be {@code Binding#void_ void}.

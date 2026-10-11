@@ -28,23 +28,17 @@ import org.cojen.motto.model.Code;
  * @author Brian S. O'Neill
  */
 public final class BaseCode implements Code {
-    private final BaseBlock mEntry, mExit;
+    private final BaseBlock mEntry;
     private final BaseBinding mResult;
 
     public BaseCode(BaseBlock entry, BaseBinding result) {
         mEntry = entry;
-        mExit = entry.merge();
         mResult = Objects.requireNonNull(result);
     }
 
     @Override
     public BaseBlock entry() {
         return mEntry;
-    }
-
-    @Override
-    public BaseBlock exit() {
-        return mExit;
     }
 
     @Override
