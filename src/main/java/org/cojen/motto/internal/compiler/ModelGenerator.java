@@ -36,6 +36,7 @@ import org.cojen.motto.internal.model.BaseCallSignature;
 import org.cojen.motto.internal.model.BaseCallableItem;
 import org.cojen.motto.internal.model.BaseClassTypeItem;
 import org.cojen.motto.internal.model.BaseCode;
+import org.cojen.motto.internal.model.BaseCodeType;
 import org.cojen.motto.internal.model.BaseFieldItem;
 import org.cojen.motto.internal.model.BaseFunctionType;
 import org.cojen.motto.internal.model.BaseInferredType;
@@ -609,18 +610,31 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
                 BaseBinding argBinding;
 
-                if (!(inputItem.type() instanceof BaseFunctionType ft) ||
-                    ((arg instanceof TupleStatement ts) && !ts.isCode()))
+                if (!(inputItem.type() instanceof BaseCodeType ct) ||
+                    (arg instanceof TupleStatement ts && ts.isCode()))
                 {
                     argBinding = arg.accept(this);
-                } else {
-                    // FIXME: code
-                    throw null;
-                }
 
-                if (argBinding == null) {
-                    // Error state.
-                    return null;
+                    if (argBinding == null) {
+                        // Error state.
+                        return null;
+                    }
+                } else {
+                    arg = arg.noLabel(mEnv);
+
+                    var scope = new ModelScope.CodeItem(this, mScope);
+                    enterScope(scope);
+                    scope.prepare();
+                    int numErrors = mEnv.numErrors();
+                    doVisitCode(arg, List.of(arg));
+                    mScope = scope.parent();
+
+                    if (mEnv.numErrors() > numErrors) {
+                        // Error state.
+                        return null;
+                    }
+
+                    argBinding = new BaseBinding.CodeBinding(scope.extractCode());
                 }
 
                 inputBindings[offset++] = argBinding;
@@ -2090,7 +2104,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
         BaseTupleType tt = vt.type;
 
-        // FIXME: Consider doing this only for evaluated tuples.
         if (tt.numFields() == 1 && tt.fieldName(0) == null) {
             // A single element tuple is just a grouped expression. It can be converted into a
             // tuple easily enough by the receiver if necessary.
