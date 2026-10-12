@@ -36,7 +36,10 @@ public abstract sealed class BaseAction implements Action permits FlowAction, Ba
         mPosition = position;
     }
 
-    public abstract <R> R accept(ActionVisitor<R> visitor);
+    /**
+     * @param block the block the action resides in
+     */
+    public abstract <R> R accept(BaseBlock block, ActionVisitor<R> visitor);
 
     @Override
     public int line() {
@@ -53,13 +56,21 @@ public abstract sealed class BaseAction implements Action permits FlowAction, Ba
     }
 
     /**
-     * If this is a jump or branch action, then change the destination(s).
+     * If this is a jump or branch action, then attempt to change the destination(s).
      *
      * @param origin the block that this action resides in
-     * @return true if fully changed
      */
-    boolean changeDestination(BaseBlock origin, BaseBlock oldDest, BaseBlock newDest) {
-        return false;
+    void changeDestination(BaseBlock origin, BaseBlock oldDest, BaseBlock newDest) {
+    }
+
+    /**
+     * Called when this action is moved to another block. If this is a jump or branch action,
+     * the block predecessors are updated.
+     *
+     * @param oldOrigin the block that this action currently resides in
+     * @param newOrigin the block that this action is moved to
+     */
+    void moved(BaseBlock oldOrigin, BaseBlock newOrigin) {
     }
 
     /**

@@ -171,7 +171,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         doVisitCode(block, mBlockStateMap.get(block));
     }
 
-    private void doVisitCode(BaseBlock block, BlockState state) {
+    private void doVisitCode(final BaseBlock block, BlockState state) {
         if (state != null) {
             // Removing local variable associations for bindings that aren't dependent on
             // incoming blocks helps the Maker peephole optimizer reduce the amount of
@@ -191,7 +191,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
                     mMethodMaker.lineNum(lineNum);
                     mLineNum = lineNum;
                 }
-                BaseAction next = action.accept(this);
+                BaseAction next = action.accept(block, this);
                 if (next == null) {
                     break;
                 }
@@ -205,7 +205,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     @Override
-    public BaseAction visit(BaseArrayAction.New action) {
+    public BaseAction visit(BaseBlock block, BaseArrayAction.New action) {
         var params = new Object[action.numDimensions()];
         for (int i=0; i<params.length; i++) {
             params[i] = forLoad(action.dimension(i));
@@ -217,7 +217,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     @Override
-    public BaseAction visit(BaseArrayAction.Get action) {
+    public BaseAction visit(BaseBlock block, BaseArrayAction.Get action) {
         Variable result = variableFor(action.array()).aget(forLoad(action.index()));
 
         forStore(action.output()).set(result);
@@ -226,14 +226,14 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     @Override
-    public BaseAction visit(BaseArrayAction.Set action) {
+    public BaseAction visit(BaseBlock block, BaseArrayAction.Set action) {
         variableFor(action.array()).aset(forLoad(action.index()), forLoad(action.value()));
 
         return action.next;
     }
 
     @Override
-    public BaseAction visit(BaseBranchAction action) {
+    public BaseAction visit(BaseBlock block, BaseBranchAction action) {
         // FIXME: Convert to switch statements if possible. Pattern matching should probably
         // start with the eq/ne math intrinsic action. For now, only support int and Integer
         // cases. A special switch macro can be used to generate code for cases that don't map
@@ -263,11 +263,11 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     @Override
-    public BaseAction visit(BaseCallAction.Direct action) {
+    public BaseAction visit(BaseBlock block, BaseCallAction.Direct action) {
         BaseCallableItem callable = action.callable();
 
         if (callable.isMacro()) {
-            BaseBlock entry = applyMacroCall(action);
+            BaseBlock entry = applyMacroCall(block, action);
 
             if (entry != null) {
                 return entry.firstAction();
@@ -365,7 +365,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     /**
      * @return an entry block or else return null if recompilation is required
      */
-    private BaseBlock applyMacroCall(BaseCallAction.Direct action) {
+    private BaseBlock applyMacroCall(BaseBlock block, BaseCallAction.Direct action) {
         BaseCallableItem callable = action.callable();
         MethodHandle impl = callable.findMacroImpl(env());
 
@@ -385,11 +385,11 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
             params[i] = input;
         }
 
-        var nextBlock = new BaseBlock();
+        var lastBlock = new BaseBlock();
 
         Supplier<BaseBlock> factory = () -> {
-            // When the macro adds a return action, it will instead jump to nextBlock.
-            return new BaseBlock.RetJump(action.output(), nextBlock);
+            // When the macro adds a return action, it will instead jump to lastBlock.
+            return new BaseBlock.RetJump(action.output(), lastBlock);
         };
 
         BaseCode code;
@@ -414,16 +414,20 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
         }
 
         BaseBlock entry = code.entry();
-        BaseBlock exit = entry.merge();
+
+        // Skip the lastBlock, to ensure that it remains empty and non-terminated.
+        BaseBlock exit = entry.merge(b -> b == lastBlock);
 
         if (exit != null) {
-            // The exit block should be a RetJump, and so the return jumps to nextBlock.
+            // The exit block should be a RetJump, and so return instead jumps to lastBlock.
             exit.return_(code.result());
         }
 
-        // The next action should be added after merging, to prevent it from being visited
-        // multiple times.
-        nextBlock.addAction(action.next);
+        // Move the next action to lastBlock such that the action is reachable from the entry.
+        block.transfer(action, lastBlock);
+
+        // Skip over simple blocks, but not too soon. Otherwise, lastBlock can get skipped.
+        entry = entry.skipAhead();
 
         buildBlockStateMap(entry);
 
@@ -431,7 +435,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     @Override
-    public BaseAction visit(BaseCallAction.New action) {
+    public BaseAction visit(BaseBlock block, BaseCallAction.New action) {
         var params = new Object[action.numInputs()];
         for (int i=0; i<params.length; i++) {
             params[i] = forLoad(action.input(i));
@@ -445,7 +449,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     @Override
-    public BaseAction visit(BaseCallAction.Virtual action) {
+    public BaseAction visit(BaseBlock block, BaseCallAction.Virtual action) {
         BaseBinding instanceBinding = action.input(0);
         BaseCallableItem callable = action.callable();
         BaseCallSignature signature = callable.signature();
@@ -489,20 +493,20 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     @Override
-    public BaseAction visit(BaseCastAction action) {
+    public BaseAction visit(BaseBlock block, BaseCastAction action) {
         //forStore(action.target()).set(variableFor(action.source()).cast(action.targetType().asMakerType()));
         // FIXME: BaseCastAction
         throw null;
     }
 
     @Override
-    public BaseAction visit(BaseConvertAction action) {
+    public BaseAction visit(BaseBlock block, BaseConvertAction action) {
         // FIXME: BaseConvertAction
         throw null;
     }
 
     @Override
-    public BaseAction visit(BaseCopyAction action) {
+    public BaseAction visit(BaseBlock block, BaseCopyAction action) {
         BaseBinding target = action.target();
 
         /* FIXME: return optimization
@@ -526,21 +530,21 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     @Override
-    public BaseAction visit(BaseJumpAction action) {
-        BaseBlock block = action.destination();
+    public BaseAction visit(BaseBlock block, BaseJumpAction action) {
+        BaseBlock dest = action.destination();
 
-        if (shouldInline(block)) {
-            doVisitCode(block);
+        if (shouldInline(dest)) {
+            doVisitCode(dest);
         } else {
-            label(block).goto_();
-            maybeVisitLater(block);
+            label(dest).goto_();
+            maybeVisitLater(dest);
         }
 
         return null;
     }
 
     @Override
-    public BaseAction visit(BaseReturnAction action) {
+    public BaseAction visit(BaseBlock block, BaseReturnAction action) {
         BaseBinding result = action.result();
         if (result.type().isVoid()) {
             mMethodMaker.return_();
@@ -552,7 +556,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     @Override
-    public BaseAction visit(BaseThrowAction action) {
+    public BaseAction visit(BaseBlock block, BaseThrowAction action) {
         BaseBinding ex = action.exception();
 
         if (ex instanceof BaseBinding.Null ||
@@ -567,7 +571,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     @Override
-    public BaseAction visit(BaseTupleAction.New action) {
+    public BaseAction visit(BaseBlock block, BaseTupleAction.New action) {
         var params = new Object[action.numInputs()];
         for (int i=0; i<params.length; i++) {
             params[i] = forLoad(action.input(i));
@@ -589,15 +593,20 @@ final class CodeGenerator implements ActionVisitor<BaseAction> {
     }
 
     @Override
-    public BaseAction visit(BaseTupleAction.Get action) {
+    public BaseAction visit(BaseBlock block, BaseTupleAction.Get action) {
         // FIXME
         throw null;
     }
 
     @Override
-    public BaseAction visit(BaseTupleAction.Set action) {
+    public BaseAction visit(BaseBlock block, BaseTupleAction.Set action) {
         // FIXME
         throw null;
+    }
+
+    @Override
+    public BaseAction visit(BaseBlock block, UnreachableAction action) {
+        throw new AssertionError();
     }
 
     private CompilationEnv env() {

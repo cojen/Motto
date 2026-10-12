@@ -22,35 +22,37 @@ package org.cojen.motto.internal.model;
  * @author Brian S. O'Neill
  */
 public interface ActionVisitor<R> {
-    public R visit(BaseArrayAction.New action);
+    public R visit(BaseBlock block, BaseArrayAction.New action);
 
-    public R visit(BaseArrayAction.Get action);
+    public R visit(BaseBlock block, BaseArrayAction.Get action);
 
-    public R visit(BaseArrayAction.Set action);
+    public R visit(BaseBlock block, BaseArrayAction.Set action);
 
-    public R visit(BaseBranchAction action);
+    public R visit(BaseBlock block, BaseBranchAction action);
 
-    public R visit(BaseCallAction.Direct action);
+    public R visit(BaseBlock block, BaseCallAction.Direct action);
 
-    public R visit(BaseCallAction.New action);
+    public R visit(BaseBlock block, BaseCallAction.New action);
 
-    public R visit(BaseCallAction.Virtual action);
+    public R visit(BaseBlock block, BaseCallAction.Virtual action);
 
-    public R visit(BaseCastAction action);
+    public R visit(BaseBlock block, BaseCastAction action);
 
-    public R visit(BaseConvertAction action);
+    public R visit(BaseBlock block, BaseConvertAction action);
 
-    public R visit(BaseCopyAction action);
+    public R visit(BaseBlock block, BaseCopyAction action);
 
-    public R visit(BaseJumpAction action);
+    public R visit(BaseBlock block, BaseJumpAction action);
 
-    public R visit(BaseReturnAction action);
+    public R visit(BaseBlock block, BaseReturnAction action);
 
-    public R visit(BaseThrowAction action);
+    public R visit(BaseBlock block, BaseThrowAction action);
 
-    public R visit(BaseTupleAction.New action);
+    public R visit(BaseBlock block, BaseTupleAction.New action);
 
-    public R visit(BaseTupleAction.Get action);
+    public R visit(BaseBlock block, BaseTupleAction.Get action);
 
-    public R visit(BaseTupleAction.Set action);
+    public R visit(BaseBlock block, BaseTupleAction.Set action);
+
+    public R visit(BaseBlock block, UnreachableAction action);
 }

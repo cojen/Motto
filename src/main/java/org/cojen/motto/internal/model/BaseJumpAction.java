@@ -39,8 +39,8 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
     }
 
     @Override
-    public <R> R accept(ActionVisitor<R> visitor) {
-        return visitor.visit(this);
+    public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
+        return visitor.visit(block, this);
     }
 
     @Override
@@ -63,8 +63,16 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
     }
 
     @Override
-    boolean changeDestination(BaseBlock origin, BaseBlock oldDest, BaseBlock newDest) {
-        return mDestination == oldDest && setDestination(origin, newDest);
+    void changeDestination(BaseBlock origin, BaseBlock oldDest, BaseBlock newDest) {
+        if (mDestination == oldDest) {
+            setDestination(origin, newDest);
+        }
+    }
+
+    @Override
+    void moved(BaseBlock oldOrigin, BaseBlock newOrigin) {
+        mDestination.removePredecessor(oldOrigin);
+        mDestination.addPredecessor(newOrigin);
     }
 
     @Override

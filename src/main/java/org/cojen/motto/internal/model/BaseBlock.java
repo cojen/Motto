@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.cojen.motto.internal.util.SimpleSet;
@@ -193,30 +194,41 @@ public sealed class BaseBlock implements Block {
 
     @Override
     public BaseBlock merge() {
-        return merge(this, null, new HashSet<>());
+        return merge(null);
     }
 
-    private BaseBlock merge(BaseBlock block, BaseBlock common, HashSet<BaseBlock> visited) {
+    /**
+     * @param skip if non-null, returns true if the given non-terminated block should be ignored
+     */
+    public BaseBlock merge(Predicate<? super Block> skip) {
+        return merge(this, skip, null, new HashSet<>());
+    }
+
+    private BaseBlock merge(BaseBlock block, Predicate<? super Block> skip,
+                            BaseBlock common, HashSet<BaseBlock> visited)
+    {
         // Note: The block being processed can match the common block when following a path
         // which was already merged.
         while (block != common && visited.add(block)) {
             BaseAction last = block.mLastAction;
 
             if (last == null || !(last instanceof TerminalAction)) {
-                if (common == null) {
-                    // Must call newBaseBlock from the block that initiated the merge, not the
-                    // block participating in the merge. This ensures that a merge against a
-                    // RetJump block creates a new RetJump block.
-                    common = this.newBaseBlock();
+                if (skip == null || !skip.test(block)) {
+                    if (common == null) {
+                        // Must call newBaseBlock from the block that initiated the merge, not
+                        // the block participating in the merge. This ensures that a merge
+                        // against a RetJump block creates a new RetJump block.
+                        common = this.newBaseBlock();
+                    }
+                    block.jump(common);
                 }
-                block.jump(common);
                 break;
             }
 
             if (last instanceof BaseJumpAction jump) {
                 block = jump.destination(); // tail call
             } else if (last instanceof BaseBranchAction branch) {
-                common = merge(branch.whenTrue(), common, visited);
+                common = merge(branch.whenTrue(), skip, common, visited);
                 block = branch.whenFalse(); // tail call
             } else {
                 break;
@@ -363,45 +375,33 @@ public sealed class BaseBlock implements Block {
         jump((BaseBlock) destination);
     }
 
-    @SuppressWarnings("unchecked")
     public void jump(BaseBlock destination) {
-        skip: if (mFirstAction == null) {
-            // If possible, don't make a simple jump block. Instead, update the predecessors to
-            // jump to the given destination.
+        addJumpAction(new BaseJumpAction(this, mPosition, destination.skipAhead()));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void addJumpAction(BaseJumpAction jump) {
+        if (mFirstAction == null) {
+            // If possible, update the predecessors to jump ahead to the given destination,
+            // skipping this simple block. The jump is still added to this block, in case it's
+            // reached later.
 
             // FIXME: Cannot skip if the exception handlers don't match.
 
             Object predecessors = mPredecessors;
 
-            if (predecessors == null) {
-                break skip;
-            }
-
-            if (predecessors instanceof BaseBlock pred) {
-                if (pred.mLastAction.changeDestination(pred, this, destination)) {
-                    return;
-                }
-            } else {
-                var set = (SimpleSet<BaseBlock>) predecessors;
-                int amount = set.size();
-
-                if (amount == 0) {
-                    break skip;
-                }
-
-                for (BaseBlock pred : set) {
-                    if (pred.mLastAction.changeDestination(pred, this, destination)) {
-                        amount--;
+            if (predecessors != null) {
+                if (predecessors instanceof BaseBlock pred) {
+                    pred.mLastAction.changeDestination(pred, this, jump.destination());
+                } else {
+                    for (BaseBlock pred : (SimpleSet<BaseBlock>) predecessors) {
+                        pred.mLastAction.changeDestination(pred, this, jump.destination());
                     }
-                }
-
-                if (amount == 0) {
-                    return;
                 }
             }
         }
 
-        addAction(new BaseJumpAction(this, mPosition, destination));
+        addAction(jump);
     }
 
     @Override
@@ -416,6 +416,9 @@ public sealed class BaseBlock implements Block {
             jump(b ? whenTrue : whenFalse);
             return;
         }
+
+        whenTrue = whenTrue.skipAhead();
+        whenFalse = whenFalse.skipAhead();
 
         if (condition instanceof BaseBinding.Branch b && b.mergeBlock() == this) {
             b.skip(whenTrue, whenFalse);
@@ -736,7 +739,7 @@ public sealed class BaseBlock implements Block {
         }
     }
 
-    void addAction(BaseAction action) {
+    private void addAction(BaseAction action) {
         BaseAction last = mLastAction;
 
         if (last == null) {
@@ -748,6 +751,37 @@ public sealed class BaseBlock implements Block {
         }
 
         mLastAction = action;
+    }
+
+    /**
+     * If this is a simple block which jumps to another, return the final destination.
+     */
+    BaseBlock skipAhead() {
+        BaseBlock block = this;
+        while (block.mFirstAction instanceof BaseJumpAction jump) {
+            block = jump.destination();
+        }
+        return block;
+    }
+
+    /**
+     * Move the next action of the given flow action (of this block) to another block. The next
+     * action of the given flow action then becomes {@link UnreachableAction unreachable}.
+     *
+     * @throws TerminatedBlockException if the destination block is terminated
+     */
+    void transfer(FlowAction action, BaseBlock destination) {
+        BaseAction next = action.next;
+
+        if (next instanceof BaseJumpAction jump) {
+            destination.addJumpAction(jump);
+        } else {
+            destination.addAction(next);
+        }
+
+        next.moved(this, destination);
+
+        action.next = UnreachableAction.THE;
     }
 
     BaseAction firstAction() {

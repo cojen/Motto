@@ -47,8 +47,8 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
     }
 
     @Override
-    public <R> R accept(ActionVisitor<R> visitor) {
-        return visitor.visit(this);
+    public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
+        return visitor.visit(block, this);
     }
 
     @Override
@@ -95,10 +95,21 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
     }
 
     @Override
-    boolean changeDestination(BaseBlock origin, BaseBlock oldDest, BaseBlock newDest) {
-        return (mWhenTrue == oldDest && setWhenTrue(origin, newDest))
-            // Note: Must not be a short-circuit "and".
-            & (mWhenFalse == oldDest && setWhenFalse(origin, newDest));
+    void changeDestination(BaseBlock origin, BaseBlock oldDest, BaseBlock newDest) {
+        if (mWhenTrue == oldDest) {
+            setWhenTrue(origin, newDest);
+        }
+        if (mWhenFalse == oldDest) {
+            setWhenFalse(origin, newDest);
+        }
+    }
+
+    @Override
+    void moved(BaseBlock oldOrigin, BaseBlock newOrigin) {
+        mWhenTrue.removePredecessor(oldOrigin);
+        mWhenTrue.addPredecessor(newOrigin);
+        mWhenFalse.removePredecessor(oldOrigin);
+        mWhenFalse.addPredecessor(newOrigin);
     }
 
     @Override

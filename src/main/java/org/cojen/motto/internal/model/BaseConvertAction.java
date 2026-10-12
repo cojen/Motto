@@ -30,7 +30,7 @@ public abstract non-sealed class BaseConvertAction extends FlowAction implements
     }
 
     @Override
-    public <R> R accept(ActionVisitor<R> visitor) {
-        return visitor.visit(this);
+    public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
+        return visitor.visit(block, this);
     }
 }
