@@ -398,21 +398,21 @@ abstract sealed class ModelScope {
          * Constructor for callables.
          */
         Code(ModelGenerator modGen, ModelScope parent, BaseItem item) {
-            super(modGen, parent, item);
-
-            mEntryBlock = mActiveBlock = new BaseBlock();
-            mLocals = Map.of();
-            mLabels = Map.of();
+            this(modGen, parent, item, new BaseBlock());
         }
 
         /**
          * Constructor for nested code scopes.
          */
-        Code(ModelGenerator modGen, ModelScope parent) {
-            if (!(parent instanceof Code)) {
-                throw new IllegalArgumentException();
-            }
-            this(modGen, parent, new BaseScopeItem(parent.mItem));
+        Code(ModelGenerator modGen, ModelScope.Code parent, BaseBlock entry) {
+            this(modGen, parent, new BaseScopeItem(parent.mItem), entry);
+        }
+
+        private Code(ModelGenerator modGen, ModelScope parent, BaseItem item, BaseBlock entry) {
+            super(modGen, parent, item);
+            mEntryBlock = mActiveBlock = entry;
+            mLocals = Map.of();
+            mLabels = Map.of();
         }
 
         @Override
@@ -803,7 +803,8 @@ abstract sealed class ModelScope {
      */
     static final class Nested extends Code {
         Nested(ModelGenerator modGen, ModelScope parent) {
-            super(modGen, parent);
+            var pc = ((Code) parent);
+            super(modGen, pc, pc.mActiveBlock);
         }
 
         @Override
@@ -824,10 +825,7 @@ abstract sealed class ModelScope {
 
         @Override
         ModelScope finish() {
-            if (!mEntryBlock.isEmpty()) {
-                ((Code) mParent).mActiveBlock.addAll(mEntryBlock);
-            }
-
+            ((Code) mParent).mActiveBlock = mActiveBlock;
             return mParent;
         }
     }
@@ -841,7 +839,7 @@ abstract sealed class ModelScope {
         private BaseBlock mYieldBlock;
 
         CodeItem(ModelGenerator modGen, ModelScope parent) {
-            super(modGen, parent);
+            super(modGen, (Code) parent, new BaseBlock());
         }
 
         void prepare() {

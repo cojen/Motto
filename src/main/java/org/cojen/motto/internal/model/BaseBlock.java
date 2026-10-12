@@ -725,20 +725,6 @@ public sealed class BaseBlock implements Block {
         sourcePosition(BaseAction.encodePosition(line, column));
     }
 
-    /**
-     * Adds all the actions from the given block to this one. The other block should be
-     * discarded.
-     *
-     * @throws TerminatedBlockException if this block is terminated
-     */
-    public void addAll(BaseBlock other) {
-        BaseAction first = other.mFirstAction;
-        if (first != null) {
-            addAction(first);
-            mLastAction = other.mLastAction;
-        }
-    }
-
     private void addAction(BaseAction action) {
         BaseAction last = mLastAction;
 
