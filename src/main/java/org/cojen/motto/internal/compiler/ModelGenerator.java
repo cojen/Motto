@@ -1445,8 +1445,10 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
     @Override
     public BaseBinding visit(LabeledStatement st) {
-        if (checkUnreachable(st)) {
-            return null;
+        if (!mScope.isReachable()) {
+            // It might become reachable later, but there's no guarantee. Full reachability
+            // analysis must still be performed later.
+            mScope.setActiveBlock(new BaseBlock());
         }
 
         if (!mScope.labelVisited(st)) {
