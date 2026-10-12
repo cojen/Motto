@@ -759,13 +759,15 @@ public sealed class BaseBlock implements Block {
     void transfer(FlowAction action, BaseBlock destination) {
         BaseAction next = action.next;
 
-        if (next instanceof BaseJumpAction jump) {
-            destination.addJumpAction(jump);
-        } else {
-            destination.addAction(next);
-        }
+        if (next != null) {
+            if (next instanceof BaseJumpAction jump) {
+                destination.addJumpAction(jump);
+            } else {
+                destination.addAction(next);
+            }
 
-        next.moved(this, destination);
+            next.moved(this, destination);
+        }
 
         action.next = UnreachableAction.THE;
     }
