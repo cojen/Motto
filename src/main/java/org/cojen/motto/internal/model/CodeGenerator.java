@@ -35,6 +35,8 @@ import org.cojen.maker.Maker;
 import org.cojen.maker.MethodMaker;
 import org.cojen.maker.Variable;
 
+import org.cojen.motto.model.UnresolvedMacroException;
+
 import org.cojen.motto.runtime.ConstantBootstraps;
 
 import org.cojen.motto.internal.compiler.CompilationEnv;

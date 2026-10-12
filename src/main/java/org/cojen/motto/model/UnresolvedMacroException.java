@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package org.cojen.motto.internal.model;
+package org.cojen.motto.model;
 
 /**
  * 
@@ -22,6 +22,9 @@ package org.cojen.motto.internal.model;
  * @author Brian S. O'Neill
  */
 public final class UnresolvedMacroException extends Exception {
+    // Note: This class must be public because it's thrown from generated code that lives
+    // outside the motto module.
+
     private static final UnresolvedMacroException THE = new UnresolvedMacroException();
 
     private UnresolvedMacroException() {
