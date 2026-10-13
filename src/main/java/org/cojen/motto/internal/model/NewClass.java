@@ -40,7 +40,6 @@ import org.cojen.motto.internal.compiler.CompilationEnv;
 import org.cojen.motto.model.Block;
 import org.cojen.motto.model.CallableItem;
 import org.cojen.motto.model.CallSignature;
-import org.cojen.motto.model.Code;
 import org.cojen.motto.model.MacroAccess;
 
 import static org.cojen.motto.internal.model.Modifiers.*;
@@ -487,7 +486,7 @@ public sealed class NewClass extends BaseClassTypeItem permits NewLocalClass {
                 // which are only needed by the macros class.
                 Object[] paramTypes = makerParamsFor(method, signature);
 
-                mm = macrosMaker.addMethod(Code.class, methodName, paramTypes);
+                mm = macrosMaker.addMethod(Block.class, methodName, paramTypes);
                 method.applyModifiers(mm);
                 applyParamNames(mm, method, signature);
                 mm.public_();

@@ -742,12 +742,12 @@ public abstract sealed class BaseBinding implements Binding {
      * Defines a binding which refers to code which can be passed to a macro call.
      */
     public static final class CodeBinding extends Unmodifiable {
-        private final BaseCode mCode;
+        private final BaseBlock mEntry;
         private final BaseCodeType mType;
 
-        public CodeBinding(BaseCode code) {
-            mCode = code;
-            mType = BaseCodeType.from(code.result().type());
+        public CodeBinding(BaseBlock entry, BaseType resultType) {
+            mEntry = entry;
+            mType = BaseCodeType.from(resultType);
         }
 
         @Override
@@ -755,8 +755,8 @@ public abstract sealed class BaseBinding implements Binding {
             return mType;
         }
 
-        public BaseCode code() {
-            return mCode;
+        public BaseBlock entry() {
+            return mEntry;
         }
     }
 }

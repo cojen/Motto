@@ -420,29 +420,33 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
         for (int i=0; i<params.length; i++) {
             Object input = action.input(i);
             if (input instanceof BaseBinding.CodeBinding cb) {
-                input = cb.code();
+                input = cb.entry();
             }
             params[i] = input;
         }
 
         var lastBlock = new BaseBlock();
 
+        // FIXME: Use BaseInferredType and a block context to track it. Macros can return a
+        // block instead. Calling asCode is error prone. Eventually remove it. Consider making
+        // all Blocks have an inferred result binding, which links to the context.
+
         Supplier<BaseBlock> factory = () -> {
             // When the macro adds a return action, it will instead jump to lastBlock.
             return new BaseBlock.RetJump(action.output(), lastBlock);
         };
 
-        BaseCode code;
+        BaseBlock entry;
 
         try {
             BaseMacroAccess.setLocal(new BaseMacroAccess(macroImpl));
 
-            code = BaseBlock.inScope(factory, () -> {
-                return (BaseCode) impl.invokeWithArguments(params);
+            entry = BaseBlock.inScope(factory, () -> {
+                return (BaseBlock) impl.invokeWithArguments(params);
             });
 
             // FIXME: report a proper exception
-            Objects.requireNonNull(code);
+            Objects.requireNonNull(entry);
         } catch (UnresolvedMacroException e) {
             return null;
         } catch (Throwable e) {
@@ -453,14 +457,13 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
             BaseMacroAccess.removeLocal();
         }
 
-        BaseBlock entry = code.entry();
-
         // Skip the lastBlock, to ensure that it remains empty and non-terminated.
         BaseBlock exit = entry.merge(b -> b == lastBlock);
 
         if (exit != null) {
-            // The exit block should be a RetJump, and so return instead jumps to lastBlock.
-            exit.return_(code.result());
+            // The exit block should be a RetJump, and so this actually jumps to lastBlock.
+            // FIXME: Support result value.
+            exit.return_(BaseBinding.Void.THE);
         }
 
         // Move the next action to lastBlock such that the action is reachable from the entry.

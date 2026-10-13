@@ -239,20 +239,6 @@ public sealed class BaseBlock implements Block {
     }
 
     @Override
-    public BaseCode asCode() {
-        return asCode(BaseBinding.Void.THE);
-    }
-
-    @Override
-    public BaseCode asCode(Binding result) {
-        return asCode((BaseBinding) result);
-    }
-
-    public BaseCode asCode(BaseBinding result) {
-        return new BaseCode(this, result);
-    }
-
-    @Override
     public BaseBinding.Anonymous var(Type type) {
         return var((BaseType) type);
     }

@@ -35,7 +35,6 @@ import org.cojen.motto.internal.model.BaseBooleanType;
 import org.cojen.motto.internal.model.BaseCallSignature;
 import org.cojen.motto.internal.model.BaseCallableItem;
 import org.cojen.motto.internal.model.BaseClassTypeItem;
-import org.cojen.motto.internal.model.BaseCode;
 import org.cojen.motto.internal.model.BaseCodeType;
 import org.cojen.motto.internal.model.BaseFieldItem;
 import org.cojen.motto.internal.model.BaseFunctionType;
@@ -634,7 +633,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                         return null;
                     }
 
-                    argBinding = new BaseBinding.CodeBinding(scope.extractCode());
+                    // FIXME: The result must be managed by the block context.
+                    argBinding = new BaseBinding.CodeBinding(scope.extractCode(), BaseVoidType.THE);
                 }
 
                 inputBindings[offset++] = argBinding;
@@ -796,8 +796,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             if (numItems == 0) {
                 // Create an empty code block. This special case isn't all that unusual
                 // considering that {} is an illegal type anyhow. See TupleStatement.asVarType.
-                var code = new BaseCode(new BaseBlock(), BaseBinding.Void.THE);
-                var input = new BaseBinding.CodeBinding(code);
+                var input = new BaseBinding.CodeBinding(new BaseBlock(), BaseVoidType.THE);
                 var tt = BaseTupleType.from(input.type());
                 return new VisitedTuple(tt, new BaseBinding[] {input});
             }
@@ -825,7 +824,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
                 doVisitCode(item, subItems);
 
-                var input = new BaseBinding.CodeBinding(scope.extractCode());
+                // FIXME: The result must be managed by the block context.
+                var input = new BaseBinding.CodeBinding(scope.extractCode(), BaseVoidType.THE);
 
                 types[i] = input.type();
                 inputs[i] = input;

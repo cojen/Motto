@@ -25,7 +25,6 @@ import org.cojen.motto.internal.model.BaseBinding;
 import org.cojen.motto.internal.model.BaseBlock;
 import org.cojen.motto.internal.model.BaseCallableItem;
 import org.cojen.motto.internal.model.BaseCallSignature;
-import org.cojen.motto.internal.model.BaseCode;
 import org.cojen.motto.internal.model.BaseInferredType;
 import org.cojen.motto.internal.model.BaseItem;
 import org.cojen.motto.internal.model.BaseScopeItem;
@@ -834,6 +833,7 @@ abstract sealed class ModelScope {
      * Scope for a code tuple item.
      */
     static final class CodeItem extends Code {
+        // FIXME: The result must be managed by the block context.
         private BaseInferredType mResultType;
         private BaseBinding mResult;
         private BaseBlock mYieldBlock;
@@ -888,11 +888,10 @@ abstract sealed class ModelScope {
             return true;
         }
 
-        BaseCode extractCode() {
-            // Note: Only the code is extracted, but the locals and labels are shared.
-            var code = new BaseCode(mEntryBlock, mResult);
+        BaseBlock extractCode() {
+            BaseBlock entry = mEntryBlock;
             mEntryBlock = null;
-            return code;
+            return entry;
         }
     }
 }

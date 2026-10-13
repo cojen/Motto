@@ -21,7 +21,7 @@ import java.util.Set;
 
 import org.cojen.motto.internal.util.InternSet;
 
-import org.cojen.motto.model.Code;
+import org.cojen.motto.model.Block;
 import org.cojen.motto.model.Type;
 
 /**
@@ -85,7 +85,7 @@ public final class BaseCodeType extends GeneratedType
 
     @Override
     public BaseType forMacro() {
-        return BaseType.from(Code.class);
+        return BaseType.from(Block.class);
     }
 
     @Override

@@ -24,8 +24,8 @@ import java.util.Objects;
 
 import org.cojen.maker.MethodMaker;
 
+import org.cojen.motto.model.Block;
 import org.cojen.motto.model.CallableItem;
-import org.cojen.motto.model.Code;
 import org.cojen.motto.model.Item;
 
 import org.cojen.motto.internal.compiler.CompilationEnv;
@@ -242,7 +242,7 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
                 paramTypes[i] = typeClass;
             }
 
-            MethodType mt = MethodType.methodType(Code.class, paramTypes);
+            MethodType mt = MethodType.methodType(Block.class, paramTypes);
 
             MethodHandle mh;
 
