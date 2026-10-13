@@ -725,6 +725,11 @@ public sealed class BaseBlock implements Block {
         sourcePosition(BaseAction.encodePosition(line, column));
     }
 
+    int firstSourcePosition() {
+        BaseAction first = mFirstAction;
+        return first == null ? mPosition : first.position();
+    }
+
     private void addAction(BaseAction action) {
         BaseAction last = mLastAction;
 
