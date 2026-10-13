@@ -1445,12 +1445,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
     @Override
     public BaseBinding visit(LabeledStatement st) {
-        if (!mScope.isReachable()) {
-            // It might become reachable later, but there's no guarantee. Full reachability
-            // analysis must still be performed later.
-            mScope.setActiveBlock(new BaseBlock());
-        }
-
         if (!mScope.labelVisited(st)) {
             // This likely indicates a compiler bug.
             error(st.label, "label not declared");
