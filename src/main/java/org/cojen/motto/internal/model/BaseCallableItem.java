@@ -47,8 +47,6 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
     private final BaseClassTypeItem mEnclosingClass;
     private final BaseCallSignature mSignature;
 
-    private CapturedSet mCapturedSet;
-
     private BaseBlock mCode;
 
     /**
@@ -123,21 +121,6 @@ public sealed class BaseCallableItem extends BaseItem implements CallableItem {
     boolean typeNamesMatch(BaseCallSignature otherSig) {
         return mSignature.outputType().namesMatch(0, otherSig.outputType())
             && mSignature.inputType().namesMatch(isStatic() ? 0 : 1, otherSig.inputType());
-    }
-
-    /**
-     * Capture a local variable of the given type and name.
-     *
-     * @throws IllegalStateException if already captured and the type doesn't match
-     */
-    public final BaseBinding.Captured capture(BaseType type, String name, NewLocalClass usedBy) {
-        var cs = mCapturedSet;
-
-        if (cs == null) {
-            mCapturedSet = cs = new CapturedSet(this);
-        }
-
-        return cs.capture(type, name, usedBy);
     }
 
     public final void assignCode(BaseBlock code) {

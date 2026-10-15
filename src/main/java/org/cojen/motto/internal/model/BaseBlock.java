@@ -70,6 +70,7 @@ public sealed class BaseBlock implements Block {
         }
     }
 
+    private final CodeContext mContext;
     private final int mHashCode;
 
     private int mPosition;
@@ -86,7 +87,9 @@ public sealed class BaseBlock implements Block {
     // Immediate dominator.
     private BaseBlock mIdom;
 
-    public BaseBlock() {
+    public BaseBlock(CodeContext context) {
+        mContext = context;
+
         // This is a bit faster than the default identity hashcode.
         mHashCode = ThreadLocalRandom.current().nextInt();
     }
@@ -97,7 +100,7 @@ public sealed class BaseBlock implements Block {
     }
 
     protected BaseBlock newBaseBlock() {
-        return new BaseBlock();
+        return new BaseBlock(mContext);
     }
 
     // FIXME: Need stricter checks that objects passed into these methods belong to the same
@@ -244,7 +247,7 @@ public sealed class BaseBlock implements Block {
     }
 
     public BaseBinding.Anonymous var(BaseType type) {
-        return new BaseBinding.Anonymous(type);
+        return new BaseBinding.Anonymous(mContext, type);
     }
 
     @Override
@@ -253,7 +256,7 @@ public sealed class BaseBlock implements Block {
     }
 
     public BaseBinding.Local var(BaseType type, String name) {
-        return name == null ? var(type) : BaseBinding.Named.from(type, name);
+        return name == null ? var(type) : new BaseBinding.Named(mContext, type, name);
     }
 
     @Override
@@ -693,6 +696,13 @@ public sealed class BaseBlock implements Block {
         return bindings;
     }
 
+    /**
+     * Returns the non-null context the Block belongs to.
+     */
+    public CodeContext context() {
+        return mContext;
+    }
+
     public boolean isEmpty() {
         return mFirstAction == null;
     }
@@ -979,15 +989,15 @@ public sealed class BaseBlock implements Block {
         private final BaseBinding mRetBinding;
         private final BaseBlock mRetDestination;
 
-        RetJump(BaseBinding retBinding, BaseBlock retDestination) {
-            super();
+        RetJump(CodeContext context, BaseBinding retBinding, BaseBlock retDestination) {
+            super(context);
             mRetBinding = retBinding;
             mRetDestination = retDestination;
         }
 
         @Override
         protected RetJump newBaseBlock() {
-            return new RetJump(mRetBinding, mRetDestination);
+            return new RetJump(context(), mRetBinding, mRetDestination);
         }
 
         @Override

@@ -32,6 +32,7 @@ import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
+import org.cojen.motto.internal.model.CodeContext;
 import org.cojen.motto.internal.model.NewClass;
 import org.cojen.motto.internal.model.NewLocalClass;
 
@@ -88,6 +89,13 @@ abstract sealed class ModelScope {
 
     CompilationEnv env() {
         return mModGen.env();
+    }
+
+    /**
+     * @throws UnsupportedOperationException if not supported by this scope
+     */
+    CodeContext context() {
+        throw new UnsupportedOperationException();
     }
 
     /**
@@ -384,6 +392,8 @@ abstract sealed class ModelScope {
      * Scope which has code blocks, local variables, and labels.
      */
     static abstract sealed class Code extends ModelScope {
+        final CodeContext mContext;
+
         BaseBlock mEntryBlock;
         BaseBlock mActiveBlock;
 
@@ -397,7 +407,7 @@ abstract sealed class ModelScope {
          * Constructor for callables.
          */
         Code(ModelGenerator modGen, ModelScope parent, BaseItem item) {
-            this(modGen, parent, item, new BaseBlock());
+            this(modGen, parent, item, new BaseBlock(new CodeContext()));
         }
 
         /**
@@ -409,9 +419,15 @@ abstract sealed class ModelScope {
 
         private Code(ModelGenerator modGen, ModelScope parent, BaseItem item, BaseBlock entry) {
             super(modGen, parent, item);
+            mContext = entry.context();
             mEntryBlock = mActiveBlock = entry;
             mLocals = Map.of();
             mLabels = Map.of();
+        }
+
+        @Override
+        CodeContext context() {
+            return mContext;
         }
 
         @Override
@@ -473,7 +489,7 @@ abstract sealed class ModelScope {
                 mLocals = new LinkedHashMap<>();
             }
 
-            mLocals.put(name, BaseBinding.Named.from(type, name));
+            mLocals.put(name, new BaseBinding.Named(mContext, type, name));
 
             return true;
         }
@@ -483,7 +499,7 @@ abstract sealed class ModelScope {
             if (mLocals.isEmpty()) {
                 return null;
             }
-            var local = BaseBinding.Named.from(type, name);
+            var local = new BaseBinding.Named(mContext, type, name);
             if (mLocals.replace(name, local) == null) {
                 return null;
             }
@@ -509,7 +525,7 @@ abstract sealed class ModelScope {
             if (labels.isEmpty()) {
                 mLabels = labels = new LinkedHashMap<>();
             }
-            var block = new BaseBlock();
+            var block = new BaseBlock(mContext);
             block.sourcePosition(st.start().position());
             return labels.putIfAbsent(st.label.text, new LabelTarget(st, block)) == null;
         }
@@ -636,7 +652,10 @@ abstract sealed class ModelScope {
 
             if (captured != null) {
                 if (captured instanceof BaseBinding.Named n) {
-                    return enclosing.capture(n.type(), name, localClass);
+                    // FIXME: CapturedSet should be tracked by parent ModelScope, or possibly
+                    // be tracked by CodeContext.
+                    throw null;
+                    //return enclosing.capture(n.type(), name, localClass);
                 } else if (captured instanceof BaseBinding.Captured c) {
                     return c;
                 }
@@ -693,7 +712,7 @@ abstract sealed class ModelScope {
             for (int i=0; i<num; i++) {
                 BaseType type = inputType.fieldType(i);
                 String name = inputType.fieldName(i);
-                var param = BaseBinding.Parameter.from(type, name, i);
+                var param = new BaseBinding.Parameter(mContext, type, name, i);
                 if (mLocals.isEmpty()) {
                     mLocals = new LinkedHashMap<>();
                 }
@@ -839,15 +858,16 @@ abstract sealed class ModelScope {
         private BaseBlock mYieldBlock;
 
         CodeItem(ModelGenerator modGen, ModelScope parent) {
-            super(modGen, (Code) parent, new BaseBlock());
+            var pc = (Code) parent;
+            super(modGen, pc, new BaseBlock(pc.mContext));
         }
 
         void prepare() {
             if (mEntryBlock == null) {
-                mEntryBlock = mActiveBlock = new BaseBlock();
+                mEntryBlock = mActiveBlock = new BaseBlock(mContext);
             }
             mResultType = new BaseInferredType();
-            mResult = new BaseBinding.Anonymous(mResultType);
+            mResult = new BaseBinding.Anonymous(mContext, mResultType);
             mYieldBlock = null;
         }
 
@@ -867,7 +887,7 @@ abstract sealed class ModelScope {
             block.copy(mResult, result);
 
             if (mYieldBlock == null) {
-                mYieldBlock = new BaseBlock();
+                mYieldBlock = new BaseBlock(mContext);
             }
 
             block.jump(mYieldBlock);

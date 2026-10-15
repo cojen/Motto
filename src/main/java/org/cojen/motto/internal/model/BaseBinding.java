@@ -40,6 +40,11 @@ public abstract sealed class BaseBinding implements Binding {
     public abstract BaseType type();
 
     /**
+     * Returns the context the binding belongs to, or null if not applicable.
+     */
+    abstract CodeContext context();
+
+    /**
      * If this is an anonymous binding or if it accesses any, then map.putIfAbsent(anonymous,
      * true) is called for each of them. If successful, then the anonymous bindings are tagged
      * as having a block interdependency. They depend on having a value assigned when the block
@@ -93,6 +98,11 @@ public abstract sealed class BaseBinding implements Binding {
         public BaseType type() {
             return BaseVoidType.THE;
         }
+
+        @Override
+        CodeContext context() {
+            return null;
+        }
     }
 
     public static final class Null extends Unmodifiable {
@@ -104,6 +114,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return BaseNullType.THE;
+        }
+
+        @Override
+        CodeContext context() {
+            return null;
         }
     }
 
@@ -123,6 +138,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return mType;
+        }
+
+        @Override
+        CodeContext context() {
+            return null;
         }
 
         public Object value() {
@@ -203,6 +223,8 @@ public abstract sealed class BaseBinding implements Binding {
         private final BaseBlock mTruePath, mFalsePath, mMerge;
 
         /**
+         * Note: All blocks must belong to the same context.
+         *
          * @param truePath the block which will assign a true value
          * @param falsePath the block which will assign a false value
          * @param merge the block to jump to after assigning a value
@@ -213,7 +235,7 @@ public abstract sealed class BaseBinding implements Binding {
                 throw new IllegalArgumentException();
             }
 
-            mValue = new BaseBinding.Anonymous(BaseBooleanType.THE);
+            mValue = new BaseBinding.Anonymous(merge.context(), BaseBooleanType.THE);
 
             truePath.copy(mValue, true);
             truePath.jump(merge);
@@ -230,6 +252,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return mValue.type();
+        }
+
+        @Override
+        CodeContext context() {
+            return mMerge.context();
         }
 
         @Override
@@ -284,6 +311,11 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
+        CodeContext context() {
+            return null;
+        }
+
+        @Override
         public boolean isStable() {
             return mField.isFinal();
         }
@@ -313,14 +345,10 @@ public abstract sealed class BaseBinding implements Binding {
      * Defines a binding which refers to an instance field.
      */
     public static final class InstanceField extends BaseBinding {
-        public static InstanceField from(BaseBinding instance, ClassFieldItem field) {
-            return InternSet.apply(new InstanceField(instance, field));
-        }
-
         private final BaseBinding mInstance;
         private final ClassFieldItem mField;
 
-        private InstanceField(BaseBinding instance, ClassFieldItem field) {
+        public InstanceField(BaseBinding instance, ClassFieldItem field) {
             mInstance = Objects.requireNonNull(instance);
             mField = Objects.requireNonNull(field);
         }
@@ -328,6 +356,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return mField.type();
+        }
+
+        @Override
+        CodeContext context() {
+            return mInstance.context();
         }
 
         @Override
@@ -352,38 +385,26 @@ public abstract sealed class BaseBinding implements Binding {
         void trackBlockLocalSource(Map<Anonymous, Boolean> map) {
             mInstance.trackBlockLocalSource(map);
         }
-
-        @Override
-        public int hashCode() {
-            int hash = mInstance.hashCode();
-            hash = hash * 1259428081 + mField.hashCode();
-            return hash;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return this == obj || obj instanceof InstanceField other
-                && mInstance.equals(other.mInstance) && mField.equals(other.mField);
-        }
     }
 
     /**
      * Defines a binding which obtains the length of an array.
      */
     public static final class ArrayLength extends BaseBinding {
-        public static ArrayLength from(BaseBinding instance) {
-            return InternSet.apply(new ArrayLength(instance));
-        }
-
         private final BaseBinding mInstance;
 
-        private ArrayLength(BaseBinding instance) {
+        public ArrayLength(BaseBinding instance) {
             mInstance = Objects.requireNonNull(instance);
         }
 
         @Override
         public BaseType type() {
             return BaseIntType.THE;
+        }
+
+        @Override
+        CodeContext context() {
+            return mInstance.context();
         }
 
         @Override
@@ -404,17 +425,6 @@ public abstract sealed class BaseBinding implements Binding {
         void trackBlockLocalSource(Map<Anonymous, Boolean> map) {
             mInstance.trackBlockLocalSource(map);
         }
-
-        @Override
-        public int hashCode() {
-            return mInstance.hashCode() * 321510741;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return this == obj || obj instanceof ArrayLength other
-                && mInstance.equals(other.mInstance);
-        }
     }
 
     /**
@@ -434,6 +444,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return LoadedClass.classFrom(Class.class);
+        }
+
+        @Override
+        CodeContext context() {
+            return null;
         }
 
         @Override
@@ -467,14 +482,10 @@ public abstract sealed class BaseBinding implements Binding {
      * TupleAction.Set if the field selection is variable.
      */
     public static final class TupleField extends BaseBinding {
-        public static TupleField from(BaseBinding tuple, int index) {
-            return InternSet.apply(new TupleField(tuple, index));
-        }
-
         private final BaseBinding mTuple;
         private final int mIndex;
 
-        private TupleField(BaseBinding tuple, int index) {
+        public TupleField(BaseBinding tuple, int index) {
             if (index < 0 || !(tuple.type() instanceof BaseTupleType tt) ||
                 index > tt.numFields())
             {
@@ -488,6 +499,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return tupleType().fieldType(mIndex);
+        }
+
+        @Override
+        CodeContext context() {
+            return mTuple.context();
         }
 
         @Override
@@ -516,34 +532,29 @@ public abstract sealed class BaseBinding implements Binding {
         void trackBlockLocalSource(Map<Anonymous, Boolean> map) {
             mTuple.trackBlockLocalSource(map);
         }
-
-        @Override
-        public int hashCode() {
-            int hash = mTuple.hashCode();
-            hash = hash * -633060527 + mIndex;
-            return hash;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return this == obj || obj instanceof TupleField other
-                && mTuple.equals(other.mTuple) && mIndex == other.mIndex;
-        }
     }
 
     public static abstract sealed class Local extends Stable {
+        private final CodeContext mContext;
         final BaseType mType;
 
         /**
+         * @param context required
          * @param type required
          */
-        Local(BaseType type) {
+        Local(CodeContext context, BaseType type) {
+            mContext = Objects.requireNonNull(context);
             mType = Objects.requireNonNull(type);
         }
 
         @Override
         public final BaseType type() {
             return mType;
+        }
+
+        @Override
+        CodeContext context() {
+            return mContext;
         }
 
         @Override
@@ -567,22 +578,25 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     public static sealed class Named extends Local {
-        public static Named from(BaseType type, String name) {
-            return InternSet.apply(new Named(type, name));
-        }
-
         final String mName;
 
         /**
+         * @param context required
+         * @param type required
          * @param name required
          */
-        private Named(BaseType type, String name) {
-            super(type);
+        public Named(CodeContext context, BaseType type, String name) {
+            super(context, type);
             mName = Objects.requireNonNull(name);
         }
 
-        protected Named(String name, BaseType type) {
-            super(type);
+        /**
+         * @param context required
+         * @param name optional
+         * @param type required
+         */
+        protected Named(CodeContext context, String name, BaseType type) {
+            super(context, type);
             mName = name;
         }
 
@@ -590,38 +604,19 @@ public abstract sealed class BaseBinding implements Binding {
         public final String name() {
             return mName;
         }
-
-        @Override
-        public int hashCode() {
-            return type().hashCode() * 31 + Objects.hashCode(name());
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return obj == this || obj instanceof Named other
-                && other.getClass() == Named.class
-                && Objects.equals(name(), other.name())
-                && type().equals(other.type());
-        }
     }
 
     public static final class Parameter extends Named {
-        /**
-         * @param name optional
-         * @throws IllegalArgumentException if index is negative
-         */
-        public static Parameter from(BaseType type, String name, int index) {
-            return InternSet.apply(new Parameter(type, name, index));
-        }
-
         private final int mIndex;
 
         /**
+         * @param context required
+         * @param type required
          * @param name optional
          * @throws IllegalArgumentException if index is negative
          */
-        private Parameter(BaseType type, String name, int index) {
-            super(name, type);
+        public Parameter(CodeContext context, BaseType type, String name, int index) {
+            super(context, name, type);
             if (index < 0) {
                 throw new IllegalArgumentException();
             }
@@ -632,19 +627,6 @@ public abstract sealed class BaseBinding implements Binding {
         public int index() {
             return mIndex;
         }
-
-        @Override
-        public int hashCode() {
-            return super.hashCode() * 31 + mIndex + 1;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return obj == this || obj instanceof Parameter other
-                && Objects.equals(name(), other.name())
-                && type().equals(other.type())
-                && index() == other.index();
-        }
     }
 
     /**
@@ -653,8 +635,12 @@ public abstract sealed class BaseBinding implements Binding {
     public static final class Anonymous extends Local {
         private boolean mHasBlockInterdependency;
 
-        public Anonymous(BaseType type) {
-            super(type);
+        /**
+         * @param context required
+         * @param type required
+         */
+        public Anonymous(CodeContext context, BaseType type) {
+            super(context, type);
         }
 
         @Override
@@ -681,6 +667,7 @@ public abstract sealed class BaseBinding implements Binding {
      * Defines a binding which refers to a captured local variable, used by a local inner class.
      */
     public static final class Captured extends BaseBinding {
+        private final CodeContext mContext;
         private final BaseCallableItem mCallable;
         private final BaseType mType;
         private final String mName;
@@ -695,9 +682,11 @@ public abstract sealed class BaseBinding implements Binding {
         private int mAccessMode;
 
         /**
+         * @param context required
          * @param callable declares the local variable
          */
-        Captured(BaseCallableItem callable, BaseType type, String name) {
+        Captured(CodeContext context, BaseCallableItem callable, BaseType type, String name) {
+            mContext = Objects.requireNonNull(context);
             mCallable = Objects.requireNonNull(callable);
             mType = Objects.requireNonNull(type);
             mName = Objects.requireNonNull(name);
@@ -706,6 +695,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return mType;
+        }
+
+        @Override
+        CodeContext context() {
+            return mContext;
         }
 
         @Override
@@ -725,17 +719,6 @@ public abstract sealed class BaseBinding implements Binding {
         public String name() {
             return mName;
         }
-
-        @Override
-        public int hashCode() {
-            return mCallable.hashCode() * 31 + mName.hashCode();
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return this == obj || obj instanceof Captured other
-                && mCallable.equals(other.mCallable) && mName.equals(other.mName);
-        }
     }
 
     /**
@@ -753,6 +736,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseCodeType type() {
             return mType;
+        }
+
+        @Override
+        CodeContext context() {
+            return mEntry.context();
         }
 
         public BaseBlock entry() {

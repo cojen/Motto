@@ -425,15 +425,12 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
             params[i] = input;
         }
 
-        var lastBlock = new BaseBlock();
-
-        // FIXME: Use BaseInferredType and a block context to track it. Macros can return a
-        // block instead. Calling asCode is error prone. Eventually remove it. Consider making
-        // all Blocks have an inferred result binding, which links to the context.
+        CodeContext context = block.context();
+        var lastBlock = new BaseBlock(context);
 
         Supplier<BaseBlock> factory = () -> {
             // When the macro adds a return action, it will instead jump to lastBlock.
-            return new BaseBlock.RetJump(action.output(), lastBlock);
+            return new BaseBlock.RetJump(context, action.output(), lastBlock);
         };
 
         BaseBlock entry;

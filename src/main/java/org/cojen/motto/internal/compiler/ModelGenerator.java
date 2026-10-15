@@ -48,6 +48,7 @@ import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
 import org.cojen.motto.internal.model.ClassFieldItem;
+import org.cojen.motto.internal.model.CodeContext;
 import org.cojen.motto.internal.model.GeneratedType;
 import org.cojen.motto.internal.model.LoadedClass;
 import org.cojen.motto.internal.model.NewClass;
@@ -436,12 +437,12 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
                     int index = t.fieldIndex(name);
 
-                    instanceBinding = BaseBinding.TupleField.from(instanceBinding, index);
+                    instanceBinding = new BaseBinding.TupleField(instanceBinding, index);
                 }
 
                 case BaseArrayType t -> {
                     if ("length".equals(name)) {
-                        instanceBinding = BaseBinding.ArrayLength.from(instanceBinding);
+                        instanceBinding = new BaseBinding.ArrayLength(instanceBinding);
                     } else {
                         error(nameToken, "array field not found");
                         return null;
@@ -471,7 +472,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
                     ClassFieldItem fieldItem = fieldSet.iterator().next();
 
-                    instanceBinding = BaseBinding.InstanceField.from(instanceBinding, fieldItem);
+                    instanceBinding = new BaseBinding.InstanceField(instanceBinding, fieldItem);
                 }
 
                 default -> {
@@ -796,7 +797,8 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             if (numItems == 0) {
                 // Create an empty code block. This special case isn't all that unusual
                 // considering that {} is an illegal type anyhow. See TupleStatement.asVarType.
-                var input = new BaseBinding.CodeBinding(new BaseBlock(), BaseVoidType.THE);
+                var empty = new BaseBlock(mScope.context());
+                var input = new BaseBinding.CodeBinding(empty, BaseVoidType.THE);
                 var tt = BaseTupleType.from(input.type());
                 return new VisitedTuple(tt, new BaseBinding[] {input});
             }
@@ -1070,7 +1072,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
             @Override
             public BaseBinding forTuple(BaseBlock block, BaseBinding tuple, int index) {
-                return BaseBinding.TupleField.from(tuple, index);
+                return new BaseBinding.TupleField(tuple, index);
             }
         });
     }
@@ -1159,7 +1161,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                     }
 
                     if (it.hasNext()) {
-                        BaseBinding.TupleField.from(binding, (int) index);
+                        new BaseBinding.TupleField(binding, (int) index);
                         continue;
                     }
 
@@ -1310,7 +1312,9 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
      * @param opType must be T_LAND or T_LOR
      */
     private BaseBinding visitShortCircuit(InfixStatement st, int opType) {
-        var stopBlock = new BaseBlock(); // short-circuit destination
+        CodeContext context = mScope.context();
+
+        var stopBlock = new BaseBlock(context); // short-circuit destination
         var contBlock = mScope.activeBlock(st); // destination to continue checking
 
         for (Statement sub : new Statement[] {st.left, st.right}) {
@@ -1329,7 +1333,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                 error(sub, "must evaluate to a boolean");
             }
 
-            contBlock = new BaseBlock();
+            contBlock = new BaseBlock(context);
 
             if (opType == T_LAND) {
                 activeBlock.branch(result, contBlock, stopBlock);
@@ -1338,7 +1342,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
             }
         }
 
-        var endBlock = new BaseBlock();
+        var endBlock = new BaseBlock(context);
         mScope.setActiveBlock(endBlock);
 
         BaseBinding result;

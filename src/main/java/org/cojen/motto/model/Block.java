@@ -261,7 +261,6 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     public Binding shl(Object input1, Object input2);
 
     /**
-
      * @param input1 a {@link Binding Binding} or a constant
      * @param input2 a {@code Binding} or a constant
      * @return the result binding
