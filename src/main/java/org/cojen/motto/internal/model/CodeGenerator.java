@@ -253,7 +253,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
 
         forStore(action.output()).set(mMethodMaker.new_(action.type().asMakerType(), params));
 
-        return action.next;
+        return action.flowNext();
     }
 
     @Override
@@ -262,14 +262,14 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
 
         forStore(action.output()).set(result);
 
-        return action.next;
+        return action.flowNext();
     }
 
     @Override
     public BaseAction visit(BaseBlock block, BaseArrayAction.Set action) {
         variableFor(action.array()).aset(forLoad(action.index()), forLoad(action.value()));
 
-        return action.next;
+        return action.flowNext();
     }
 
     @Override
@@ -327,7 +327,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
                 forStore(output).clear();
             }
 
-            return action.next;
+            return action.flowNext();
         }
 
         BaseClassTypeItem objType = callable.nearestClass();
@@ -336,7 +336,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
             BasePath namePath = objType.namePath();
             if (namePath.size() == 1 && namePath.getFirst().equals("Math")) {
                 if (tryMathIntrinsic(action)) {
-                    return action.next;
+                    return action.flowNext();
                 }
             }
         }
@@ -354,7 +354,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
             forStore(action.output()).set(result);
         }
 
-        return action.next;
+        return action.flowNext();
     }
 
     private boolean tryMathIntrinsic(BaseCallAction.Direct action) {
@@ -485,7 +485,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
 
         forStore(action.output()).set(mMethodMaker.new_(classVar, params));
 
-        return action.next;
+        return action.flowNext();
     }
 
     @Override
@@ -529,7 +529,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
             forStore(action.output()).set(result);
         }
 
-        return action.next;
+        return action.flowNext();
     }
 
     @Override
@@ -566,7 +566,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
 
         forStore(target).set(forLoad(action.source()));
 
-        return action.next;
+        return action.flowNext();
     }
 
     @Override
@@ -629,7 +629,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
 
         forStore(action.output()).set(result);
 
-        return action.next;
+        return action.flowNext();
     }
 
     @Override

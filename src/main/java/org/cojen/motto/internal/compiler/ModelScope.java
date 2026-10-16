@@ -741,11 +741,12 @@ abstract sealed class ModelScope {
             if (isReachable()) {
                 // The scope must end with a return statement.
                 var callable = (BaseCallableItem) mItem;
-                if (!callable.implSignature().outputType().isVoid()) {
-                    if (env().numErrors() == 0) {
-                        env().error(st.end(), "missing return statement");
-                        return false;
-                    }
+                if (callable.implSignature().outputType().isVoid()) {
+                    // Automatically return.
+                    mActiveBlock.return_(BaseBinding.Void.THE);
+                } else if (env().numErrors() == 0) {
+                    env().error(st.end(), "missing return statement");
+                    return false;
                 }
             }
 
@@ -790,11 +791,12 @@ abstract sealed class ModelScope {
 
         @Override
         boolean afterVisitCode(Statement st, List<Statement> items, BaseBinding lastResult) {
-            if (isReachable() && items.size() == 1 && lastResult != null) {
-                // If only one item was visited, automatically add a yield statement.
-                Statement first = items.getFirst();
-                if (!(first instanceof YieldStatement) && specializeResult(first, lastResult)) {
-                    activeBlock(first).return_(lastResult);
+            if (isReachable()) {
+                // Automatically yield.
+                if (items.size() == 1 && lastResult != null) {
+                    addYield(items.getFirst(), lastResult);
+                } else {
+                    addYield(st, BaseBinding.Void.THE);
                 }
             }
 
