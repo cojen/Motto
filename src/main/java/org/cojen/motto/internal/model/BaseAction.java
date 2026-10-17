@@ -74,6 +74,14 @@ public abstract sealed class BaseAction implements Action permits FlowAction, Ba
     }
 
     /**
+     * If this action has any mutable state, a copy is returned. Otherwise, the original action
+     * is returned.
+     *
+     * @param origin the block that the action will reside in
+     */
+    abstract BaseAction detach(BaseBlock origin);
+
+    /**
      * For each binding used by this action, calls BaseBinding#trackBlockLocalSource or
      * BaseBinding#trackBlockLocalTarget against the given map. True values indicate that the
      * binding value is dependent upon a prior block.

@@ -44,6 +44,11 @@ public final class BaseThrowAction extends BaseTerminalAction implements ThrowAc
     }
 
     @Override
+    BaseThrowAction detach(BaseBlock origin) {
+        return this;
+    }
+
+    @Override
     void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
         mException.trackBlockLocalSource(map);
     }

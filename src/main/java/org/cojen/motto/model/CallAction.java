@@ -35,7 +35,6 @@ public sealed interface CallAction extends Action
     public Binding input(int index);
 
     public static sealed interface Direct extends CallAction permits New, BaseCallAction.Direct {
-        public CallableItem callable();
     }
 
     public static sealed interface New extends Direct permits BaseCallAction.New {

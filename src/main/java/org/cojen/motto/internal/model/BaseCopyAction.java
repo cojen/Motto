@@ -51,6 +51,11 @@ public final class BaseCopyAction extends FlowAction implements CopyAction {
     }
 
     @Override
+    BaseCopyAction detach(BaseBlock origin) {
+        return new BaseCopyAction(position(), mTarget, mSource);
+    }
+
+    @Override
     void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
         mSource.trackBlockLocalSource(map);
         mTarget.trackBlockLocalTarget(map);

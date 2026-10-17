@@ -69,6 +69,11 @@ public abstract sealed class BaseArrayAction extends FlowAction implements Array
         }
 
         @Override
+        BaseArrayAction.New detach(BaseBlock origin) {
+            return new BaseArrayAction.New(position(), mType, mOutput, mDimensions);
+        }
+
+        @Override
         void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
             for (BaseBinding dim : mDimensions) {
                 dim.trackBlockLocalSource(map);
@@ -111,6 +116,11 @@ public abstract sealed class BaseArrayAction extends FlowAction implements Array
         }
 
         @Override
+        BaseArrayAction.Get detach(BaseBlock origin) {
+            return new BaseArrayAction.Get(position(), mArray, mOutput, mIndex);
+        }
+
+        @Override
         void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
             mArray.trackBlockLocalSource(map);
             mIndex.trackBlockLocalSource(map);
@@ -148,6 +158,11 @@ public abstract sealed class BaseArrayAction extends FlowAction implements Array
         @Override
         public BaseBinding value() {
             return mValue;
+        }
+
+        @Override
+        BaseArrayAction.Set detach(BaseBlock origin) {
+            return new BaseArrayAction.Set(position(), mArray, mIndex, mValue);
         }
 
         @Override

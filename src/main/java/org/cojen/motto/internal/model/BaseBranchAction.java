@@ -113,6 +113,11 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
     }
 
     @Override
+    BaseBranchAction detach(BaseBlock origin) {
+        return new BaseBranchAction(origin, position(), mCondition, mWhenTrue, mWhenFalse);
+    }
+
+    @Override
     void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
         mCondition.trackBlockLocalSource(map);
     }

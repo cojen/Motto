@@ -260,6 +260,15 @@ public sealed class BaseBlock implements Block {
     }
 
     @Override
+    public void append(Action action) {
+        append((BaseAction) action);
+    }
+
+    public void append(BaseAction action) {
+        addAction(action.detach(this));
+    }
+
+    @Override
     public void copy(Binding target, Object source) {
         copy((BaseBinding) target, toBinding(source));
     }

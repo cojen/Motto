@@ -36,6 +36,11 @@ final class UnreachableAction extends BaseTerminalAction {
     }
 
     @Override
+    UnreachableAction detach(BaseBlock origin) {
+        return this;
+    }
+
+    @Override
     void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
         // Nothing to do.
     }

@@ -45,6 +45,11 @@ public final class BaseReturnAction extends BaseTerminalAction implements Return
     }
 
     @Override
+    BaseReturnAction detach(BaseBlock origin) {
+        return this;
+    }
+
+    @Override
     void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
         mResult.trackBlockLocalSource(map);
     }

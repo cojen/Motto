@@ -68,6 +68,13 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     public Binding var(Type type, String name);
 
     /**
+     * Append an action to the end of this block.
+     *
+     * @throws TerminatedBlockException if this block is terminated
+     */
+    public void append(Action action);
+
+    /**
      * Append a copy action to the end of this block. If necessary, a widening conversion is
      * automatically applied. If the target and source are the same, then no copy is appended.
      *

@@ -71,6 +71,11 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         }
 
         @Override
+        BaseTupleAction.New detach(BaseBlock origin) {
+            return new BaseTupleAction.New(position(), mType, mOutput, mInputs);
+        }
+
+        @Override
         void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
             for (BaseBinding input : mInputs) {
                 input.trackBlockLocalSource(map);
@@ -117,6 +122,11 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         }
 
         @Override
+        BaseTupleAction.Get detach(BaseBlock origin) {
+            return new BaseTupleAction.Get(position(), mTuple, mOutput, mIndex);
+        }
+
+        @Override
         void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
             mTuple.trackBlockLocalSource(map);
             mIndex.trackBlockLocalSource(map);
@@ -158,6 +168,11 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         @Override
         public BaseBinding value() {
             return mValue;
+        }
+
+        @Override
+        BaseTupleAction.Set detach(BaseBlock origin) {
+            return new BaseTupleAction.Set(position(), mTuple, mIndex, mValue);
         }
 
         @Override

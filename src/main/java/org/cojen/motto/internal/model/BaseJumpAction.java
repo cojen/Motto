@@ -76,6 +76,11 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
     }
 
     @Override
+    BaseJumpAction detach(BaseBlock origin) {
+        return new BaseJumpAction(origin, position(), mDestination);
+    }
+
+    @Override
     void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
         // Nothing to do.
     }

@@ -27,9 +27,9 @@ import org.cojen.motto.model.CallAction;
  * @author Brian S. O'Neill
  */
 public sealed abstract class BaseCallAction extends FlowAction implements CallAction {
-    private final BaseCallableItem mCallable;
-    private final BaseBinding mOutput;
-    private final BaseBinding[] mInputs;
+    final BaseCallableItem mCallable;
+    final BaseBinding mOutput;
+    final BaseBinding[] mInputs;
 
     BaseCallAction(int position, BaseCallableItem callable,
                    BaseBinding output, BaseBinding... inputs)
@@ -80,6 +80,11 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
         public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
             return visitor.visit(block, this);
         }
+
+        @Override
+        BaseCallAction.Direct detach(BaseBlock origin) {
+            return new BaseCallAction.Direct(position(), mCallable, mOutput, mInputs);
+        }
     }
 
     public static final class New extends BaseCallAction implements CallAction.New {
@@ -98,6 +103,11 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
         public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
             return visitor.visit(block, this);
         }
+
+        @Override
+        BaseCallAction.New detach(BaseBlock origin) {
+            return new BaseCallAction.New(position(), mCallable, mOutput, mInputs);
+        }
     }
 
     public static final class Virtual extends BaseCallAction implements CallAction.Virtual {
@@ -114,6 +124,11 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
         @Override
         public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
             return visitor.visit(block, this);
+        }
+
+        @Override
+        BaseCallAction.Virtual detach(BaseBlock origin) {
+            return new BaseCallAction.Virtual(position(), mCallable, mOutput, mInputs);
         }
     }
 }
