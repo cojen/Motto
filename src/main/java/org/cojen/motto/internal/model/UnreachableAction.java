@@ -36,7 +36,7 @@ final class UnreachableAction extends BaseTerminalAction {
     }
 
     @Override
-    UnreachableAction detach(BaseBlock origin) {
+    UnreachableAction detach(BaseBlock owner) {
         return this;
     }
 

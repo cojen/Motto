@@ -30,11 +30,11 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
     private BaseBlock mDestination;
 
     /**
-     * @param origin the block that this action resides in
+     * @param owner the block that this action resides in
      */
-    BaseJumpAction(BaseBlock origin, int position, BaseBlock destination) {
+    BaseJumpAction(BaseBlock owner, int position, BaseBlock destination) {
         super(position);
-        destination.addPredecessor(origin);
+        destination.addPredecessor(owner);
         mDestination = destination;
     }
 
@@ -49,35 +49,35 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
     }
 
     /**
-     * @param origin the block that this action resides in
+     * @param owner the block that this action resides in
      * @return false if nothing changed
      */
-    boolean setDestination(BaseBlock origin, BaseBlock newDestination) {
+    boolean setDestination(BaseBlock owner, BaseBlock newDestination) {
         if (newDestination == mDestination) {
             return false;
         }
-        newDestination.addPredecessor(origin);
-        mDestination.removePredecessor(origin);
+        newDestination.addPredecessor(owner);
+        mDestination.removePredecessor(owner);
         mDestination = newDestination;
         return true;
     }
 
     @Override
-    void changeDestination(BaseBlock origin, BaseBlock oldDest, BaseBlock newDest) {
+    void changeDestination(BaseBlock owner, BaseBlock oldDest, BaseBlock newDest) {
         if (mDestination == oldDest) {
-            setDestination(origin, newDest);
+            setDestination(owner, newDest);
         }
     }
 
     @Override
-    void moved(BaseBlock oldOrigin, BaseBlock newOrigin) {
-        mDestination.removePredecessor(oldOrigin);
-        mDestination.addPredecessor(newOrigin);
+    void moved(BaseBlock oldOwner, BaseBlock newOwner) {
+        mDestination.removePredecessor(oldOwner);
+        mDestination.addPredecessor(newOwner);
     }
 
     @Override
-    BaseJumpAction detach(BaseBlock origin) {
-        return new BaseJumpAction(origin, position(), mDestination);
+    BaseJumpAction detach(BaseBlock owner) {
+        return new BaseJumpAction(owner, position(), mDestination);
     }
 
     @Override

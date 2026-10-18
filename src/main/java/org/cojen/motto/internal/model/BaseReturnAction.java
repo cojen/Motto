@@ -45,7 +45,7 @@ public final class BaseReturnAction extends BaseTerminalAction implements Return
     }
 
     @Override
-    BaseReturnAction detach(BaseBlock origin) {
+    BaseReturnAction detach(BaseBlock owner) {
         return this;
     }
 

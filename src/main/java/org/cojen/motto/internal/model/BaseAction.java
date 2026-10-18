@@ -58,28 +58,28 @@ public abstract sealed class BaseAction implements Action permits FlowAction, Ba
     /**
      * If this is a jump or branch action, then attempt to change the destination(s).
      *
-     * @param origin the block that this action resides in
+     * @param owner the block that this action resides in
      */
-    void changeDestination(BaseBlock origin, BaseBlock oldDest, BaseBlock newDest) {
+    void changeDestination(BaseBlock owner, BaseBlock oldDest, BaseBlock newDest) {
     }
 
     /**
      * Called when this action is moved to another block. If this is a jump or branch action,
      * the block predecessors are updated.
      *
-     * @param oldOrigin the block that this action currently resides in
-     * @param newOrigin the block that this action is moved to
+     * @param oldOwner the block that this action currently resides in
+     * @param newOwner the block that this action is moved to
      */
-    void moved(BaseBlock oldOrigin, BaseBlock newOrigin) {
+    void moved(BaseBlock oldOwner, BaseBlock newOwner) {
     }
 
     /**
      * If this action has any mutable state, a copy is returned. Otherwise, the original action
      * is returned.
      *
-     * @param origin the block that the action will reside in
+     * @param owner the block that the action will reside in
      */
-    abstract BaseAction detach(BaseBlock origin);
+    abstract BaseAction detach(BaseBlock owner);
 
     /**
      * For each binding used by this action, calls BaseBinding#trackBlockLocalSource or
