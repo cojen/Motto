@@ -430,7 +430,9 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
 
         Supplier<BaseBlock> factory = () -> {
             // When the macro adds a return action, it will instead jump to lastBlock.
-            return new BaseBlock.RetJump(context, action.output(), lastBlock);
+            var newBlock = new BaseBlock.RetJump(context, action.output(), lastBlock);
+            newBlock.sourcePosition(action.position());
+            return newBlock;
         };
 
         BaseBlock entry;
