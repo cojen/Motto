@@ -407,7 +407,7 @@ abstract sealed class ModelScope {
          * Constructor for callables.
          */
         Code(ModelGenerator modGen, ModelScope parent, BaseItem item) {
-            this(modGen, parent, item, new BaseBlock(new CodeContext()));
+            this(modGen, parent, item, new BaseBlock(new CodeContext(modGen.env())));
         }
 
         /**

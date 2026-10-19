@@ -214,7 +214,8 @@ public abstract sealed class BaseBinding implements Binding {
 
     /**
      * Defines a constant boolean binding which is treated specially by a branch action. When
-     * possible, it skips creation of a boolean variable.
+     * possible, it skips creation of a boolean variable. This kind of binding is used to
+     * implement short-circuit boolean logic.
      *
      * @see BaseBlock#branch
      */

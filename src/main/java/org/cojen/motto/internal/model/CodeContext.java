@@ -16,14 +16,19 @@
 
 package org.cojen.motto.internal.model;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 /**
  * A CodeContext is referenced by all code elements of a BaseCallableItem.
  *
  * @author Brian S. O'Neill
  */
 public final class CodeContext {
+    private CompilationEnv mEnv;
+
     // FIXME: Needs a return type, which might be a BaseInferredType.
-    public CodeContext() {
+    public CodeContext(CompilationEnv env) {
+        mEnv = env;
     }
 
     /**
