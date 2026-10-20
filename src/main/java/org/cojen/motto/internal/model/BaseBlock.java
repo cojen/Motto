@@ -47,7 +47,7 @@ import org.cojen.motto.runtime.Math;
  *
  * @author Brian S. O'Neill
  */
-public sealed class BaseBlock implements Block {
+public final class BaseBlock implements Block {
     private static final ScopedValue<Supplier<BaseBlock>> CONTEXT = ScopedValue.newInstance();
 
     /**
@@ -345,7 +345,7 @@ public sealed class BaseBlock implements Block {
     }
 
     public BaseBinding callVirtual(BaseCallableItem callable, Object... inputs) {
-        // FIXME: verify target, "this" input, and other input types
+        // FIXME: verify "this" input, and other input types
 
         BaseBinding target = targetVar(callable);
 
@@ -365,7 +365,11 @@ public sealed class BaseBlock implements Block {
     }
 
     public void return_(BaseBinding result) {
-        addAction(new BaseReturnAction(mPosition, result));
+        BaseType conflict = mContext.assignResultAndJump(this, result);
+        if (conflict != null) {
+            // FIXME: report an error
+            throw new IllegalStateException();
+        }
     }
 
     @Override
@@ -987,45 +991,5 @@ public sealed class BaseBlock implements Block {
         }
 
         return index;
-    }
-
-    /**
-     * With this kind of block, return actions don't actually return. Instead they copy to a
-     * custom binding and jump to a destination block. This is used by CodeGenerator when
-     * calling macros.
-     */
-    static final class RetJump extends BaseBlock {
-        private final BaseBinding mRetBinding;
-        private final BaseBlock mRetDestination;
-
-        RetJump(CodeContext context, BaseBinding retBinding, BaseBlock retDestination) {
-            super(context);
-            mRetBinding = retBinding;
-            mRetDestination = retDestination;
-        }
-
-        @Override
-        protected RetJump newBaseBlock() {
-            return new RetJump(context(), mRetBinding, mRetDestination);
-        }
-
-        @Override
-        public void return_(BaseBinding result) {
-            BaseType type = mRetBinding.type();
-
-            // FIXME: type check
-
-            if (!type.isVoid()) {
-                copy(mRetBinding, result);
-            }
-
-            jump(mRetDestination);
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public Iterator iterator() {
-            return baseIterator();
-        }
     }
 }

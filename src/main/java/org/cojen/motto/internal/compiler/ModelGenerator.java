@@ -634,7 +634,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
                         return null;
                     }
 
-                    // FIXME: The result must be managed by the block context.
                     argBinding = new BaseBinding.CodeBinding(scope.extractCode(), BaseVoidType.THE);
                 }
 
@@ -826,7 +825,6 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
 
                 doVisitCode(item, subItems);
 
-                // FIXME: The result must be managed by the block context.
                 var input = new BaseBinding.CodeBinding(scope.extractCode(), BaseVoidType.THE);
 
                 types[i] = input.type();

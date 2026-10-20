@@ -44,8 +44,6 @@ public interface ActionVisitor<R> {
 
     public R visit(BaseBlock block, BaseJumpAction action);
 
-    public R visit(BaseBlock block, BaseReturnAction action);
-
     public R visit(BaseBlock block, BaseThrowAction action);
 
     public R visit(BaseBlock block, BaseTupleAction.New action);

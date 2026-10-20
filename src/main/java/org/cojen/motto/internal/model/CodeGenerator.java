@@ -240,7 +240,12 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
         }
 
         if (!(action instanceof BaseTerminalAction)) {
-            mMethodMaker.return_();
+            BaseBinding result = block.context().resultBinding();
+            if (result.type().isVoid()) {
+                mMethodMaker.return_();
+            } else {
+                mMethodMaker.return_(forLoad(result));
+            }
         }
     }
 
@@ -253,7 +258,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
 
         forStore(action.output()).set(mMethodMaker.new_(action.type().asMakerType(), params));
 
-        return action.flowNext();
+        return action.next;
     }
 
     @Override
@@ -262,14 +267,14 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
 
         forStore(action.output()).set(result);
 
-        return action.flowNext();
+        return action.next;
     }
 
     @Override
     public BaseAction visit(BaseBlock block, BaseArrayAction.Set action) {
         variableFor(action.array()).aset(forLoad(action.index()), forLoad(action.value()));
 
-        return action.flowNext();
+        return action.next;
     }
 
     @Override
@@ -327,7 +332,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
                 forStore(output).clear();
             }
 
-            return action.flowNext();
+            return action.next;
         }
 
         BaseClassTypeItem objType = callable.nearestClass();
@@ -336,7 +341,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
             BasePath namePath = objType.namePath();
             if (namePath.size() == 1 && namePath.getFirst().equals("Math")) {
                 if (tryMathIntrinsic(action)) {
-                    return action.flowNext();
+                    return action.next;
                 }
             }
         }
@@ -354,7 +359,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
             forStore(action.output()).set(result);
         }
 
-        return action.flowNext();
+        return action.next;
     }
 
     private boolean tryMathIntrinsic(BaseCallAction.Direct action) {
@@ -429,8 +434,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
         var lastBlock = new BaseBlock(context);
 
         Supplier<BaseBlock> factory = () -> {
-            // When the macro adds a return action, it will instead jump to lastBlock.
-            var newBlock = new BaseBlock.RetJump(context, action.output(), lastBlock);
+            var newBlock = new BaseBlock(context);
             newBlock.sourcePosition(action.position());
             return newBlock;
         };
@@ -461,7 +465,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
 
         if (exit != null) {
             // The exit block should be a RetJump, and so this actually jumps to lastBlock.
-            // FIXME: Support result value.
+            // FIXME: Support yield value.
             exit.return_(BaseBinding.Void.THE);
         }
 
@@ -487,7 +491,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
 
         forStore(action.output()).set(mMethodMaker.new_(classVar, params));
 
-        return action.flowNext();
+        return action.next;
     }
 
     @Override
@@ -531,7 +535,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
             forStore(action.output()).set(result);
         }
 
-        return action.flowNext();
+        return action.next;
     }
 
     @Override
@@ -568,7 +572,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
 
         forStore(target).set(forLoad(action.source()));
 
-        return action.flowNext();
+        return action.next;
     }
 
     @Override
@@ -580,18 +584,6 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
         } else {
             label(dest).goto_();
             maybeVisitLater(dest);
-        }
-
-        return null;
-    }
-
-    @Override
-    public BaseAction visit(BaseBlock block, BaseReturnAction action) {
-        BaseBinding result = action.result();
-        if (result.type().isVoid()) {
-            mMethodMaker.return_();
-        } else {
-            mMethodMaker.return_(forLoad(result));
         }
 
         return null;
@@ -631,7 +623,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
 
         forStore(action.output()).set(result);
 
-        return action.flowNext();
+        return action.next;
     }
 
     @Override
@@ -656,15 +648,13 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
     }
 
     /**
-     * Returns true if the block is reached once, or is empty, or it consists of one small
-     * terminal action.
+     * Returns true if the block is reached once or is empty.
      */
     private boolean shouldInline(BaseBlock block) {
         if (block.isReachedOnce()) {
             return true;
         }
-        BaseAction first = block.firstAction();
-        return first == null || first instanceof BaseReturnAction;
+        return block.firstAction() == null;
     }
 
     private void maybeVisitLater(BaseBlock block) {

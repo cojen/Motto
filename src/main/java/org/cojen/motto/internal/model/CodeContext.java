@@ -19,23 +19,54 @@ package org.cojen.motto.internal.model;
 import org.cojen.motto.internal.compiler.CompilationEnv;
 
 /**
- * A CodeContext is referenced by all code elements of a BaseCallableItem.
+ * A CodeContext is referenced by blocks and bindings.
  *
  * @author Brian S. O'Neill
  */
 public final class CodeContext {
-    private CompilationEnv mEnv;
+    private final CompilationEnv mEnv;
+    private final BaseBlock mResultBlock;
+    private final BaseBinding mResultBinding;
 
-    // FIXME: Needs a return type, which might be a BaseInferredType.
-    public CodeContext(CompilationEnv env) {
+    public CodeContext(CompilationEnv env, BaseType resultType) {
         mEnv = env;
+        mResultBinding = new BaseBinding.Anonymous(this, resultType);
+        mResultBlock = new BaseBlock(this);
+    }
+
+    public CompilationEnv env() {
+        return mEnv;
     }
 
     /**
-     * @return true if the context is valid within the current thread scope
+     * Returns an anonymous binding which must be assigned before jumping to the result block.
      */
-    boolean isValid() {
-        // FIXME
-        throw null;
+    public BaseBinding resultBinding() {
+        return mResultBinding;
+    }
+
+    /**
+     * Returns a block to jump to when the code is done.
+     */
+    public BaseBlock resultBlock() {
+        return mResultBlock;
+    }
+
+    /**
+     * Assigns the context result binding and jumps to the result block.
+     *
+     * @param block and a jump from this block to the context result block
+     * @return null if successful, or else a conflicting type if the context result type is
+     * inferred, and it couldn't be specialized
+     */
+    public BaseType assignResultAndJump(BaseBlock block, BaseBinding result) {
+        BaseType conflict = mResultBinding.type().specialize(result.type());
+
+        if (conflict == null) {
+            block.copy(mResultBinding, result);
+            block.jump(mResultBlock);
+        }
+
+        return conflict;
     }
 }

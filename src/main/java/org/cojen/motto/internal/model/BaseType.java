@@ -275,6 +275,16 @@ public sealed interface BaseType extends Type, EncodableType
     }
 
     /**
+     * Specialize the current type by inferring a common compatible type.
+     *
+     * @return null if successful, or else returns the conflicting type
+     * @see BaseInferredType
+     */
+    public default BaseType specialize(BaseType other) {
+        return null;
+    }
+
+    /**
      * Compares this type to another and returns a common type which can represent either. The
      * returned type shouldn't require any conversion other than simple widening or boxing. For
      * example, the inferred type for double and long is Number.

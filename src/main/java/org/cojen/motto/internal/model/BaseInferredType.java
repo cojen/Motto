@@ -23,7 +23,7 @@ import org.cojen.motto.model.Type;
 
 /**
  * Defines a type which is initially unspecified, but it can be changed later. It can be used
- * for inferring a common return type from a lambda function.
+ * for inferring a common result type from a lambda function or code tuple.
  *
  * @author Brian S. O'Neill
  */
@@ -55,6 +55,7 @@ public final class BaseInferredType implements BaseType {
      *
      * @return null if successful, or else returns the conflicting type
      */
+    @Override
     public BaseType specialize(BaseType other) {
         if (other instanceof BaseInferredType inferred) {
             other = inferred.mCurrent;

@@ -30,15 +30,4 @@ public abstract sealed class FlowAction extends BaseAction
     FlowAction(int position) {
         super(position);
     }
-
-    /**
-     * @throws IllegalStateException if next is null, because the flow isn't terminated
-     */
-    public final BaseAction flowNext() {
-        BaseAction next = this.next;
-        if (next == null) {
-            throw new IllegalStateException();
-        }
-        return next;
-    }
 }

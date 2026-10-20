@@ -83,6 +83,22 @@ abstract sealed class ModelScope {
         return mParent;
     }
 
+    /**
+     * Returns the nearest callable parent.
+     *
+     * @throws IllegalStateException if no callable parent is found
+     */
+    Callable callableParent() {
+        ModelScope parent = mParent;
+        do {
+            if (parent instanceof Callable c) {
+                return c;
+            }
+        } while ((parent = parent.mParent) != null);
+
+        throw new IllegalStateException();
+    }
+
     BaseItem item() {
         return mItem;
     }
@@ -406,8 +422,9 @@ abstract sealed class ModelScope {
         /**
          * Constructor for callables.
          */
-        Code(ModelGenerator modGen, ModelScope parent, BaseItem item) {
-            this(modGen, parent, item, new BaseBlock(new CodeContext(modGen.env())));
+        Code(ModelGenerator modGen, ModelScope parent, BaseCallableItem item) {
+            var context = new CodeContext(modGen.env(), item.implSignature().outputType());
+            this(modGen, parent, item, new BaseBlock(context));
         }
 
         /**
@@ -678,18 +695,41 @@ abstract sealed class ModelScope {
 
         /**
          * @param st used for error reporting
+         * @param block and a jump from this block to the context result block
          * @return false if an error was reported
          */
-        boolean specializeResult(Statement st, BaseInferredType inferred, BaseBinding result) {
-            BaseType conflict = inferred.specialize(result.type());
+        boolean doReturn(Statement st, BaseBlock block, BaseBinding result) {
+            return doResult(st, "return", block, result);
+        }
 
-            if (conflict != null) {
-                env().error(st, "yield type of " + result.type().displayName() +
-                            " conflicts with an earlier yield type of " + conflict.displayName());
-                return false;
+        /**
+         * @param st used for error reporting
+         * @param block and a jump from this block to the context result block
+         * @return false if an error was reported
+         */
+        boolean doYield(Statement st, BaseBlock block, BaseBinding result) {
+            return doResult(st, "yield", block, result);
+        }
+
+        /**
+         * @param st used for error reporting
+         * @param block and a jump from this block to the context result block
+         * @param which used for error reporting
+         * @return false if an error was reported
+         */
+        private boolean doResult(Statement st, String which, BaseBlock block, BaseBinding result) {
+            BaseType conflict = mContext.assignResultAndJump(block, result);
+
+            if (conflict == null) {
+                return true;
             }
 
-            return true;
+            String message = which + " type of " + result.type().displayName() +
+                " conflicts with an earlier " + which + " type of " + conflict.displayName();
+
+            env().error(st, message);
+
+            return false;
         }
     }
 
@@ -726,8 +766,7 @@ abstract sealed class ModelScope {
 
         @Override
         boolean addReturn(Statement st, BaseBinding result) {
-            activeBlock(st).return_(result);
-            return true;
+            return doReturn(st, activeBlock(st), result);
         }
 
         @Override
@@ -743,7 +782,7 @@ abstract sealed class ModelScope {
                 var callable = (BaseCallableItem) mItem;
                 if (callable.implSignature().outputType().isVoid()) {
                     // Automatically return.
-                    mActiveBlock.return_(BaseBinding.Void.THE);
+                    return doReturn(st, mActiveBlock, BaseBinding.Void.THE);
                 } else if (env().numErrors() == 0) {
                     env().error(st.end(), "missing return statement");
                     return false;
@@ -780,38 +819,22 @@ abstract sealed class ModelScope {
 
         @Override
         boolean addYield(Statement st, BaseBinding result) {
-            if (!specializeResult(st, result)) {
-                return false;
-            }
-
-            activeBlock(st).return_(result);
-
-            return true;
+            return doYield(st, activeBlock(st), result);
         }
 
         @Override
         boolean afterVisitCode(Statement st, List<Statement> items, BaseBinding lastResult) {
             if (isReachable()) {
                 // Automatically yield.
+
+                BaseBinding result;
                 if (items.size() == 1 && lastResult != null) {
-                    addYield(items.getFirst(), lastResult);
+                    result = lastResult;
                 } else {
-                    addYield(st, BaseBinding.Void.THE);
+                    result = BaseBinding.Void.THE;
                 }
-            }
-
-            return true;
-        }
-
-        /**
-         * @param st used for error reporting
-         * @return false if an error was reported
-         */
-        private boolean specializeResult(Statement st, BaseBinding result) {
-            var outputType = ((BaseCallableItem) mItem).implSignature().outputType();
-
-            if (outputType instanceof BaseInferredType inferred) {
-                return specializeResult(st, inferred, result);
+                
+                addYield(items.getLast(), result);
             }
 
             return true;
@@ -854,47 +877,34 @@ abstract sealed class ModelScope {
      * Scope for a code tuple item.
      */
     static final class CodeItem extends Code {
-        // FIXME: The result must be managed by the block context.
-        private BaseInferredType mResultType;
-        private BaseBinding mResult;
-        private BaseBlock mYieldBlock;
-
         CodeItem(ModelGenerator modGen, ModelScope parent) {
-            var pc = (Code) parent;
-            super(modGen, pc, new BaseBlock(pc.mContext));
+            var context = new CodeContext(modGen.env(), new BaseInferredType());
+            super(modGen, (Code) parent, new BaseBlock(context));
         }
 
+        // FIXME: Instead of calling prepare to re-use this object, allow locals and labels to
+        //        be transferred.
         void prepare() {
             if (mEntryBlock == null) {
-                mEntryBlock = mActiveBlock = new BaseBlock(mContext);
+                throw null;
             }
-            mResultType = new BaseInferredType();
-            mResult = new BaseBinding.Anonymous(mContext, mResultType);
-            mYieldBlock = null;
+        }
+
+        // FIXME: Revise along with the prepare method.
+        BaseBlock extractCode() {
+            BaseBlock entry = mEntryBlock;
+            mEntryBlock = null;
+            return entry;
         }
 
         @Override
         boolean addReturn(Statement st, BaseBinding result) {
-            activeBlock(st).return_(result);
-            return true;
+            return callableParent().doReturn(st, activeBlock(st), result);
         }
 
         @Override
         boolean addYield(Statement st, BaseBinding result) {
-            if (!specializeResult(st, mResultType, result)) {
-                return false;
-            }
-
-            BaseBlock block = activeBlock(st);
-            block.copy(mResult, result);
-
-            if (mYieldBlock == null) {
-                mYieldBlock = new BaseBlock(mContext);
-            }
-
-            block.jump(mYieldBlock);
-
-            return true;
+            return doYield(st, activeBlock(st), result);
         }
 
         @Override
@@ -908,12 +918,6 @@ abstract sealed class ModelScope {
             }
 
             return true;
-        }
-
-        BaseBlock extractCode() {
-            BaseBlock entry = mEntryBlock;
-            mEntryBlock = null;
-            return entry;
         }
     }
 }
