@@ -49,6 +49,7 @@ public final class BaseByteType extends BasePrimitiveType implements ByteType {
     BaseType doInferredType(BasePrimitiveType other) {
         return switch (other.typeCode()) {
             case T_SHORT, T_INT, T_LONG, T_FLOAT, T_DOUBLE -> other;
+            case T_VOID -> null;
             default -> LoadedClass.forObject();
         };
     }

@@ -44,6 +44,7 @@ public final class BaseDoubleType extends BasePrimitiveType implements DoubleTyp
         return switch (other.typeCode()) {
             case T_CHAR, T_BYTE, T_SHORT, T_INT, T_FLOAT -> this;
             case T_LONG -> LoadedClass.classFrom(Number.class);
+            case T_VOID -> null;
             default -> LoadedClass.forObject();
         };
     }

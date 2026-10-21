@@ -44,6 +44,7 @@ public final class BaseLongType extends BasePrimitiveType implements LongType {
         return switch (other.typeCode()) {
             case T_CHAR, T_BYTE, T_SHORT, T_INT -> this;
             case T_FLOAT, T_DOUBLE -> LoadedClass.classFrom(Number.class);
+            case T_VOID -> null;
             default -> LoadedClass.forObject();
         };
     }

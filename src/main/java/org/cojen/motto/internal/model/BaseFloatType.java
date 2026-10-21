@@ -48,6 +48,7 @@ public final class BaseFloatType extends BasePrimitiveType implements FloatType 
             case T_DOUBLE -> other;
             case T_INT -> BaseDoubleType.THE;
             case T_LONG -> LoadedClass.classFrom(Number.class);
+            case T_VOID -> null;
             default -> LoadedClass.forObject();
         };
     }

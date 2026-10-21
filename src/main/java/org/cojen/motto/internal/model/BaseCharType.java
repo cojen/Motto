@@ -48,6 +48,7 @@ public final class BaseCharType extends BasePrimitiveType implements CharType {
     BaseType doInferredType(BasePrimitiveType other) {
         return switch (other.typeCode()) {
             case T_INT, T_LONG, T_FLOAT, T_DOUBLE -> other;
+            case T_VOID -> null;
             default -> LoadedClass.forObject();
         };
     }

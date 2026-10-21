@@ -41,7 +41,7 @@ public final class BaseBooleanType extends BasePrimitiveType implements BooleanT
 
     @Override
     BaseType doInferredType(BasePrimitiveType other) {
-        return LoadedClass.forObject();
+        return other.typeCode() == T_VOID ? null : LoadedClass.forObject();
     }
 
     @Override

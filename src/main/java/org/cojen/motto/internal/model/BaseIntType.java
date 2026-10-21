@@ -48,6 +48,7 @@ public final class BaseIntType extends BasePrimitiveType implements IntType {
             case T_CHAR, T_BYTE, T_SHORT -> this;
             case T_LONG, T_DOUBLE -> other;
             case T_FLOAT -> BaseDoubleType.THE;
+            case T_VOID -> null;
             default -> LoadedClass.forObject();
         };
     }
