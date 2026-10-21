@@ -731,6 +731,61 @@ abstract sealed class ModelScope {
 
             return false;
         }
+
+        /**
+         * @param st used for error reporting
+         * @param items code items which were just visited
+         * @param lastResult is non-null if at least one item exists and it didn't produce an error
+         * @return false if an error was reported
+         */
+        boolean doAutomaticYield(Statement st, List<Statement> items, BaseBinding lastResult) {
+            if (isReachable()) {
+                // Automatically yield.
+
+                BaseBinding result;
+                if (items.size() == 1 && lastResult != null) {
+                    result = lastResult;
+                } else {
+                    result = BaseBinding.Void.THE;
+                }
+                
+                addYield(items.getLast(), result);
+            }
+
+            return true;
+        }
+    }
+
+    /**
+     * Scope for plain nested code.
+     */
+    static final class Nested extends Code {
+        Nested(ModelGenerator modGen, ModelScope parent) {
+            var pc = ((Code) parent);
+            super(modGen, pc, pc.mActiveBlock);
+        }
+
+        @Override
+        boolean addReturn(Statement st, BaseBinding result) {
+            return ((Code) mParent).addReturn(st, result);
+        }
+
+        @Override
+        boolean addYield(Statement st, BaseBinding result) {
+            return ((Code) mParent).addYield(st, result);
+        }
+
+        @Override
+        boolean afterVisitCode(Statement st, List<Statement> items, BaseBinding lastResult) {
+            // Nothing to do.
+            return true;
+        }
+
+        @Override
+        ModelScope finish() {
+            ((Code) mParent).mActiveBlock = mActiveBlock;
+            return mParent;
+        }
     }
 
     /**
@@ -824,52 +879,7 @@ abstract sealed class ModelScope {
 
         @Override
         boolean afterVisitCode(Statement st, List<Statement> items, BaseBinding lastResult) {
-            if (isReachable()) {
-                // Automatically yield.
-
-                BaseBinding result;
-                if (items.size() == 1 && lastResult != null) {
-                    result = lastResult;
-                } else {
-                    result = BaseBinding.Void.THE;
-                }
-                
-                addYield(items.getLast(), result);
-            }
-
-            return true;
-        }
-    }
-
-    /**
-     * Scope for plain nested code.
-     */
-    static final class Nested extends Code {
-        Nested(ModelGenerator modGen, ModelScope parent) {
-            var pc = ((Code) parent);
-            super(modGen, pc, pc.mActiveBlock);
-        }
-
-        @Override
-        boolean addReturn(Statement st, BaseBinding result) {
-            return ((Code) mParent).addReturn(st, result);
-        }
-
-        @Override
-        boolean addYield(Statement st, BaseBinding result) {
-            return ((Code) mParent).addYield(st, result);
-        }
-
-        @Override
-        boolean afterVisitCode(Statement st, List<Statement> items, BaseBinding lastResult) {
-            // Nothing to do.
-            return true;
-        }
-
-        @Override
-        ModelScope finish() {
-            ((Code) mParent).mActiveBlock = mActiveBlock;
-            return mParent;
+            return doAutomaticYield(st, items, lastResult);
         }
     }
 
@@ -909,15 +919,7 @@ abstract sealed class ModelScope {
 
         @Override
         boolean afterVisitCode(Statement st, List<Statement> items, BaseBinding lastResult) {
-            if (isReachable() && items.size() == 1 && lastResult != null) {
-                // If only one item was visited, automatically add a yield statement.
-                Statement first = items.getFirst();
-                if (!(first instanceof YieldStatement)) {
-                    return addYield(first, lastResult);
-                }
-            }
-
-            return true;
+            return doAutomaticYield(st, items, lastResult);
         }
     }
 }
