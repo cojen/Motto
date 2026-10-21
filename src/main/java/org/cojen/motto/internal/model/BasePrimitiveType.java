@@ -72,7 +72,7 @@ public abstract sealed class BasePrimitiveType implements BaseType, PrimitiveTyp
 
     @Override
     public BaseType inferredType(BaseType other) {
-        if (equals(other) || other == BaseUnspecifiedType.THE) {
+        if (isEquivalentTo(other) || other == BaseUnspecifiedType.THE) {
             return this;
         }
 

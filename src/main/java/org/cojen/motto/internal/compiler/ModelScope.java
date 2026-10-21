@@ -724,8 +724,7 @@ abstract sealed class ModelScope {
                 return true;
             }
 
-            String message = which + " type of " + result.type().displayName() +
-                " conflicts with an earlier " + which + " type of " + conflict.displayName();
+            String message = BaseInferredType.errorMessage(which, result.type(), conflict);
 
             env().error(st, message);
 

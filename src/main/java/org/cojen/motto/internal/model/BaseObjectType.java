@@ -94,7 +94,7 @@ public sealed interface BaseObjectType extends BaseType, ObjectType
 
     @Override
     public default BaseType inferredType(BaseType other) {
-        if (equals(other) || other == BaseUnspecifiedType.THE) {
+        if (isEquivalentTo(other) || other == BaseUnspecifiedType.THE) {
             return this;
         }
 

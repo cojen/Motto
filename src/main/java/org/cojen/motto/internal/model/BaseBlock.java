@@ -367,8 +367,9 @@ public final class BaseBlock implements Block {
     public void return_(BaseBinding result) {
         BaseType conflict = mContext.assignResultAndJump(this, result);
         if (conflict != null) {
+            String message = BaseInferredType.errorMessage("return", result.type(), conflict);
             // FIXME: report an error
-            throw new IllegalStateException();
+            throw new IllegalStateException(message);
         }
     }
 

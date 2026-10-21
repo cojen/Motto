@@ -28,6 +28,29 @@ import org.cojen.motto.model.Type;
  * @author Brian S. O'Neill
  */
 public final class BaseInferredType implements BaseType {
+    /**
+     * @param which usually "return" or "yield"
+     * @param resultType the copy destination type
+     * @param conflictType the copy source type which isn't compatible
+     */
+    public static String errorMessage(String which, BaseType resultType, BaseType conflictType) {
+        var b = new StringBuilder(which).append(" type of ");
+        resultType.appendDisplayNameTo(b);
+
+        b.append(" conflicts with ");
+
+        if (resultType instanceof BaseInferredType) {
+            b.append("an earlier ");
+        } else {
+            b.append("required ");
+        }
+
+        b.append(which).append(" type of ");
+        conflictType.appendDisplayNameTo(b);
+
+        return b.toString();
+    }
+
     private BaseType mCurrent;
 
     public BaseInferredType() {
