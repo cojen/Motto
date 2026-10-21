@@ -240,7 +240,15 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
         }
 
         if (!(action instanceof BaseTerminalAction)) {
-            BaseBinding result = block.context().resultBinding();
+            CodeContext context = block.context();
+
+            if (context != mItem.code().context()) {
+                // Return is only allowed for the original context.
+                throw new IllegalStateException();
+            }
+
+            BaseBinding result = context.resultBinding();
+
             if (result.type().isVoid()) {
                 mMethodMaker.return_();
             } else {
