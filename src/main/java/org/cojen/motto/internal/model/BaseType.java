@@ -281,8 +281,7 @@ public sealed interface BaseType extends Type, EncodableType
      * @see BaseInferredType
      */
     public default BaseType specialize(BaseType other) {
-        BaseType inferred = inferredType(other);
-        return (inferred == null || !isAssignableFrom(inferred)) ? this : null;
+        return isAssignableFrom(other) ? null : this;
     }
 
     /**
