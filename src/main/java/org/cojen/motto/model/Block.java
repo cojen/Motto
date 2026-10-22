@@ -123,15 +123,10 @@ public sealed interface Block extends Iterable<Action> permits BaseBlock {
     public Binding callVirtual(CallableItem callable, Object... inputs);
 
     /**
-     * Terminate a block and return a value, possibly void. A return exits the current context,
-     * which might be a method, a constructor, or a macro. Returning from a macro doesn't exit
-     * the calling method or constructor. Like a method, it returns control to the point after
-     * the invocation.
-     *
      * @param result a {@link Binding Binding} or a constant
      * @throws TerminatedBlockException if this block is terminated
      */
-    public void return_(Object result);
+    public void yield(Object result);
 
     /**
      * Append a jump action to the end of this block, and then terminate it.

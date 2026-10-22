@@ -343,14 +343,15 @@ public final class BaseBlock implements Block {
     }
 
     @Override
-    public void return_(Object result) {
-        this.return_(toBinding(result));
+    public void yield(Object result) {
+        this.yield(toBinding(result));
     }
 
-    public void return_(BaseBinding result) {
+    public void yield(BaseBinding result) {
         BaseType conflict = mContext.assignResultAndJump(this, result);
+
         if (conflict != null) {
-            String message = BaseInferredType.errorMessage("return", result.type(), conflict);
+            String message = BaseInferredType.errorMessage("yield", result.type(), conflict);
             // FIXME: report an error
             throw new IllegalStateException(message);
         }
