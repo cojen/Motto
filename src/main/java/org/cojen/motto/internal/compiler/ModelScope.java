@@ -834,12 +834,21 @@ abstract sealed class ModelScope {
         @Override
         boolean afterVisitCode(Statement st, List<Statement> items, BaseBinding lastResult) {
             if (isReachable()) {
-                // The scope must end with a return statement.
-                var callable = (BaseCallableItem) mItem;
-                if (callable.implSignature().outputType().isVoid()) {
-                    // Automatically return.
+                // The scope must end with a return statement. Try to add one automatically.
+
+                BaseType outputType = ((BaseCallableItem) mItem).implSignature().outputType();
+
+                if (outputType.isVoid()) {
                     return doReturn(st, mActiveBlock, BaseBinding.Void.THE);
-                } else if (env().numErrors() == 0) {
+                }
+
+                if (items.size() == 1 && lastResult != null &&
+                    outputType.isAssignableFrom(lastResult.type()))
+                {
+                    return doReturn(items.getLast(), mActiveBlock, lastResult);
+                }
+
+                if (env().numErrors() == 0) {
                     env().error(st.end(), "missing return statement");
                     return false;
                 }
