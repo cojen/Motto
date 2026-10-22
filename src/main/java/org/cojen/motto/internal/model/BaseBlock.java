@@ -25,7 +25,6 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.cojen.motto.internal.util.SimpleSet;
@@ -70,7 +69,7 @@ public final class BaseBlock implements Block {
         }
     }
 
-    private final CodeContext mContext;
+    private final ResultContext mContext;
     private final int mHashCode;
 
     private int mPosition;
@@ -87,7 +86,7 @@ public final class BaseBlock implements Block {
     // Immediate dominator.
     private BaseBlock mIdom;
 
-    public BaseBlock(CodeContext context) {
+    public BaseBlock(ResultContext context) {
         mContext = context;
 
         // This is a bit faster than the default identity hashcode.
@@ -97,10 +96,6 @@ public final class BaseBlock implements Block {
     @Override
     public int hashCode() {
         return mHashCode;
-    }
-
-    protected BaseBlock newBaseBlock() {
-        return new BaseBlock(mContext);
     }
 
     // FIXME: Need stricter checks that objects passed into these methods belong to the same
@@ -197,41 +192,29 @@ public final class BaseBlock implements Block {
 
     @Override
     public BaseBlock merge() {
-        return merge(null);
+        return merge(this, null, new HashSet<>());
     }
 
-    /**
-     * @param skip if non-null, returns true if the given non-terminated block should be ignored
-     */
-    public BaseBlock merge(Predicate<? super Block> skip) {
-        return merge(this, skip, null, new HashSet<>());
-    }
-
-    private BaseBlock merge(BaseBlock block, Predicate<? super Block> skip,
-                            BaseBlock common, HashSet<BaseBlock> visited)
-    {
+    private BaseBlock merge(BaseBlock block, BaseBlock common, HashSet<BaseBlock> visited) {
         // Note: The block being processed can match the common block when following a path
         // which was already merged.
         while (block != common && visited.add(block)) {
             BaseAction last = block.mLastAction;
 
-            if (last == null || !(last instanceof TerminalAction)) {
-                if (skip == null || !skip.test(block)) {
-                    if (common == null) {
-                        // Must call newBaseBlock from the block that initiated the merge, not
-                        // the block participating in the merge. This ensures that a merge
-                        // against a RetJump block creates a new RetJump block.
-                        common = this.newBaseBlock();
-                    }
-                    block.jump(common);
+            if ((last == null || !(last instanceof TerminalAction)) && !block.isReturnBlock()) {
+                if (common == null) {
+                    // Use the context of the block that initiated the merge, not the block
+                    // participating in the merge.
+                    common = new BaseBlock(this.mContext);
                 }
+                block.jump(common);
                 break;
             }
 
             if (last instanceof BaseJumpAction jump) {
                 block = jump.destination(); // tail call
             } else if (last instanceof BaseBranchAction branch) {
-                common = merge(branch.whenTrue(), skip, common, visited);
+                common = merge(branch.whenTrue(), common, visited);
                 block = branch.whenFalse(); // tail call
             } else {
                 break;
@@ -713,8 +696,16 @@ public final class BaseBlock implements Block {
     /**
      * Returns the non-null context the Block belongs to.
      */
-    public CodeContext context() {
+    public ResultContext context() {
         return mContext;
+    }
+
+    /**
+     * Returns true if this block is the result block of its context, and the result is
+     * excepted to be returned from a callable.
+     */
+    public boolean isReturnBlock() {
+        return mContext.isReturnBlock(this);
     }
 
     public boolean isEmpty() {

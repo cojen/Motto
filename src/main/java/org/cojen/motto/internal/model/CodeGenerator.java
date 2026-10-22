@@ -240,7 +240,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
         }
 
         if (!(action instanceof BaseTerminalAction)) {
-            CodeContext context = block.context();
+            ResultContext context = block.context();
 
             if (context != mItem.code().context()) {
                 // Return is only allowed for the original context.
@@ -438,8 +438,13 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
             params[i] = input;
         }
 
-        CodeContext context = block.context();
-        var lastBlock = new BaseBlock(context);
+        BaseType resultType = callable.signature().outputType();
+
+        if (resultType == BaseUnspecifiedType.THE) {
+            resultType = new BaseInferredType();
+        }
+
+        var context = new ResultContext.Yield(resultType);
 
         Supplier<BaseBlock> factory = () -> {
             var newBlock = new BaseBlock(context);
@@ -468,20 +473,22 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
             BaseMacroAccess.removeLocal();
         }
 
-        // Skip the lastBlock, to ensure that it remains empty and non-terminated.
-        BaseBlock exit = entry.merge(b -> b == lastBlock);
+        BaseBlock exit = entry.merge();
 
-        if (exit != null) {
-            // The exit block should be a RetJump, and so this actually jumps to lastBlock.
-            // FIXME: Support yield value.
-            exit.return_(BaseBinding.Void.THE);
+        BaseAction next = action.next;
+
+        if (exit == null) {
+            if (next != null) {
+                // FIXME: report a proper exception
+                throw new IllegalStateException("unreachable; line=" + next.line());
+            }
+        } else {
+            // FIXME: copy the result to the call output (merge must handle the inferred stuff)
+
+            if (next != null) {
+                block.transfer(action, exit);
+            }
         }
-
-        // Move the next action to lastBlock such that the action is reachable from the entry.
-        block.transfer(action, lastBlock);
-
-        // Skip over simple blocks, but not too soon. Otherwise, lastBlock can get skipped.
-        entry = entry.skipAhead();
 
         buildBlockStateMap(entry);
 

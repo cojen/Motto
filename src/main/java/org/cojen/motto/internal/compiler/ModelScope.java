@@ -32,9 +32,9 @@ import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
-import org.cojen.motto.internal.model.CodeContext;
 import org.cojen.motto.internal.model.NewClass;
 import org.cojen.motto.internal.model.NewLocalClass;
+import org.cojen.motto.internal.model.ResultContext;
 
 import org.cojen.motto.internal.parser.ClassDefinitionStatement;
 import org.cojen.motto.internal.parser.ConstructorDefinitionStatement;
@@ -110,7 +110,7 @@ abstract sealed class ModelScope {
     /**
      * @throws UnsupportedOperationException if not supported by this scope
      */
-    CodeContext context() {
+    ResultContext context() {
         throw new UnsupportedOperationException();
     }
 
@@ -408,7 +408,7 @@ abstract sealed class ModelScope {
      * Scope which has code blocks, local variables, and labels.
      */
     static abstract sealed class Code extends ModelScope {
-        final CodeContext mContext;
+        final ResultContext mContext;
 
         BaseBlock mEntryBlock;
         BaseBlock mActiveBlock;
@@ -423,7 +423,7 @@ abstract sealed class ModelScope {
          * Constructor for callables.
          */
         Code(ModelGenerator modGen, ModelScope parent, BaseCallableItem item) {
-            var context = new CodeContext(modGen.env(), item.implSignature().outputType());
+            var context = new ResultContext.Return(item.implSignature().outputType());
             this(modGen, parent, item, new BaseBlock(context));
         }
 
@@ -443,7 +443,7 @@ abstract sealed class ModelScope {
         }
 
         @Override
-        CodeContext context() {
+        ResultContext context() {
             return mContext;
         }
 
@@ -670,7 +670,7 @@ abstract sealed class ModelScope {
             if (captured != null) {
                 if (captured instanceof BaseBinding.Named n) {
                     // FIXME: CapturedSet should be tracked by parent ModelScope, or possibly
-                    // be tracked by CodeContext.
+                    // be tracked by ResultContext.
                     throw null;
                     //return enclosing.capture(n.type(), name, localClass);
                 } else if (captured instanceof BaseBinding.Captured c) {
@@ -761,6 +761,7 @@ abstract sealed class ModelScope {
     static final class Nested extends Code {
         Nested(ModelGenerator modGen, ModelScope parent) {
             var pc = ((Code) parent);
+            // Uses the same context as the parent (from mActiveBlock).
             super(modGen, pc, pc.mActiveBlock);
         }
 
@@ -796,6 +797,7 @@ abstract sealed class ModelScope {
                 throw new IllegalArgumentException();
             }
 
+            // Uses a new context.
             super(modGen, parent, item);
 
             // Parameters must be added before named local variables.
@@ -861,6 +863,7 @@ abstract sealed class ModelScope {
      */
     static final class Lambda extends Callable {
         Lambda(ModelGenerator modGen, ModelScope parent, BaseCallableItem item) {
+            // Uses a new context.
             super(modGen, parent, item);
         }
 
@@ -887,7 +890,8 @@ abstract sealed class ModelScope {
      */
     static final class CodeItem extends Code {
         CodeItem(ModelGenerator modGen, ModelScope parent) {
-            var context = new CodeContext(modGen.env(), new BaseInferredType());
+            // Uses a new non-returning context.
+            var context = new ResultContext.Yield(new BaseInferredType());
             super(modGen, (Code) parent, new BaseBlock(context));
         }
 

@@ -23,7 +23,6 @@ import java.util.Map;
  *
  * @author Brian S. O'Neill
  */
-// FIXME: remove
 final class UnreachableAction extends BaseTerminalAction {
     static final UnreachableAction THE = new UnreachableAction();
 

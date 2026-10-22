@@ -16,41 +16,39 @@
 
 package org.cojen.motto.internal.model;
 
-import org.cojen.motto.internal.compiler.CompilationEnv;
-
 /**
- * A CodeContext is referenced by blocks and bindings.
+ * Tracks the result for a block of code.
  *
  * @author Brian S. O'Neill
  */
-public final class CodeContext {
-    private final CompilationEnv mEnv;
+public abstract sealed class ResultContext {
     private final BaseBlock mResultBlock;
     private final BaseBinding mResultBinding;
 
-    public CodeContext(CompilationEnv env, BaseType resultType) {
-        mEnv = env;
+    public ResultContext(BaseType resultType) {
         mResultBinding = new BaseBinding.Anonymous(this, resultType);
         mResultBlock = new BaseBlock(this);
-    }
-
-    public CompilationEnv env() {
-        return mEnv;
     }
 
     /**
      * Returns an anonymous binding which must be assigned before jumping to the result block.
      */
-    public BaseBinding resultBinding() {
+    public final BaseBinding resultBinding() {
         return mResultBinding;
     }
 
     /**
      * Returns a block to jump to when the code is done.
      */
-    public BaseBlock resultBlock() {
+    public final BaseBlock resultBlock() {
         return mResultBlock;
     }
+
+    /**
+     * Returns true if the given block is the result block of this context, and the result is
+     * excepted to be returned from a callable.
+     */
+    public abstract boolean isReturnBlock(BaseBlock block);
 
     /**
      * Assigns the context result binding and jumps to the result block.
@@ -59,7 +57,7 @@ public final class CodeContext {
      * @return null if successful, or else a conflicting type if the context result type is
      * inferred, and it couldn't be specialized
      */
-    public BaseType assignResultAndJump(BaseBlock block, BaseBinding result) {
+    public final BaseType assignResultAndJump(BaseBlock block, BaseBinding result) {
         BaseType conflict = mResultBinding.type().specialize(result.type());
 
         if (conflict == null) {
@@ -68,5 +66,33 @@ public final class CodeContext {
         }
 
         return conflict;
+    }
+
+    /**
+     * Defines a context which doesn't generate a return instruction.
+     */
+    public static final class Yield extends ResultContext {
+        public Yield(BaseType resultType) {
+            super(resultType);
+        }
+        
+        @Override
+        public boolean isReturnBlock(BaseBlock block) {
+            return false;
+        }
+    }
+
+    /**
+     * Defines a context which should generate a return instruction.
+     */
+    public static final class Return extends ResultContext {
+        public Return(BaseType resultType) {
+            super(resultType);
+        }
+        
+        @Override
+        public boolean isReturnBlock(BaseBlock block) {
+            return block == resultBlock();
+        }
     }
 }

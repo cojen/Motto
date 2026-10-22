@@ -42,7 +42,7 @@ public abstract sealed class BaseBinding implements Binding {
     /**
      * Returns the context the binding belongs to, or null if not applicable.
      */
-    abstract CodeContext context();
+    abstract ResultContext context();
 
     /**
      * If this is an anonymous binding or if it accesses any, then map.putIfAbsent(anonymous,
@@ -100,7 +100,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        CodeContext context() {
+        ResultContext context() {
             return null;
         }
     }
@@ -117,7 +117,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        CodeContext context() {
+        ResultContext context() {
             return null;
         }
     }
@@ -141,7 +141,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        CodeContext context() {
+        ResultContext context() {
             return null;
         }
 
@@ -256,7 +256,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        CodeContext context() {
+        ResultContext context() {
             return mMerge.context();
         }
 
@@ -312,7 +312,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        CodeContext context() {
+        ResultContext context() {
             return null;
         }
 
@@ -360,7 +360,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        CodeContext context() {
+        ResultContext context() {
             return mInstance.context();
         }
 
@@ -404,7 +404,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        CodeContext context() {
+        ResultContext context() {
             return mInstance.context();
         }
 
@@ -448,7 +448,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        CodeContext context() {
+        ResultContext context() {
             return null;
         }
 
@@ -503,7 +503,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        CodeContext context() {
+        ResultContext context() {
             return mTuple.context();
         }
 
@@ -536,14 +536,14 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     public static abstract sealed class Local extends Stable {
-        private final CodeContext mContext;
+        private final ResultContext mContext;
         final BaseType mType;
 
         /**
          * @param context required
          * @param type required
          */
-        Local(CodeContext context, BaseType type) {
+        Local(ResultContext context, BaseType type) {
             mContext = Objects.requireNonNull(context);
             mType = Objects.requireNonNull(type);
         }
@@ -554,7 +554,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        CodeContext context() {
+        ResultContext context() {
             return mContext;
         }
 
@@ -586,7 +586,7 @@ public abstract sealed class BaseBinding implements Binding {
          * @param type required
          * @param name required
          */
-        public Named(CodeContext context, BaseType type, String name) {
+        public Named(ResultContext context, BaseType type, String name) {
             super(context, type);
             mName = Objects.requireNonNull(name);
         }
@@ -596,7 +596,7 @@ public abstract sealed class BaseBinding implements Binding {
          * @param name optional
          * @param type required
          */
-        protected Named(CodeContext context, String name, BaseType type) {
+        protected Named(ResultContext context, String name, BaseType type) {
             super(context, type);
             mName = name;
         }
@@ -616,7 +616,7 @@ public abstract sealed class BaseBinding implements Binding {
          * @param name optional
          * @throws IllegalArgumentException if index is negative
          */
-        public Parameter(CodeContext context, BaseType type, String name, int index) {
+        public Parameter(ResultContext context, BaseType type, String name, int index) {
             super(context, name, type);
             if (index < 0) {
                 throw new IllegalArgumentException();
@@ -640,7 +640,7 @@ public abstract sealed class BaseBinding implements Binding {
          * @param context required
          * @param type required
          */
-        public Anonymous(CodeContext context, BaseType type) {
+        public Anonymous(ResultContext context, BaseType type) {
             super(context, type);
         }
 
@@ -668,7 +668,7 @@ public abstract sealed class BaseBinding implements Binding {
      * Defines a binding which refers to a captured local variable, used by a local inner class.
      */
     public static final class Captured extends BaseBinding {
-        private final CodeContext mContext;
+        private final ResultContext mContext;
         private final BaseCallableItem mCallable;
         private final BaseType mType;
         private final String mName;
@@ -686,7 +686,7 @@ public abstract sealed class BaseBinding implements Binding {
          * @param context required
          * @param callable declares the local variable
          */
-        Captured(CodeContext context, BaseCallableItem callable, BaseType type, String name) {
+        Captured(ResultContext context, BaseCallableItem callable, BaseType type, String name) {
             mContext = Objects.requireNonNull(context);
             mCallable = Objects.requireNonNull(callable);
             mType = Objects.requireNonNull(type);
@@ -699,7 +699,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        CodeContext context() {
+        ResultContext context() {
             return mContext;
         }
 
@@ -740,7 +740,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        CodeContext context() {
+        ResultContext context() {
             return mEntry.context();
         }
 
