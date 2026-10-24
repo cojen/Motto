@@ -377,6 +377,10 @@ public final class BaseBlock implements Block {
 
     @SuppressWarnings("unchecked")
     private synchronized void addJumpAction(BaseJumpAction jump) {
+        if (isTerminated()) {
+            throw new TerminatedBlockException();
+        }
+
         if (mFirstAction == null) {
             // If possible, update the predecessors to jump ahead to the given destination,
             // skipping this simple block. The jump is still added to this block, in case it's
