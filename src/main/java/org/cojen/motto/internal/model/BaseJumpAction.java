@@ -29,12 +29,8 @@ import org.cojen.motto.model.JumpAction;
 public final class BaseJumpAction extends BaseTerminalAction implements JumpAction {
     private BaseBlock mDestination;
 
-    /**
-     * @param owner the block that this action resides in
-     */
-    BaseJumpAction(BaseBlock owner, int position, BaseBlock destination) {
+    BaseJumpAction(int position, BaseBlock destination) {
         super(position);
-        destination.addPredecessor(owner);
         mDestination = destination;
     }
 
@@ -50,16 +46,23 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
 
     /**
      * @param owner the block that this action resides in
-     * @return false if nothing changed
      */
-    boolean setDestination(BaseBlock owner, BaseBlock newDestination) {
-        if (newDestination == mDestination) {
-            return false;
+    void setDestination(BaseBlock owner, BaseBlock newDestination) {
+        if (newDestination != mDestination) {
+            newDestination.addPredecessor(owner);
+            mDestination.removePredecessor(owner);
+            mDestination = newDestination;
         }
-        newDestination.addPredecessor(owner);
+    }
+
+    @Override
+    void addPredecessors(BaseBlock owner) {
+        mDestination.addPredecessor(owner);
+    }
+
+    @Override
+    void removePredecessors(BaseBlock owner) {
         mDestination.removePredecessor(owner);
-        mDestination = newDestination;
-        return true;
     }
 
     @Override
@@ -70,14 +73,8 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
     }
 
     @Override
-    void moved(BaseBlock oldOwner, BaseBlock newOwner) {
-        mDestination.removePredecessor(oldOwner);
-        mDestination.addPredecessor(newOwner);
-    }
-
-    @Override
-    BaseJumpAction detach(BaseBlock owner) {
-        return new BaseJumpAction(owner, position(), mDestination);
+    BaseJumpAction detach() {
+        return new BaseJumpAction(position(), mDestination);
     }
 
     @Override

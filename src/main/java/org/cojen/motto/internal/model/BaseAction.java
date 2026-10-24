@@ -56,6 +56,24 @@ public abstract sealed class BaseAction implements Action permits FlowAction, Ba
     }
 
     /**
+     * If this is a jump or branch action, then call addPredecessor on the destination blocks.
+     * This must be called when an action is appended to a block.
+     *
+     * @param owner the block that this action resides in
+     */
+    void addPredecessors(BaseBlock owner) {
+    }
+
+    /**
+     * If this is a jump or branch action, then call removePredecessor on the destination
+     * blocks. This must be called when an action is removed from a block.
+     *
+     * @param owner the block that this action resides in
+     */
+    void removePredecessors(BaseBlock owner) {
+    }
+
+    /**
      * If this is a jump or branch action, then attempt to change the destination(s).
      *
      * @param owner the block that this action resides in
@@ -64,22 +82,10 @@ public abstract sealed class BaseAction implements Action permits FlowAction, Ba
     }
 
     /**
-     * Called when this action is moved to another block. If this is a jump or branch action,
-     * the block predecessors are updated.
-     *
-     * @param oldOwner the block that this action currently resides in
-     * @param newOwner the block that this action is moved to
-     */
-    void moved(BaseBlock oldOwner, BaseBlock newOwner) {
-    }
-
-    /**
      * If this action has any mutable state, a copy is returned. Otherwise, the original action
      * is returned.
-     *
-     * @param owner the block that the action will reside in
      */
-    abstract BaseAction detach(BaseBlock owner);
+    abstract BaseAction detach();
 
     /**
      * For each binding used by this action, calls BaseBinding#trackBlockLocalSource or

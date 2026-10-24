@@ -82,7 +82,7 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
         }
 
         @Override
-        BaseCallAction.Direct detach(BaseBlock owner) {
+        BaseCallAction.Direct detach() {
             return new BaseCallAction.Direct(position(), mCallable, mOutput, mInputs);
         }
     }
@@ -105,7 +105,7 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
         }
 
         @Override
-        BaseCallAction.New detach(BaseBlock owner) {
+        BaseCallAction.New detach() {
             return new BaseCallAction.New(position(), mCallable, mOutput, mInputs);
         }
     }
@@ -127,7 +127,7 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
         }
 
         @Override
-        BaseCallAction.Virtual detach(BaseBlock owner) {
+        BaseCallAction.Virtual detach() {
             return new BaseCallAction.Virtual(position(), mCallable, mOutput, mInputs);
         }
     }

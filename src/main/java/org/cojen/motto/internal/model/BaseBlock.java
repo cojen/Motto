@@ -69,6 +69,19 @@ public final class BaseBlock implements Block {
         }
     }
 
+    /*
+      Thread-safety notes:
+
+      BaseBlock isn't designed to be acted upon by multiple threads, but to guard against a
+      misbehaving macro, minimal synchronization is used to prevent data structure corruption.
+      This only is required for methods that the macro has access to.
+
+      This doesn't guard against observing apparent corruption, but this is temporary. When
+      it's guaranteed that macros cannot modify the BaseBlock (or anything it depends on), then
+      the BaseBlock can be safely used by the one thread which is allowed to interact with it.
+
+     */
+
     private final ResultContext mContext;
     private final int mHashCode;
 
@@ -97,10 +110,6 @@ public final class BaseBlock implements Block {
     public int hashCode() {
         return mHashCode;
     }
-
-    // FIXME: Need stricter checks that objects passed into these methods belong to the same
-    // callable or class being made. For blocks, compare the context instance, which should be
-    // unique for each macro call.
 
     @Override
     public void forEach(Consumer<? super Action> consumer) {
@@ -248,7 +257,7 @@ public final class BaseBlock implements Block {
     }
 
     public void append(BaseAction action) {
-        addAction(action.detach(this));
+        addAction(action.detach());
     }
 
     @Override
@@ -363,17 +372,22 @@ public final class BaseBlock implements Block {
     }
 
     public void jump(BaseBlock destination) {
-        addJumpAction(new BaseJumpAction(this, mPosition, destination.skipAhead()));
+        addJumpAction(new BaseJumpAction(mPosition, destination.skipAhead()));
     }
 
     @SuppressWarnings("unchecked")
-    private void addJumpAction(BaseJumpAction jump) {
+    private synchronized void addJumpAction(BaseJumpAction jump) {
         if (mFirstAction == null) {
             // If possible, update the predecessors to jump ahead to the given destination,
             // skipping this simple block. The jump is still added to this block, in case it's
             // reached later.
 
             // FIXME: Cannot skip if the exception handlers don't match.
+
+            // Note: The following code is deadlock prone because BaseBlock synchronization
+            // order can be inconsistent. I'm not too concerned with this the moment, because
+            // synchronization is only intended to prevent corruption from misbehaving macros.
+            // If the macro causes a deadlock, then that's treated as a macro bug.
 
             Object predecessors = mPredecessors;
 
@@ -412,7 +426,7 @@ public final class BaseBlock implements Block {
             return;
         }
 
-        addAction(new BaseBranchAction(this, mPosition, condition, whenTrue, whenFalse));
+        addAction(new BaseBranchAction(mPosition, condition, whenTrue, whenFalse));
     }
 
     @Override
@@ -732,7 +746,7 @@ public final class BaseBlock implements Block {
         return first == null ? mPosition : first.position();
     }
 
-    private void addAction(BaseAction action) {
+    private synchronized void addAction(BaseAction action) {
         BaseAction last = mLastAction;
 
         if (last == null) {
@@ -742,6 +756,8 @@ public final class BaseBlock implements Block {
         } else {
             throw new TerminatedBlockException();
         }
+
+        action.addPredecessors(this);
 
         mLastAction = action;
     }
@@ -773,7 +789,8 @@ public final class BaseBlock implements Block {
                 destination.addAction(next);
             }
 
-            next.moved(this, destination);
+            next.addPredecessors(destination);
+            next.removePredecessors(this);
         }
 
         action.next = UnreachableAction.THE;
@@ -788,7 +805,7 @@ public final class BaseBlock implements Block {
     }
 
     @SuppressWarnings("unchecked")
-    void addPredecessor(BaseBlock predecessor) {
+    synchronized void addPredecessor(BaseBlock predecessor) {
         Object predecessors = mPredecessors;
         if (predecessors == null) {
             mPredecessors = predecessor;
@@ -805,7 +822,7 @@ public final class BaseBlock implements Block {
         }
     }
 
-    void removePredecessor(BaseBlock predecessor) {
+    synchronized void removePredecessor(BaseBlock predecessor) {
         Object predecessors = mPredecessors;
         if (predecessors == predecessor) {
             mPredecessors = null;
@@ -844,7 +861,7 @@ public final class BaseBlock implements Block {
 
     /**
      * Returns the immediate dominator for this block, which is only valid after computeIdom
-     * has been called from the start block.
+     * has been called from the entry block.
      */
     BaseBlock idom() {
         return mIdom;

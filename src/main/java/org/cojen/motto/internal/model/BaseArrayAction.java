@@ -69,7 +69,7 @@ public abstract sealed class BaseArrayAction extends FlowAction implements Array
         }
 
         @Override
-        BaseArrayAction.New detach(BaseBlock owner) {
+        BaseArrayAction.New detach() {
             return new BaseArrayAction.New(position(), mType, mOutput, mDimensions);
         }
 
@@ -116,7 +116,7 @@ public abstract sealed class BaseArrayAction extends FlowAction implements Array
         }
 
         @Override
-        BaseArrayAction.Get detach(BaseBlock owner) {
+        BaseArrayAction.Get detach() {
             return new BaseArrayAction.Get(position(), mArray, mOutput, mIndex);
         }
 
@@ -161,7 +161,7 @@ public abstract sealed class BaseArrayAction extends FlowAction implements Array
         }
 
         @Override
-        BaseArrayAction.Set detach(BaseBlock owner) {
+        BaseArrayAction.Set detach() {
             return new BaseArrayAction.Set(position(), mArray, mIndex, mValue);
         }
 

@@ -31,17 +31,10 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
     private BaseBlock mWhenTrue;
     private BaseBlock mWhenFalse;
 
-    /**
-     * @param owner the block that this action resides in
-     */
-    BaseBranchAction(BaseBlock owner,
-                     int position, BaseBinding condition, BaseBlock whenTrue, BaseBlock whenFalse)
-    {
+    BaseBranchAction(int position, BaseBinding condition, BaseBlock whenTrue, BaseBlock whenFalse) {
         super(position);
         mCondition = Objects.requireNonNull(condition);
         Objects.requireNonNull(whenTrue);
-        whenFalse.addPredecessor(owner);
-        whenTrue.addPredecessor(owner);
         mWhenTrue = whenTrue;
         mWhenFalse = whenFalse;
     }
@@ -68,30 +61,36 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
 
     /**
      * @param owner the block that this action resides in
-     * @return false if nothing changed
      */
-    boolean setWhenTrue(BaseBlock owner, BaseBlock newWhenTrue) {
-        if (newWhenTrue == mWhenTrue) {
-            return false;
+    private void setWhenTrue(BaseBlock owner, BaseBlock newWhenTrue) {
+        if (newWhenTrue != mWhenTrue) {
+            mWhenTrue.removePredecessor(owner);
+            newWhenTrue.addPredecessor(owner);
+            mWhenTrue = newWhenTrue;
         }
-        newWhenTrue.addPredecessor(owner);
-        mWhenTrue.removePredecessor(owner);
-        mWhenTrue = newWhenTrue;
-        return true;
     }
 
     /**
      * @param owner the block that this action resides in
-     * @return false if nothing changed
      */
-    boolean setWhenFalse(BaseBlock owner, BaseBlock newWhenFalse) {
-        if (newWhenFalse == mWhenFalse) {
-            return false;
+    private void setWhenFalse(BaseBlock owner, BaseBlock newWhenFalse) {
+        if (newWhenFalse != mWhenFalse) {
+            newWhenFalse.addPredecessor(owner);
+            mWhenFalse.removePredecessor(owner);
+            mWhenFalse = newWhenFalse;
         }
-        newWhenFalse.addPredecessor(owner);
+    }
+
+    @Override
+    void addPredecessors(BaseBlock owner) {
+        mWhenFalse.addPredecessor(owner);
+        mWhenTrue.addPredecessor(owner);
+    }
+
+    @Override
+    void removePredecessors(BaseBlock owner) {
         mWhenFalse.removePredecessor(owner);
-        mWhenFalse = newWhenFalse;
-        return true;
+        mWhenTrue.removePredecessor(owner);
     }
 
     @Override
@@ -105,16 +104,8 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
     }
 
     @Override
-    void moved(BaseBlock oldOwner, BaseBlock newOwner) {
-        mWhenTrue.removePredecessor(oldOwner);
-        mWhenTrue.addPredecessor(newOwner);
-        mWhenFalse.removePredecessor(oldOwner);
-        mWhenFalse.addPredecessor(newOwner);
-    }
-
-    @Override
-    BaseBranchAction detach(BaseBlock owner) {
-        return new BaseBranchAction(owner, position(), mCondition, mWhenTrue, mWhenFalse);
+    BaseBranchAction detach() {
+        return new BaseBranchAction(position(), mCondition, mWhenTrue, mWhenFalse);
     }
 
     @Override

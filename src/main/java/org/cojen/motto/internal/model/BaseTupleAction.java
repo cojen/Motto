@@ -71,7 +71,7 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         }
 
         @Override
-        BaseTupleAction.New detach(BaseBlock owner) {
+        BaseTupleAction.New detach() {
             return new BaseTupleAction.New(position(), mType, mOutput, mInputs);
         }
 
@@ -122,7 +122,7 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         }
 
         @Override
-        BaseTupleAction.Get detach(BaseBlock owner) {
+        BaseTupleAction.Get detach() {
             return new BaseTupleAction.Get(position(), mTuple, mOutput, mIndex);
         }
 
@@ -171,7 +171,7 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         }
 
         @Override
-        BaseTupleAction.Set detach(BaseBlock owner) {
+        BaseTupleAction.Set detach() {
             return new BaseTupleAction.Set(position(), mTuple, mIndex, mValue);
         }
 

@@ -51,7 +51,7 @@ public final class BaseCopyAction extends FlowAction implements CopyAction {
     }
 
     @Override
-    BaseCopyAction detach(BaseBlock owner) {
+    BaseCopyAction detach() {
         return new BaseCopyAction(position(), mTarget, mSource);
     }
 
