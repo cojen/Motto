@@ -848,6 +848,11 @@ abstract sealed class ModelScope {
                     return doReturn(items.getLast(), mActiveBlock, lastResult);
                 }
 
+                // FIXME: Return and yield checks cannot be reliably handled here. A macro
+                // might need to be expanded first. Consider: if (a) {return b} else {return c}
+                // I think macro expansion needs to be a phase, and return/yield stuff in a
+                // phase as well.
+
                 if (env().numErrors() == 0) {
                     env().error(st.end(), "missing return statement");
                     return false;
