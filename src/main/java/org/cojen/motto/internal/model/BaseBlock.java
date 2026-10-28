@@ -73,12 +73,14 @@ public final class BaseBlock implements Block {
       Thread-safety notes:
 
       BaseBlock isn't designed to be acted upon by multiple threads, but to guard against a
-      misbehaving macro, minimal synchronization is used to prevent data structure corruption.
-      This only is required for methods that the macro has access to.
+      misbehaving macro, a simple lock is used to prevent data structure corruption. This only
+      is required for mutating methods that a macro can call.
 
       This doesn't guard against observing apparent corruption, but this is temporary. When
       it's guaranteed that macros cannot modify the BaseBlock (or anything it depends on), then
       the BaseBlock can be safely used by the one thread which is allowed to interact with it.
+
+      See BlockContext.acquire.
 
      */
 
@@ -201,10 +203,15 @@ public final class BaseBlock implements Block {
 
     @Override
     public BaseBlock merge() {
-        return merge(this, null, new HashSet<>());
+        boolean acquired = mContext.acquire();
+        try {
+            return doMerge(this, null, new HashSet<>());
+        } finally {
+            mContext.release(acquired);
+        }
     }
 
-    private BaseBlock merge(BaseBlock block, BaseBlock common, HashSet<BaseBlock> visited) {
+    private BaseBlock doMerge(BaseBlock block, BaseBlock common, HashSet<BaseBlock> visited) {
         // Note: The block being processed can match the common block when following a path
         // which was already merged.
         while (block != common && visited.add(block)) {
@@ -223,7 +230,7 @@ public final class BaseBlock implements Block {
             if (last instanceof BaseJumpAction jump) {
                 block = jump.destination(); // tail call
             } else if (last instanceof BaseBranchAction branch) {
-                common = merge(branch.whenTrue(), common, visited);
+                common = doMerge(branch.whenTrue(), common, visited);
                 block = branch.whenFalse(); // tail call
             } else {
                 break;
@@ -376,37 +383,38 @@ public final class BaseBlock implements Block {
     }
 
     @SuppressWarnings("unchecked")
-    private synchronized void addJumpAction(BaseJumpAction jump) {
-        if (isTerminated()) {
-            throw new TerminatedBlockException();
-        }
+    private void addJumpAction(BaseJumpAction jump) {
+        boolean acquired = mContext.acquire();
 
-        if (mFirstAction == null) {
-            // If possible, update the predecessors to jump ahead to the given destination,
-            // skipping this simple block. The jump is still added to this block, in case it's
-            // reached later.
+        try {
+            if (isTerminated()) {
+                throw new TerminatedBlockException();
+            }
 
-            // FIXME: Cannot skip if the exception handlers don't match.
+            if (mFirstAction == null) {
+                // If possible, update the predecessors to jump ahead to the given destination,
+                // skipping this simple block. The jump is still added to this block, in case
+                // it's reached later.
 
-            // Note: The following code is deadlock prone because BaseBlock synchronization
-            // order can be inconsistent. I'm not too concerned with this the moment, because
-            // synchronization is only intended to prevent corruption from misbehaving macros.
-            // If the macro causes a deadlock, then that's treated as a macro bug.
+                // FIXME: Cannot skip if the exception handlers don't match.
 
-            Object predecessors = mPredecessors;
+                Object predecessors = mPredecessors;
 
-            if (predecessors != null) {
-                if (predecessors instanceof BaseBlock pred) {
-                    pred.mLastAction.changeDestination(pred, this, jump.destination());
-                } else {
-                    for (BaseBlock pred : (SimpleSet<BaseBlock>) predecessors) {
+                if (predecessors != null) {
+                    if (predecessors instanceof BaseBlock pred) {
                         pred.mLastAction.changeDestination(pred, this, jump.destination());
+                    } else {
+                        for (BaseBlock pred : (SimpleSet<BaseBlock>) predecessors) {
+                            pred.mLastAction.changeDestination(pred, this, jump.destination());
+                        }
                     }
                 }
             }
-        }
 
-        addAction(jump);
+            doAddAction(jump);
+        } finally {
+            mContext.release(acquired);
+        }
     }
 
     @Override
@@ -750,7 +758,16 @@ public final class BaseBlock implements Block {
         return first == null ? mPosition : first.position();
     }
 
-    private synchronized void addAction(BaseAction action) {
+    private void addAction(BaseAction action) {
+        boolean acquired = mContext.acquire();
+        try {
+            doAddAction(action);
+        } finally {
+            mContext.release(acquired);
+        }
+    }
+
+    private void doAddAction(BaseAction action) {
         BaseAction last = mLastAction;
 
         if (last == null) {
@@ -784,20 +801,26 @@ public final class BaseBlock implements Block {
      * @throws TerminatedBlockException if the destination block is terminated
      */
     void transfer(FlowAction action, BaseBlock destination) {
-        BaseAction next = action.next;
+        boolean acquired = mContext.acquire();
 
-        if (next != null) {
-            if (next instanceof BaseJumpAction jump) {
-                destination.addJumpAction(jump);
-            } else {
-                destination.addAction(next);
+        try {
+            BaseAction next = action.next;
+
+            if (next != null) {
+                if (next instanceof BaseJumpAction jump) {
+                    destination.addJumpAction(jump);
+                } else {
+                    destination.addAction(next);
+                }
+
+                next.addPredecessors(destination);
+                next.removePredecessors(this);
             }
 
-            next.addPredecessors(destination);
-            next.removePredecessors(this);
+            action.next = UnreachableAction.THE;
+        } finally {
+            mContext.release(acquired);
         }
-
-        action.next = UnreachableAction.THE;
     }
 
     BaseAction firstAction() {
@@ -809,32 +832,44 @@ public final class BaseBlock implements Block {
     }
 
     @SuppressWarnings("unchecked")
-    synchronized void addPredecessor(BaseBlock predecessor) {
-        Object predecessors = mPredecessors;
-        if (predecessors == null) {
-            mPredecessors = predecessor;
-        } else {
-            SimpleSet<BaseBlock> set;
-            if (predecessors instanceof SimpleSet) {
-                set = (SimpleSet<BaseBlock>) predecessors;
+    void addPredecessor(BaseBlock predecessor) {
+        boolean acquired = mContext.acquire();
+
+        try {
+            Object predecessors = mPredecessors;
+            if (predecessors == null) {
+                mPredecessors = predecessor;
             } else {
-                set = new SimpleSet<>();
-                set.add((BaseBlock) predecessors);
-                mPredecessors = set;
+                SimpleSet<BaseBlock> set;
+                if (predecessors instanceof SimpleSet) {
+                    set = (SimpleSet<BaseBlock>) predecessors;
+                } else {
+                    set = new SimpleSet<>();
+                    set.add((BaseBlock) predecessors);
+                    mPredecessors = set;
+                }
+                set.add(predecessor);
             }
-            set.add(predecessor);
+        } finally {
+            mContext.release(acquired);
         }
     }
 
-    synchronized void removePredecessor(BaseBlock predecessor) {
-        Object predecessors = mPredecessors;
-        if (predecessors == predecessor) {
-            mPredecessors = null;
-        } else if (predecessors instanceof SimpleSet set) {
-            set.remove(predecessor);
-            if (set.isEmpty()) {
+    void removePredecessor(BaseBlock predecessor) {
+        boolean acquired = mContext.acquire();
+
+        try {
+            Object predecessors = mPredecessors;
+            if (predecessors == predecessor) {
                 mPredecessors = null;
+            } else if (predecessors instanceof SimpleSet set) {
+                set.remove(predecessor);
+                if (set.isEmpty()) {
+                    mPredecessors = null;
+                }
             }
+        } finally {
+            mContext.release(acquired);
         }
     }
 
