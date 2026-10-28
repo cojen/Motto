@@ -21,11 +21,11 @@ package org.cojen.motto.internal.model;
  *
  * @author Brian S. O'Neill
  */
-public abstract sealed class ResultContext {
+public abstract sealed class BlockContext {
     private final BaseBlock mResultBlock;
     private final BaseBinding mResultBinding;
 
-    public ResultContext(BaseType resultType) {
+    public BlockContext(BaseType resultType) {
         mResultBinding = new BaseBinding.Anonymous(this, resultType);
         mResultBlock = new BaseBlock(this);
     }
@@ -71,7 +71,7 @@ public abstract sealed class ResultContext {
     /**
      * Defines a context which doesn't generate a return instruction.
      */
-    public static final class Yield extends ResultContext {
+    public static final class Yield extends BlockContext {
         public Yield(BaseType resultType) {
             super(resultType);
         }
@@ -85,7 +85,7 @@ public abstract sealed class ResultContext {
     /**
      * Defines a context which should generate a return instruction.
      */
-    public static final class Return extends ResultContext {
+    public static final class Return extends BlockContext {
         public Return(BaseType resultType) {
             super(resultType);
         }

@@ -82,7 +82,7 @@ public final class BaseBlock implements Block {
 
      */
 
-    private final ResultContext mContext;
+    private final BlockContext mContext;
     private final int mHashCode;
 
     private int mPosition;
@@ -99,7 +99,7 @@ public final class BaseBlock implements Block {
     // Immediate dominator.
     private BaseBlock mIdom;
 
-    public BaseBlock(ResultContext context) {
+    public BaseBlock(BlockContext context) {
         mContext = context;
 
         // This is a bit faster than the default identity hashcode.
@@ -715,7 +715,7 @@ public final class BaseBlock implements Block {
     /**
      * Returns the non-null context the Block belongs to.
      */
-    public ResultContext context() {
+    public BlockContext context() {
         return mContext;
     }
 

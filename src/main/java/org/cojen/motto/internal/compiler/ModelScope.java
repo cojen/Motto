@@ -32,9 +32,9 @@ import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
+import org.cojen.motto.internal.model.BlockContext;
 import org.cojen.motto.internal.model.NewClass;
 import org.cojen.motto.internal.model.NewLocalClass;
-import org.cojen.motto.internal.model.ResultContext;
 
 import org.cojen.motto.internal.parser.ClassDefinitionStatement;
 import org.cojen.motto.internal.parser.ConstructorDefinitionStatement;
@@ -42,10 +42,8 @@ import org.cojen.motto.internal.parser.DeclarationStatement;
 import org.cojen.motto.internal.parser.Element;
 import org.cojen.motto.internal.parser.LabeledStatement;
 import org.cojen.motto.internal.parser.MethodDefinitionStatement;
-import org.cojen.motto.internal.parser.ReturnStatement;
 import org.cojen.motto.internal.parser.Statement;
 import org.cojen.motto.internal.parser.Token;
-import org.cojen.motto.internal.parser.YieldStatement;
 
 import static org.cojen.motto.internal.model.Modifiers.*;
 
@@ -110,7 +108,7 @@ abstract sealed class ModelScope {
     /**
      * @throws UnsupportedOperationException if not supported by this scope
      */
-    ResultContext context() {
+    BlockContext context() {
         throw new UnsupportedOperationException();
     }
 
@@ -408,7 +406,7 @@ abstract sealed class ModelScope {
      * Scope which has code blocks, local variables, and labels.
      */
     static abstract sealed class Code extends ModelScope {
-        final ResultContext mContext;
+        final BlockContext mContext;
 
         BaseBlock mEntryBlock;
         BaseBlock mActiveBlock;
@@ -423,7 +421,7 @@ abstract sealed class ModelScope {
          * Constructor for callables.
          */
         Code(ModelGenerator modGen, ModelScope parent, BaseCallableItem item) {
-            var context = new ResultContext.Return(item.implSignature().outputType());
+            var context = new BlockContext.Return(item.implSignature().outputType());
             this(modGen, parent, item, new BaseBlock(context));
         }
 
@@ -443,7 +441,7 @@ abstract sealed class ModelScope {
         }
 
         @Override
-        ResultContext context() {
+        BlockContext context() {
             return mContext;
         }
 
@@ -670,7 +668,7 @@ abstract sealed class ModelScope {
             if (captured != null) {
                 if (captured instanceof BaseBinding.Named n) {
                     // FIXME: CapturedSet should be tracked by parent ModelScope, or possibly
-                    // be tracked by ResultContext.
+                    // be tracked by BlockContext.
                     throw null;
                     //return enclosing.capture(n.type(), name, localClass);
                 } else if (captured instanceof BaseBinding.Captured c) {
@@ -905,7 +903,7 @@ abstract sealed class ModelScope {
     static final class CodeItem extends Code {
         CodeItem(ModelGenerator modGen, ModelScope parent) {
             // Uses a new non-returning context.
-            var context = new ResultContext.Yield(new BaseInferredType());
+            var context = new BlockContext.Yield(new BaseInferredType());
             super(modGen, (Code) parent, new BaseBlock(context));
         }
 

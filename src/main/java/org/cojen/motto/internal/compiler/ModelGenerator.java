@@ -47,12 +47,12 @@ import org.cojen.motto.internal.model.BaseTupleType;
 import org.cojen.motto.internal.model.BaseType;
 import org.cojen.motto.internal.model.BaseUnspecifiedType;
 import org.cojen.motto.internal.model.BaseVoidType;
+import org.cojen.motto.internal.model.BlockContext;
 import org.cojen.motto.internal.model.ClassFieldItem;
 import org.cojen.motto.internal.model.GeneratedType;
 import org.cojen.motto.internal.model.LoadedClass;
 import org.cojen.motto.internal.model.NewClass;
 import org.cojen.motto.internal.model.NewLocalClass;
-import org.cojen.motto.internal.model.ResultContext;
 
 import org.cojen.motto.internal.parser.AsStatement;
 import org.cojen.motto.internal.parser.ClassDefinitionStatement;
@@ -1310,7 +1310,7 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
      * @param opType must be T_LAND or T_LOR
      */
     private BaseBinding visitShortCircuit(InfixStatement st, int opType) {
-        ResultContext context = mScope.context();
+        BlockContext context = mScope.context();
 
         var stopBlock = new BaseBlock(context); // short-circuit destination
         var contBlock = mScope.activeBlock(st); // destination to continue checking

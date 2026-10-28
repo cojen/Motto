@@ -240,7 +240,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
         }
 
         if (!(action instanceof BaseTerminalAction)) {
-            ResultContext context = block.context();
+            BlockContext context = block.context();
 
             if (context != mItem.code().context()) {
                 // Return is only allowed for the original context.
@@ -444,7 +444,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
             resultType = new BaseInferredType();
         }
 
-        var context = new ResultContext.Yield(resultType);
+        var context = new BlockContext.Yield(resultType);
 
         Supplier<BaseBlock> factory = () -> {
             var newBlock = new BaseBlock(context);

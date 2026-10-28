@@ -26,7 +26,7 @@ import org.cojen.motto.internal.util.SimpleSet;
  * @author Brian S. O'Neill
  */
 public final class CapturedSet {
-    private final ResultContext mContext;
+    private final BlockContext mContext;
     private final BaseCallableItem mCallable;
 
     // Maps variable names declared in the callable to bindings for captured variables.
@@ -35,7 +35,7 @@ public final class CapturedSet {
     // Set of local inner classes which use the captured variables of this CapturedSet.
     private final SimpleSet<NewLocalClass> mUsedBy;
 
-    public CapturedSet(ResultContext context, BaseCallableItem callable) {
+    public CapturedSet(BlockContext context, BaseCallableItem callable) {
         mContext = context;
         mCallable = callable;
         mCapturedMap = new HashMap<>(4);
