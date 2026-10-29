@@ -264,7 +264,7 @@ public final class BaseBlock implements Block {
     }
 
     public void append(BaseAction action) {
-        addAction(action.detach());
+        addAction(action.copy());
     }
 
     @Override

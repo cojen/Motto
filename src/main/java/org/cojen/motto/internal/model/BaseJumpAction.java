@@ -73,7 +73,7 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
     }
 
     @Override
-    BaseJumpAction detach() {
+    BaseJumpAction copy() {
         return new BaseJumpAction(position(), mDestination);
     }
 

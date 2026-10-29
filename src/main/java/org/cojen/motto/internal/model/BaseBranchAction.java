@@ -104,7 +104,7 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
     }
 
     @Override
-    BaseBranchAction detach() {
+    BaseBranchAction copy() {
         return new BaseBranchAction(position(), mCondition, mWhenTrue, mWhenFalse);
     }
 

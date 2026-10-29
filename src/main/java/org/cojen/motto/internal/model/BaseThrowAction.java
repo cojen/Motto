@@ -44,7 +44,7 @@ public final class BaseThrowAction extends BaseTerminalAction implements ThrowAc
     }
 
     @Override
-    BaseThrowAction detach() {
+    BaseThrowAction copy() {
         return this;
     }
 

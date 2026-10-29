@@ -82,10 +82,9 @@ public abstract sealed class BaseAction implements Action permits FlowAction, Ba
     }
 
     /**
-     * If this action has any mutable state, a copy is returned. Otherwise, the original action
-     * is returned.
+     * Return a shallow copy of this action, unless it's a singleton.
      */
-    abstract BaseAction detach();
+    abstract BaseAction copy();
 
     /**
      * For each binding used by this action, calls BaseBinding#trackBlockLocalSource or
