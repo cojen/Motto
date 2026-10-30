@@ -123,36 +123,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
 
     @Override // Comparator
     public int compare(BaseBlock a, BaseBlock b) {
-        int apos = a.firstSourcePosition();
-        int bpos = b.firstSourcePosition();
-
-        int aline = BaseAction.decodeLine(apos);
-
-        if (aline == 0) {
-            // Not applicable.
-            return 0;
-        }
-
-        int bline = BaseAction.decodeLine(bpos);
-
-        if (bline == 0) {
-            // Not applicable.
-            return 0;
-        }
-
-        int cmp = Integer.compare(aline, bline);
-
-        if (cmp == 0) {
-            int acol = BaseAction.decodeColumn(apos);
-            if (acol != -1) {
-                int bcol = BaseAction.decodeColumn(bpos);
-                if (bcol != -1) {
-                    cmp = Integer.compare(acol, bcol);
-                }
-            }
-        }
-
-        return cmp;
+        return BaseAction.comparePositions(a.firstSourcePosition(), b.firstSourcePosition());
     }
 
     private void buildBlockStateMap(BaseBlock code) {

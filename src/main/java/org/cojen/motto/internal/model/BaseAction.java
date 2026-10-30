@@ -152,4 +152,14 @@ public abstract sealed class BaseAction implements Action permits FlowAction, Ba
             case 3  -> position & ((1 <<  6) - 1);
         } - 1;
     }
+
+    public static int comparePositions(int apos, int bpos) {
+        int cmp = Integer.compare(decodeLine(apos), decodeLine(bpos));
+
+        if (cmp == 0) {
+            cmp = Integer.compare(decodeColumn(apos), decodeColumn(bpos));
+        }
+
+        return cmp;
+    }
 }
