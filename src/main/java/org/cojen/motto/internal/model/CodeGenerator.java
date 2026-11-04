@@ -489,13 +489,12 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
         final Variable result;
 
         invoke: {
-            if (instanceBinding instanceof BaseBinding.Constant c &&
-                c.value() instanceof org.cojen.maker.Type classType)
-            {
+            if (instanceBinding instanceof BaseBinding.ClassLiteral c) {
                 if (signature.name().equals("isInstance") && !callable.isStatic()
                     && signature.inputType().numFields() == 2 && // field 0 is "this"
                     signature.inputType().fieldType(1).isJavaLangObject())
                 {
+                    var classType = c.sourceType().asMakerType();
                     result = variableFor(action.input(1)).instanceOf(classType);
                     break invoke;
                 }

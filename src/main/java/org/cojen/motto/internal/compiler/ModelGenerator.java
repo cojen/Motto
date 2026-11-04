@@ -1390,14 +1390,13 @@ final class ModelGenerator implements ParseVisitor<BaseBinding> {
         } else {
             var classClass = LoadedClass.classFrom(Class.class);
             var objectClass = LoadedClass.classFrom(Object.class);
-            var clazzObj = BaseBinding.Constant.from(classClass, toType.asMakerType());
-            // Note: The CodeGenerator sees that the class is a constant and uses the
-            // instanceof instruction.
             var sig = BaseCallSignature.from
                 (BaseBooleanType.THE, "isInstance", BaseTupleType.from(objectClass));
             var isInstance = classClass.method(sig);
             BaseBlock block = mScope.activeBlock(st);
-            result = block.callVirtual(isInstance, clazzObj, binding);
+            // Note: The CodeGenerator sees that the binding is a ClassLiteral and uses the
+            // instanceof instruction.
+            result = block.callVirtual(isInstance, BaseBinding.ClassLiteral.from(toType), binding);
             if (st.not != null) {
                 result = block.not(result);
             }
