@@ -1357,6 +1357,11 @@ public final class Parser implements Closeable {
                 var elementType = new LoadStatement(ls.path).asVarType(this);
                 return new NewArrayStatement(elementType, what.coordinates, values);
             }
+        } else if (st instanceof FieldLoadStatement what) {
+            Statement newSource = tryConvertToNewStatement(what.source);
+            if (newSource != null) {
+                return new FieldLoadStatement(newSource, what.name);
+            }
         }
 
         return null;
