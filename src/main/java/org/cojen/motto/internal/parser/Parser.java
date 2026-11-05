@@ -1316,56 +1316,81 @@ public final class Parser implements Closeable {
     }
 
     private Statement tryConvertToNewStatement(Statement st) throws IOException, Abort {
-        if (st instanceof MethodCallStatement what) {
-            Statement source = what.source;
+        switch (st) {
+            case MethodCallStatement call -> {
+                Statement source = call.source;
 
-            if (source != null) {
-                if (what.path.size() == 1) {
-                    Identifier name = what.path.getFirst();
-                    Statement newSource = tryConvertToNewStatement(source);
-                    if (newSource != null) {
-                        return new MethodCallStatement(newSource, name, what.params, what.segments);
-                    }
-                }
-            } else {
-                List<Statement> segments = what.segments;
-                if (segments.isEmpty()) {
-                    return new NewStatement(what.path, what.params);
-                }
-                if (segments.size() == 1) {
-                    Statement seg = segments.getFirst();
-                    if (seg instanceof TupleStatement code && code.isCode()) {
-                        return new NewClassDefinitionStatement(what.path, what.params, code);
-                    }
-                }
-            }
-        } else if (st instanceof CoordinateLoadStatement what) {
-            if (what.source instanceof LoadStatement ls) {
-                TupleStatement values;
-                {
-                    Token t = nextToken();
-                    values = switch (t.type()) {
-                        case T_LPAREN -> parseTuple(t, T_RPAREN);
-                        case T_LBRACE -> parseTuple(t, T_RBRACE);
-                        default -> {
-                            pushToken(t);
-                            yield null;
+                if (source != null) {
+                    if (call.path.size() == 1) {
+                        Identifier name = call.path.getFirst();
+                        Statement newSource = tryConvertToNewStatement(source);
+                        if (newSource != null) {
+                            return new MethodCallStatement
+                                (newSource, name, call.params, call.segments);
                         }
-                    };
-                }
-
-                var elementType = new LoadStatement(ls.path).asVarType(this);
-                return new NewArrayStatement(elementType, what.coordinates, values);
-            } else {
-                Statement newSource = tryConvertToNewStatement(what.source);
-                if (newSource != null) {
-                    return CoordinateLoadStatement.from(newSource, what.coordinates);
+                    }
+                } else {
+                    List<Statement> segments = call.segments;
+                    if (segments.isEmpty()) {
+                        return new NewStatement(call.path, call.params);
+                    }
+                    if (segments.size() == 1) {
+                        Statement seg = segments.getFirst();
+                        if (seg instanceof TupleStatement code && code.isCode()) {
+                            return new NewClassDefinitionStatement(call.path, call.params, code);
+                        }
+                    }
                 }
             }
-        } else if (st instanceof FieldLoadStatement what) {
-            Statement newSource = tryConvertToNewStatement(what.source);
-            if (newSource != null) {
-                return new FieldLoadStatement(newSource, what.name);
+
+            case CoordinateLoadStatement load -> {
+                if (load.source instanceof LoadStatement ls) {
+                    TupleStatement values;
+                    {
+                        Token t = nextToken();
+                        values = switch (t.type()) {
+                            case T_LPAREN -> parseTuple(t, T_RPAREN);
+                            case T_LBRACE -> parseTuple(t, T_RBRACE);
+                            default -> {
+                                pushToken(t);
+                                yield null;
+                            }
+                        };
+                    }
+
+                    var elementType = new LoadStatement(ls.path).asVarType(this);
+                    return new NewArrayStatement(elementType, load.coordinates, values);
+                } else {
+                    Statement newSource = tryConvertToNewStatement(load.source);
+                    if (newSource != null) {
+                        return CoordinateLoadStatement.from(newSource, load.coordinates);
+                    }
+                }
+            }
+
+            case FieldLoadStatement load -> {
+                Statement newSource = tryConvertToNewStatement(load.source);
+                if (newSource != null) {
+                    return new FieldLoadStatement(newSource, load.name);
+                }
+            }
+
+            case AsStatement as -> {
+                Statement newSource = tryConvertToNewStatement(as.source);
+                if (newSource != null) {
+                    return new AsStatement(newSource, as.type);
+                }
+            }
+
+            case IsStatement is -> {
+                Statement newSource = tryConvertToNewStatement(is.source);
+                if (newSource != null) {
+                    return new IsStatement(newSource, is.not, is.type);
+                }
+            }
+
+            default -> {
+                break;
             }
         }
 
