@@ -1375,6 +1375,13 @@ public final class Parser implements Closeable {
                 }
             }
 
+            case InfixStatement infix -> {
+                Statement newLeft = tryConvertToNewStatement(infix.left);
+                if (newLeft != null) {
+                    return new InfixStatement(newLeft, infix.operator, infix.right);
+                }
+            }
+
             case AsStatement as -> {
                 Statement newSource = tryConvertToNewStatement(as.source);
                 if (newSource != null) {
