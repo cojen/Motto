@@ -40,11 +40,6 @@ public abstract sealed class BaseBinding implements Binding {
     public abstract BaseType type();
 
     /**
-     * Returns the context the binding belongs to, or null if not applicable.
-     */
-    abstract BlockContext context();
-
-    /**
      * If this is an anonymous binding or if it accesses any, then map.putIfAbsent(anonymous,
      * true) is called for each of them. If successful, then the anonymous bindings are tagged
      * as having a block interdependency. They depend on having a value assigned when the block
@@ -98,11 +93,6 @@ public abstract sealed class BaseBinding implements Binding {
         public BaseType type() {
             return BaseVoidType.THE;
         }
-
-        @Override
-        BlockContext context() {
-            return null;
-        }
     }
 
     public static final class Null extends Unmodifiable {
@@ -114,11 +104,6 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return BaseNullType.THE;
-        }
-
-        @Override
-        BlockContext context() {
-            return null;
         }
     }
 
@@ -138,11 +123,6 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return mType;
-        }
-
-        @Override
-        BlockContext context() {
-            return null;
         }
 
         public Object value() {
@@ -236,7 +216,7 @@ public abstract sealed class BaseBinding implements Binding {
                 throw new IllegalArgumentException();
             }
 
-            mValue = new BaseBinding.Anonymous(merge.context(), BaseBooleanType.THE);
+            mValue = new BaseBinding.Anonymous(BaseBooleanType.THE);
 
             truePath.copy(mValue, true);
             truePath.jump(merge);
@@ -253,11 +233,6 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return mValue.type();
-        }
-
-        @Override
-        BlockContext context() {
-            return mMerge.context();
         }
 
         @Override
@@ -312,11 +287,6 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        BlockContext context() {
-            return null;
-        }
-
-        @Override
         public boolean isStable() {
             return mField.isFinal();
         }
@@ -360,11 +330,6 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        BlockContext context() {
-            return mInstance.context();
-        }
-
-        @Override
         public boolean isStable() {
             return mInstance.isStable() && mField.isFinal();
         }
@@ -404,11 +369,6 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        BlockContext context() {
-            return mInstance.context();
-        }
-
-        @Override
         public boolean isStable() {
             return mInstance.isStable();
         }
@@ -445,11 +405,6 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return LoadedClass.classFrom(Class.class);
-        }
-
-        @Override
-        BlockContext context() {
-            return null;
         }
 
         @Override
@@ -503,11 +458,6 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        BlockContext context() {
-            return mTuple.context();
-        }
-
-        @Override
         public boolean isStable() {
             return mTuple.isStable();
         }
@@ -536,26 +486,18 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     public static abstract sealed class Local extends Stable {
-        private final BlockContext mContext;
         final BaseType mType;
 
         /**
-         * @param context required
          * @param type required
          */
-        Local(BlockContext context, BaseType type) {
-            mContext = Objects.requireNonNull(context);
+        Local(BaseType type) {
             mType = Objects.requireNonNull(type);
         }
 
         @Override
         public final BaseType type() {
             return mType;
-        }
-
-        @Override
-        BlockContext context() {
-            return mContext;
         }
 
         @Override
@@ -582,22 +524,20 @@ public abstract sealed class BaseBinding implements Binding {
         final String mName;
 
         /**
-         * @param context required
          * @param type required
          * @param name required
          */
-        public Named(BlockContext context, BaseType type, String name) {
-            super(context, type);
+        public Named(BaseType type, String name) {
+            super(type);
             mName = Objects.requireNonNull(name);
         }
 
         /**
-         * @param context required
          * @param name optional
          * @param type required
          */
-        protected Named(BlockContext context, String name, BaseType type) {
-            super(context, type);
+        protected Named(String name, BaseType type) {
+            super(type);
             mName = name;
         }
 
@@ -611,13 +551,12 @@ public abstract sealed class BaseBinding implements Binding {
         private final int mIndex;
 
         /**
-         * @param context required
          * @param type required
          * @param name optional
          * @throws IllegalArgumentException if index is negative
          */
-        public Parameter(BlockContext context, BaseType type, String name, int index) {
-            super(context, name, type);
+        public Parameter(BaseType type, String name, int index) {
+            super(name, type);
             if (index < 0) {
                 throw new IllegalArgumentException();
             }
@@ -637,11 +576,10 @@ public abstract sealed class BaseBinding implements Binding {
         private boolean mHasBlockInterdependency;
 
         /**
-         * @param context required
          * @param type required
          */
-        public Anonymous(BlockContext context, BaseType type) {
-            super(context, type);
+        public Anonymous(BaseType type) {
+            super(type);
         }
 
         @Override
@@ -668,7 +606,6 @@ public abstract sealed class BaseBinding implements Binding {
      * Defines a binding which refers to a captured local variable, used by a local inner class.
      */
     public static final class Captured extends BaseBinding {
-        private final BlockContext mContext;
         private final BaseCallableItem mCallable;
         private final BaseType mType;
         private final String mName;
@@ -683,11 +620,9 @@ public abstract sealed class BaseBinding implements Binding {
         private int mAccessMode;
 
         /**
-         * @param context required
          * @param callable declares the local variable
          */
-        Captured(BlockContext context, BaseCallableItem callable, BaseType type, String name) {
-            mContext = Objects.requireNonNull(context);
+        Captured(BaseCallableItem callable, BaseType type, String name) {
             mCallable = Objects.requireNonNull(callable);
             mType = Objects.requireNonNull(type);
             mName = Objects.requireNonNull(name);
@@ -696,11 +631,6 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return mType;
-        }
-
-        @Override
-        BlockContext context() {
-            return mContext;
         }
 
         @Override
@@ -737,11 +667,6 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseCodeType type() {
             return mType;
-        }
-
-        @Override
-        BlockContext context() {
-            return mEntry.context();
         }
 
         public BaseBlock entry() {

@@ -504,7 +504,7 @@ abstract sealed class ModelScope {
                 mLocals = new LinkedHashMap<>();
             }
 
-            mLocals.put(name, new BaseBinding.Named(mContext, type, name));
+            mLocals.put(name, new BaseBinding.Named(type, name));
 
             return true;
         }
@@ -514,7 +514,7 @@ abstract sealed class ModelScope {
             if (mLocals.isEmpty()) {
                 return null;
             }
-            var local = new BaseBinding.Named(mContext, type, name);
+            var local = new BaseBinding.Named(type, name);
             if (mLocals.replace(name, local) == null) {
                 return null;
             }
@@ -806,7 +806,7 @@ abstract sealed class ModelScope {
             for (int i=0; i<num; i++) {
                 BaseType type = inputType.fieldType(i);
                 String name = inputType.fieldName(i);
-                var param = new BaseBinding.Parameter(mContext, type, name, i);
+                var param = new BaseBinding.Parameter(type, name, i);
                 if (mLocals.isEmpty()) {
                     mLocals = new LinkedHashMap<>();
                 }

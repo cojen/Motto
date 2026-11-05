@@ -42,7 +42,7 @@ public abstract sealed class BlockContext {
     private volatile Thread mOwner;
 
     public BlockContext(BaseType resultType) {
-        mResultBinding = new BaseBinding.Anonymous(this, resultType);
+        mResultBinding = new BaseBinding.Anonymous(resultType);
         mResultBlock = new BaseBlock(this);
     }
 
