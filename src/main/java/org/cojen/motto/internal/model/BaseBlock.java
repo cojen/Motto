@@ -16,7 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -171,10 +170,10 @@ public final class BaseBlock implements Block {
 
     @Override
     public boolean isFullyTerminated() {
-        return isFullyTerminated(this, new HashSet<>());
+        return isFullyTerminated(this, new SimpleSet<>());
     }
 
-    private static boolean isFullyTerminated(BaseBlock block, HashSet<BaseBlock> visited) {
+    private static boolean isFullyTerminated(BaseBlock block, SimpleSet<BaseBlock> visited) {
         while (true) {
             if (visited.contains(block)) {
                 return true;
@@ -205,13 +204,13 @@ public final class BaseBlock implements Block {
     public BaseBlock merge() {
         boolean acquired = mContext.acquire();
         try {
-            return doMerge(this, null, new HashSet<>());
+            return doMerge(this, null, new SimpleSet<>());
         } finally {
             mContext.release(acquired);
         }
     }
 
-    private BaseBlock doMerge(BaseBlock block, BaseBlock common, HashSet<BaseBlock> visited) {
+    private BaseBlock doMerge(BaseBlock block, BaseBlock common, SimpleSet<BaseBlock> visited) {
         // Note: The block being processed can match the common block when following a path
         // which was already merged.
         while (block != common && visited.add(block)) {
