@@ -16,6 +16,9 @@
 
 package org.cojen.motto.internal.compiler;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+
 import java.io.File;
 
 import java.util.HashMap;
@@ -65,6 +68,19 @@ public final class CompilationEnv {
 
     private boolean mRecompile;
 
+    private volatile Thread mOwner;
+
+    private static final VarHandle cOwnerHandle;
+
+    static {
+        try {
+            var lookup = MethodHandles.lookup();
+            cOwnerHandle = lookup.findVarHandle(CompilationEnv.class, "mOwner", Thread.class);
+        } catch (Throwable e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
     /**
      * @param sourceFile optional
      */
@@ -79,6 +95,37 @@ public final class CompilationEnv {
 
     public File sourceFile() {
         return mSourceFile;
+    }
+
+    /**
+     * Acquire ownership of the CompilationEnv, for the current thread. This is a simple kind
+     * of reentrant lock which doesn't have a queue. The benefit is that deadlocks aren't
+     * possible.
+     *
+     * @return true if acquired for the first time
+     * @throws IllegalStateException if owned by another thread
+     */
+    public boolean acquire() {
+        Thread current = Thread.currentThread();
+        Object result = cOwnerHandle.compareAndExchange(this, null, current);
+        if (result == null) {
+            return true;
+        }
+        if (result == current) {
+            return false;
+        }
+        throw new IllegalStateException("access is owned by another thread");
+    }
+
+    /**
+     * Release ownership of the CompilationEnv.
+     *
+     * @param wasAcquired pass true to actually release
+     */
+    public void release(boolean wasAcquired) {
+        if (wasAcquired) {
+            mOwner = null;
+        }
     }
 
     /**

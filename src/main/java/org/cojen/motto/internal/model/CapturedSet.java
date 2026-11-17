@@ -18,6 +18,8 @@ package org.cojen.motto.internal.model;
 
 import java.util.HashMap;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 import org.cojen.motto.internal.util.SimpleSet;
 
 /**
@@ -43,13 +45,15 @@ public final class CapturedSet {
     /**
      * @throws IllegalStateException if already captured and the type doesn't match
      */
-    public BaseBinding.Captured capture(BaseType type, String name, NewLocalClass usedBy) {
+    public BaseBinding.Captured capture(CompilationEnv env,
+                                        BaseType type, String name, NewLocalClass usedBy)
+    {
         var map = mCapturedMap;
 
         BaseBinding.Captured captured = map.get(name);
 
         if (captured == null) {
-            captured = new BaseBinding.Captured(mCallable, type, name);
+            captured = new BaseBinding.Captured(env, mCallable, type, name);
             map.put(name, captured);
         } else if (!type.equals(captured.type())) {
             throw new IllegalStateException();

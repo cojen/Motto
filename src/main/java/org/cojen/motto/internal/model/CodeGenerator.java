@@ -415,7 +415,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
             resultType = new BaseInferredType();
         }
 
-        var context = new BlockContext.Yield(resultType);
+        var context = new BlockContext.Yield(block.env(), resultType);
 
         Supplier<BaseBlock> factory = () -> {
             var newBlock = new BaseBlock(context);

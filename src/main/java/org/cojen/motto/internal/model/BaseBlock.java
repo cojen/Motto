@@ -26,6 +26,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 import org.cojen.motto.internal.util.SimpleSet;
 
 import org.cojen.motto.model.Action;
@@ -79,7 +81,7 @@ public final class BaseBlock implements Block {
       it's guaranteed that macros cannot modify the BaseBlock (or anything it depends on), then
       the BaseBlock can be safely used by the one thread which is allowed to interact with it.
 
-      See BlockContext.acquire.
+      See CompilationEnv.acquire.
 
      */
 
@@ -202,11 +204,11 @@ public final class BaseBlock implements Block {
 
     @Override
     public BaseBlock merge() {
-        boolean acquired = mContext.acquire();
+        boolean acquired = env().acquire();
         try {
             return doMerge(this, null, new SimpleSet<>());
         } finally {
-            mContext.release(acquired);
+            env().release(acquired);
         }
     }
 
@@ -245,7 +247,7 @@ public final class BaseBlock implements Block {
     }
 
     public BaseBinding.Anonymous var(BaseType type) {
-        return new BaseBinding.Anonymous(type);
+        return new BaseBinding.Anonymous(env(), type);
     }
 
     @Override
@@ -254,7 +256,7 @@ public final class BaseBlock implements Block {
     }
 
     public BaseBinding.Local var(BaseType type, String name) {
-        return name == null ? var(type) : new BaseBinding.Named(type, name);
+        return name == null ? var(type) : new BaseBinding.Named(env(), type, name);
     }
 
     @Override
@@ -383,7 +385,7 @@ public final class BaseBlock implements Block {
 
     @SuppressWarnings("unchecked")
     private void addJumpAction(BaseJumpAction jump) {
-        boolean acquired = mContext.acquire();
+        boolean acquired = env().acquire();
 
         try {
             if (isTerminated()) {
@@ -412,7 +414,7 @@ public final class BaseBlock implements Block {
 
             doAddAction(jump);
         } finally {
-            mContext.release(acquired);
+            env().release(acquired);
         }
     }
 
@@ -726,6 +728,10 @@ public final class BaseBlock implements Block {
         return mContext;
     }
 
+    CompilationEnv env() {
+        return mContext.env();
+    }
+
     /**
      * Returns true if this block is the result block of its context, and the result is
      * excepted to be returned from a callable.
@@ -758,11 +764,11 @@ public final class BaseBlock implements Block {
     }
 
     private void addAction(BaseAction action) {
-        boolean acquired = mContext.acquire();
+        boolean acquired = env().acquire();
         try {
             doAddAction(action);
         } finally {
-            mContext.release(acquired);
+            env().release(acquired);
         }
     }
 
@@ -785,7 +791,7 @@ public final class BaseBlock implements Block {
     /**
      * If this is a simple block which jumps to another, return the final destination.
      */
-    BaseBlock skipAhead() {
+    private BaseBlock skipAhead() {
         BaseBlock block = this;
         while (block.mFirstAction instanceof BaseJumpAction jump) {
             block = jump.destination();
@@ -800,7 +806,7 @@ public final class BaseBlock implements Block {
      * @throws TerminatedBlockException if the destination block is terminated
      */
     void transfer(FlowAction action, BaseBlock destination) {
-        boolean acquired = mContext.acquire();
+        boolean acquired = env().acquire();
 
         try {
             BaseAction next = action.next;
@@ -818,7 +824,7 @@ public final class BaseBlock implements Block {
 
             action.next = UnreachableAction.THE;
         } finally {
-            mContext.release(acquired);
+            env().release(acquired);
         }
     }
 
@@ -832,7 +838,7 @@ public final class BaseBlock implements Block {
 
     @SuppressWarnings("unchecked")
     void addPredecessor(BaseBlock predecessor) {
-        boolean acquired = mContext.acquire();
+        boolean acquired = env().acquire();
 
         try {
             Object predecessors = mPredecessors;
@@ -850,12 +856,12 @@ public final class BaseBlock implements Block {
                 set.add(predecessor);
             }
         } finally {
-            mContext.release(acquired);
+            env().release(acquired);
         }
     }
 
     void removePredecessor(BaseBlock predecessor) {
-        boolean acquired = mContext.acquire();
+        boolean acquired = env().acquire();
 
         try {
             Object predecessors = mPredecessors;
@@ -868,7 +874,7 @@ public final class BaseBlock implements Block {
                 }
             }
         } finally {
-            mContext.release(acquired);
+            env().release(acquired);
         }
     }
 

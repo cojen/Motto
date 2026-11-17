@@ -16,8 +16,7 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
+import org.cojen.motto.internal.compiler.CompilationEnv;
 
 /**
  * Tracks the result for a block of code.
@@ -25,55 +24,18 @@ import java.lang.invoke.VarHandle;
  * @author Brian S. O'Neill
  */
 public abstract sealed class BlockContext {
-    private static final VarHandle cOwnerHandle;
-
-    static {
-        try {
-            var lookup = MethodHandles.lookup();
-            cOwnerHandle = lookup.findVarHandle(BlockContext.class, "mOwner", Thread.class);
-        } catch (Throwable e) {
-            throw new ExceptionInInitializerError(e);
-        }
-    }
-
+    private final CompilationEnv mEnv;
     private final BaseBlock mResultBlock;
     private final BaseBinding mResultBinding;
 
-    private volatile Thread mOwner;
-
-    public BlockContext(BaseType resultType) {
-        mResultBinding = new BaseBinding.Anonymous(resultType);
+    public BlockContext(CompilationEnv env, BaseType resultType) {
+        mEnv = env;
+        mResultBinding = new BaseBinding.Anonymous(env, resultType);
         mResultBlock = new BaseBlock(this);
     }
 
-    /**
-     * Acquire ownership of the BlockContext, for the current thread. This is a simple kind of
-     * reentrant lock which doesn't have a queue.
-     *
-     * @return true if acquired for the first time
-     * @throws IllegalStateException if owned by another thread
-     */
-    public final boolean acquire() {
-        Thread current = Thread.currentThread();
-        Object result = cOwnerHandle.compareAndExchange(this, null, current);
-        if (result == null) {
-            return true;
-        }
-        if (result == current) {
-            return false;
-        }
-        throw new IllegalStateException("access is owned by another thread");
-    }
-
-    /**
-     * Release ownership of the BlockContext.
-     *
-     * @param wasAcquired pass true to actually release
-     */
-    public final void release(boolean wasAcquired) {
-        if (wasAcquired) {
-            mOwner = null;
-        }
+    final CompilationEnv env() {
+        return mEnv;
     }
 
     /**
@@ -118,8 +80,8 @@ public abstract sealed class BlockContext {
      * Defines a context which doesn't generate a return instruction.
      */
     public static final class Yield extends BlockContext {
-        public Yield(BaseType resultType) {
-            super(resultType);
+        public Yield(CompilationEnv env, BaseType resultType) {
+            super(env, resultType);
         }
         
         @Override
@@ -132,8 +94,8 @@ public abstract sealed class BlockContext {
      * Defines a context which should generate a return instruction.
      */
     public static final class Return extends BlockContext {
-        public Return(BaseType resultType) {
-            super(resultType);
+        public Return(CompilationEnv env, BaseType resultType) {
+            super(env, resultType);
         }
         
         @Override

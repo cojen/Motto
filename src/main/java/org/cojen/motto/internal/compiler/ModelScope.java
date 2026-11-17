@@ -421,7 +421,7 @@ abstract sealed class ModelScope {
          * Constructor for callables.
          */
         Code(ModelGenerator modGen, ModelScope parent, BaseCallableItem item) {
-            var context = new BlockContext.Return(item.implSignature().outputType());
+            var context = new BlockContext.Return(modGen.env(), item.implSignature().outputType());
             this(modGen, parent, item, new BaseBlock(context));
         }
 
@@ -504,7 +504,7 @@ abstract sealed class ModelScope {
                 mLocals = new LinkedHashMap<>();
             }
 
-            mLocals.put(name, new BaseBinding.Named(type, name));
+            mLocals.put(name, new BaseBinding.Named(env(), type, name));
 
             return true;
         }
@@ -514,7 +514,7 @@ abstract sealed class ModelScope {
             if (mLocals.isEmpty()) {
                 return null;
             }
-            var local = new BaseBinding.Named(type, name);
+            var local = new BaseBinding.Named(env(), type, name);
             if (mLocals.replace(name, local) == null) {
                 return null;
             }
@@ -806,7 +806,7 @@ abstract sealed class ModelScope {
             for (int i=0; i<num; i++) {
                 BaseType type = inputType.fieldType(i);
                 String name = inputType.fieldName(i);
-                var param = new BaseBinding.Parameter(type, name, i);
+                var param = new BaseBinding.Parameter(env(), type, name, i);
                 if (mLocals.isEmpty()) {
                     mLocals = new LinkedHashMap<>();
                 }
@@ -903,7 +903,7 @@ abstract sealed class ModelScope {
     static final class CodeItem extends Code {
         CodeItem(ModelGenerator modGen, ModelScope parent) {
             // Uses a new non-returning context.
-            var context = new BlockContext.Yield(new BaseInferredType());
+            var context = new BlockContext.Yield(modGen.env(), new BaseInferredType());
             super(modGen, (Code) parent, new BaseBlock(context));
         }
 

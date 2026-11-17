@@ -26,6 +26,8 @@ import java.util.Objects;
 
 import org.cojen.motto.model.Binding;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 import org.cojen.motto.internal.util.InternSet;
 
 /**
@@ -38,6 +40,11 @@ public abstract sealed class BaseBinding implements Binding {
 
     @Override
     public abstract BaseType type();
+
+    /**
+     * Returns the environment the binding belongs to, or null if not applicable.
+     */
+    abstract CompilationEnv env();
 
     /**
      * If this is an anonymous binding or if it accesses any, then map.putIfAbsent(anonymous,
@@ -93,6 +100,11 @@ public abstract sealed class BaseBinding implements Binding {
         public BaseType type() {
             return BaseVoidType.THE;
         }
+
+        @Override
+        CompilationEnv env() {
+            return null;
+        }
     }
 
     public static final class Null extends Unmodifiable {
@@ -104,6 +116,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return BaseNullType.THE;
+        }
+
+        @Override
+        CompilationEnv env() {
+            return null;
         }
     }
 
@@ -123,6 +140,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return mType;
+        }
+
+        @Override
+        CompilationEnv env() {
+            return null;
         }
 
         public Object value() {
@@ -216,7 +238,7 @@ public abstract sealed class BaseBinding implements Binding {
                 throw new IllegalArgumentException();
             }
 
-            mValue = new BaseBinding.Anonymous(BaseBooleanType.THE);
+            mValue = new BaseBinding.Anonymous(merge.env(), BaseBooleanType.THE);
 
             truePath.copy(mValue, true);
             truePath.jump(merge);
@@ -233,6 +255,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return mValue.type();
+        }
+
+        @Override
+        CompilationEnv env() {
+            return mMerge.env();
         }
 
         @Override
@@ -287,6 +314,11 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
+        CompilationEnv env() {
+            return null;
+        }
+
+        @Override
         public boolean isStable() {
             return mField.isFinal();
         }
@@ -330,6 +362,11 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
+        CompilationEnv env() {
+            return mInstance.env();
+        }
+
+        @Override
         public boolean isStable() {
             return mInstance.isStable() && mField.isFinal();
         }
@@ -369,6 +406,11 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
+        CompilationEnv env() {
+            return mInstance.env();
+        }
+
+        @Override
         public boolean isStable() {
             return mInstance.isStable();
         }
@@ -405,6 +447,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return LoadedClass.classFrom(Class.class);
+        }
+
+        @Override
+        CompilationEnv env() {
+            return null;
         }
 
         @Override
@@ -458,6 +505,11 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
+        CompilationEnv env() {
+            return mTuple.env();
+        }
+
+        @Override
         public boolean isStable() {
             return mTuple.isStable();
         }
@@ -486,18 +538,26 @@ public abstract sealed class BaseBinding implements Binding {
     }
 
     public static abstract sealed class Local extends Stable {
+        private final CompilationEnv mEnv;
         final BaseType mType;
 
         /**
+         * @param env required
          * @param type required
          */
-        Local(BaseType type) {
+        Local(CompilationEnv env, BaseType type) {
+            mEnv = Objects.requireNonNull(env);
             mType = Objects.requireNonNull(type);
         }
 
         @Override
         public final BaseType type() {
             return mType;
+        }
+
+        @Override
+        final CompilationEnv env() {
+            return mEnv;
         }
 
         @Override
@@ -524,20 +584,22 @@ public abstract sealed class BaseBinding implements Binding {
         final String mName;
 
         /**
+         * @param env required
          * @param type required
          * @param name required
          */
-        public Named(BaseType type, String name) {
-            super(type);
+        public Named(CompilationEnv env, BaseType type, String name) {
+            super(env, type);
             mName = Objects.requireNonNull(name);
         }
 
         /**
+         * @param env required
          * @param name optional
          * @param type required
          */
-        protected Named(String name, BaseType type) {
-            super(type);
+        protected Named(CompilationEnv env, String name, BaseType type) {
+            super(env, type);
             mName = name;
         }
 
@@ -551,12 +613,13 @@ public abstract sealed class BaseBinding implements Binding {
         private final int mIndex;
 
         /**
+         * @param env required
          * @param type required
          * @param name optional
          * @throws IllegalArgumentException if index is negative
          */
-        public Parameter(BaseType type, String name, int index) {
-            super(name, type);
+        public Parameter(CompilationEnv env, BaseType type, String name, int index) {
+            super(env, name, type);
             if (index < 0) {
                 throw new IllegalArgumentException();
             }
@@ -576,10 +639,11 @@ public abstract sealed class BaseBinding implements Binding {
         private boolean mHasBlockInterdependency;
 
         /**
+         * @param env required
          * @param type required
          */
-        public Anonymous(BaseType type) {
-            super(type);
+        public Anonymous(CompilationEnv env, BaseType type) {
+            super(env, type);
         }
 
         @Override
@@ -606,6 +670,7 @@ public abstract sealed class BaseBinding implements Binding {
      * Defines a binding which refers to a captured local variable, used by a local inner class.
      */
     public static final class Captured extends BaseBinding {
+        private final CompilationEnv mEnv;
         private final BaseCallableItem mCallable;
         private final BaseType mType;
         private final String mName;
@@ -620,9 +685,11 @@ public abstract sealed class BaseBinding implements Binding {
         private int mAccessMode;
 
         /**
+         * @param env required
          * @param callable declares the local variable
          */
-        Captured(BaseCallableItem callable, BaseType type, String name) {
+        Captured(CompilationEnv env, BaseCallableItem callable, BaseType type, String name) {
+            mEnv = Objects.requireNonNull(env);
             mCallable = Objects.requireNonNull(callable);
             mType = Objects.requireNonNull(type);
             mName = Objects.requireNonNull(name);
@@ -631,6 +698,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseType type() {
             return mType;
+        }
+
+        @Override
+        CompilationEnv env() {
+            return mEnv;
         }
 
         @Override
@@ -667,6 +739,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         public BaseCodeType type() {
             return mType;
+        }
+
+        @Override
+        CompilationEnv env() {
+            return mEntry.env();
         }
 
         public BaseBlock entry() {
