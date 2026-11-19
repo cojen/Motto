@@ -51,8 +51,8 @@ public final class BaseThrowAction extends BaseTerminalAction implements ThrowAc
     }
 
     @Override
-    boolean resolve(CompilationEnv expected, int newVersion) {
-        return mException.resolve(expected, newVersion);
+    boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
+        return mException.resolve(expected, oldVersion, newVersion);
     }
 
     @Override

@@ -230,6 +230,7 @@ public final class BaseBlock implements Block {
                     // Use the context of the block that initiated the merge, not the block
                     // participating in the merge.
                     common = new BaseBlock(this.mContext);
+                    common.mVersion = this.mVersion;
                 }
                 block.jump(common);
                 break;
@@ -799,9 +800,6 @@ public final class BaseBlock implements Block {
         action.addPredecessors(this);
 
         mLastAction = action;
-
-        // The resolve method must not skip this block.
-        mVersion = 0;
     }
 
     /**
@@ -836,23 +834,25 @@ public final class BaseBlock implements Block {
         CompilationEnv env = env();
         boolean acquired = env.acquire();
         try {
-            return resolve(env, env.nextResolveVersion());
+            return resolve(env, mVersion, env.nextResolveVersion());
         } finally {
             env.release(acquired);
         }
     }
 
-    boolean resolve(CompilationEnv expected, int newVersion) {
-        return resolve(this, expected, newVersion);
+    boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
+        return resolve(this, expected, oldVersion, newVersion);
     }
 
-    private static boolean resolve(BaseBlock block, CompilationEnv expected, int newVersion) {
+    private static boolean resolve(BaseBlock block, CompilationEnv expected,
+                                   int oldVersion, int newVersion)
+    {
         boolean result = true;
 
         while (true) {
             checkEnv(block.env(), expected);
 
-            if (!checkVersion(block.mVersion, newVersion)) {
+            if (!checkVersion(block.mVersion, oldVersion, newVersion)) {
                 return result;
             }
 
@@ -862,7 +862,7 @@ public final class BaseBlock implements Block {
             FlowAction prev = null;
 
             while (action != null) {
-                result &= action.resolve(expected, newVersion);
+                result &= action.resolve(expected, oldVersion, newVersion);
 
                 if (!(action instanceof FlowAction flow)) {
                     return result;
@@ -876,7 +876,7 @@ public final class BaseBlock implements Block {
                     continue;
                 }
 
-                BaseBlock expanded = block.expandMacroCall(call);
+                BaseBlock expanded = block.expandMacroCall(call, oldVersion);
 
                 if (expanded == null) {
                     // Recompilation is required. CodeGenerator will see the macro call and
@@ -898,6 +898,9 @@ public final class BaseBlock implements Block {
                     throw new IllegalStateException
                         ("unreachable; line=" + next.line() + ", column=" + next.column());
                 }
+
+                // Indicate that the exit block is resolved.
+                exit.mVersion = newVersion;
 
                 // FIXME: copy the result to the call output (merge must handle the inferred
                 // stuff)
@@ -929,7 +932,7 @@ public final class BaseBlock implements Block {
     /**
      * @return an entry block or else return null if recompilation is required
      */
-    private BaseBlock expandMacroCall(BaseCallAction call) {
+    private BaseBlock expandMacroCall(BaseCallAction call, int oldVersion) {
         BaseCallableItem callable = call.callable();
         MethodHandle impl = callable.findMacroImpl(env());
 
@@ -959,6 +962,8 @@ public final class BaseBlock implements Block {
 
         Supplier<BaseBlock> factory = () -> {
             var newBlock = new BaseBlock(context);
+            // Use the old version to ensure that macro result is resolved too.
+            newBlock.mVersion = oldVersion;
             newBlock.sourcePosition(call.position());
             return newBlock;
         };
@@ -997,17 +1002,15 @@ public final class BaseBlock implements Block {
     /**
      * @return false if already resolved
      */
-    static boolean checkVersion(int version, int newVersion) {
+    static boolean checkVersion(int version, int oldVersion, int newVersion) {
         if (version == newVersion) {
             return false;
         }
-        if (version == 0) {
+        if (version == oldVersion) {
             return true;
         }
-        // FIXME: Version check design doesn't work when resolve is called again.
         // FIXME: use a better exception
-        //throw new IllegalStateException();
-        return true;
+        throw new IllegalStateException();
     }
 
     BaseAction firstAction() {

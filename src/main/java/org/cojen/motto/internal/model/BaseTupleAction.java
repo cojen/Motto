@@ -78,11 +78,11 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         }
 
         @Override
-        boolean resolve(CompilationEnv expected, int newVersion) {
-            boolean result = mOutput.resolve(expected, newVersion);
+        boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
+            boolean result = mOutput.resolve(expected, oldVersion, newVersion);
 
             for (BaseBinding input : mInputs) {
-                result &= input.resolve(expected, newVersion);
+                result &= input.resolve(expected, oldVersion, newVersion);
             }
 
             return result;
@@ -140,12 +140,12 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         }
 
         @Override
-        boolean resolve(CompilationEnv expected, int newVersion) {
+        boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
             // Note that short-circuit && isn't used. Resolve as much as possible even when
             // recompilation is required.
-            return mTuple.resolve(expected, newVersion)
-                & mOutput.resolve(expected, newVersion)
-                & mIndex.resolve(expected, newVersion);
+            return mTuple.resolve(expected, oldVersion, newVersion)
+                & mOutput.resolve(expected, oldVersion, newVersion)
+                & mIndex.resolve(expected, oldVersion, newVersion);
         }
 
         @Override
@@ -198,12 +198,12 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         }
 
         @Override
-        boolean resolve(CompilationEnv expected, int newVersion) {
+        boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
             // Note that short-circuit && isn't used. Resolve as much as possible even when
             // recompilation is required.
-            return mTuple.resolve(expected, newVersion)
-                & mIndex.resolve(expected, newVersion)
-                & mValue.resolve(expected, newVersion);
+            return mTuple.resolve(expected, oldVersion, newVersion)
+                & mIndex.resolve(expected, oldVersion, newVersion)
+                & mValue.resolve(expected, oldVersion, newVersion);
         }
 
         @Override

@@ -111,14 +111,14 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
     }
 
     @Override
-    boolean resolve(CompilationEnv expected, int newVersion) {
+    boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
         // TODO: This can cause a deep call stack.
 
         // Note that short-circuit && isn't used. Resolve as much as possible even when
         // recompilation is required.
-        return mCondition.resolve(expected, newVersion)
-            & mWhenTrue.resolve(expected, newVersion)
-            & mWhenFalse.resolve(expected, newVersion);
+        return mCondition.resolve(expected, oldVersion, newVersion)
+            & mWhenTrue.resolve(expected, oldVersion, newVersion)
+            & mWhenFalse.resolve(expected, oldVersion, newVersion);
     }
 
     @Override

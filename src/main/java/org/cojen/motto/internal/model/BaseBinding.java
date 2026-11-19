@@ -49,7 +49,7 @@ public abstract sealed class BaseBinding implements Binding {
     /**
      * @see BaseBlock#resolve
      */
-    abstract boolean resolve(CompilationEnv expected, int newVersion);
+    abstract boolean resolve(CompilationEnv expected, int oldVersion, int newVersion);
 
     /**
      * If this is an anonymous binding or if it accesses any, then map.putIfAbsent(anonymous,
@@ -112,7 +112,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        boolean resolve(CompilationEnv expected, int newVersion) {
+        boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
             return true;
         }
     }
@@ -134,7 +134,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        boolean resolve(CompilationEnv expected, int newVersion) {
+        boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
             return true;
         }
     }
@@ -163,7 +163,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        boolean resolve(CompilationEnv expected, int newVersion) {
+        boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
             return true;
         }
 
@@ -283,13 +283,13 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        boolean resolve(CompilationEnv expected, int newVersion) {
+        boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
             // Note that short-circuit && isn't used. Resolve as much as possible even when
             // recompilation is required.
-            return mValue.resolve(expected, newVersion)
-                & mTruePath.resolve(expected, newVersion)
-                & mFalsePath.resolve(expected, newVersion)
-                & mMerge.resolve(expected, newVersion);
+            return mValue.resolve(expected, oldVersion, newVersion)
+                & mTruePath.resolve(expected, oldVersion, newVersion)
+                & mFalsePath.resolve(expected, oldVersion, newVersion)
+                & mMerge.resolve(expected, oldVersion, newVersion);
         }
 
         @Override
@@ -349,7 +349,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        boolean resolve(CompilationEnv expected, int newVersion) {
+        boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
             return true;
         }
 
@@ -402,8 +402,8 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        boolean resolve(CompilationEnv expected, int newVersion) {
-            return mInstance.resolve(expected, newVersion);
+        boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
+            return mInstance.resolve(expected, oldVersion, newVersion);
         }
 
         @Override
@@ -451,8 +451,8 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        boolean resolve(CompilationEnv expected, int newVersion) {
-            return mInstance.resolve(expected, newVersion);
+        boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
+            return mInstance.resolve(expected, oldVersion, newVersion);
         }
 
         @Override
@@ -500,7 +500,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        boolean resolve(CompilationEnv expected, int newVersion) {
+        boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
             return true;
         }
 
@@ -560,8 +560,8 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        boolean resolve(CompilationEnv expected, int newVersion) {
-            return mTuple.resolve(expected, newVersion);
+        boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
+            return mTuple.resolve(expected, oldVersion, newVersion);
         }
 
         @Override
@@ -618,10 +618,10 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        final boolean resolve(CompilationEnv expected, int newVersion) {
+        final boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
             BaseBlock.checkEnv(mEnv, expected);
 
-            if (BaseBlock.checkVersion(mVersion, newVersion)) {
+            if (BaseBlock.checkVersion(mVersion, oldVersion, newVersion)) {
                 mVersion = newVersion;
             }
 
@@ -774,7 +774,7 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        boolean resolve(CompilationEnv expected, int newVersion) {
+        boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
             BaseBlock.checkEnv(mEnv, expected);
             return true;
         }
@@ -821,8 +821,8 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
-        boolean resolve(CompilationEnv expected, int newVersion) {
-            return mEntry.resolve(expected, newVersion);
+        boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
+            return mEntry.resolve(expected, oldVersion, newVersion);
         }
 
         public BaseBlock entry() {

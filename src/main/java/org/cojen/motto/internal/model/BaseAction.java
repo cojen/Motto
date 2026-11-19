@@ -91,7 +91,7 @@ public abstract sealed class BaseAction implements Action permits FlowAction, Ba
     /**
      * @see BaseBlock#resolve
      */
-    abstract boolean resolve(CompilationEnv expected, int newVersion);
+    abstract boolean resolve(CompilationEnv expected, int oldVersion, int newVersion);
 
     /**
      * For each binding used by this action, calls BaseBinding#trackBlockLocalSource or

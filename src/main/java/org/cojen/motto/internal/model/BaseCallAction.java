@@ -63,11 +63,11 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
     }
 
     @Override
-    final boolean resolve(CompilationEnv expected, int newVersion) {
-        boolean result = mOutput.resolve(expected, newVersion);
+    final boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
+        boolean result = mOutput.resolve(expected, oldVersion, newVersion);
 
         for (BaseBinding input : mInputs) {
-            result &= input.resolve(expected, newVersion);
+            result &= input.resolve(expected, oldVersion, newVersion);
         }
 
         return result;

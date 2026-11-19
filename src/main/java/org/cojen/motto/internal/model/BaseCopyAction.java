@@ -58,10 +58,11 @@ public final class BaseCopyAction extends FlowAction implements CopyAction {
     }
 
     @Override
-    boolean resolve(CompilationEnv expected, int newVersion) {
+    boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
         // Note that short-circuit && isn't used. Resolve as much as possible even when
         // recompilation is required.
-        return mTarget.resolve(expected, newVersion) & mSource.resolve(expected, newVersion);
+        return mTarget.resolve(expected, oldVersion, newVersion)
+            & mSource.resolve(expected, oldVersion, newVersion);
     }
 
     @Override

@@ -80,9 +80,9 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
     }
 
     @Override
-    boolean resolve(CompilationEnv expected, int newVersion) {
+    boolean resolve(CompilationEnv expected, int oldVersion, int newVersion) {
         // TODO: This can cause a deep call stack.
-        return mDestination.resolve(expected, newVersion);
+        return mDestination.resolve(expected, oldVersion, newVersion);
     }
 
     @Override
