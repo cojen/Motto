@@ -165,6 +165,7 @@ public final class Compiler implements ErrorListener, Closeable {
 
             for (NewClass clazz : toRecompile) {
                 try {
+                    // FIXME: Why call get immediately?
                     mExecutor.submit(() -> generateCode(clazz)).get();
                 } catch (ExecutionException e) {
                     Throwable cause = e.getCause();

@@ -19,6 +19,8 @@ package org.cojen.motto.internal.model;
 import java.util.Map;
 import java.util.Objects;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 import org.cojen.motto.model.ArrayAction;
 
 /**
@@ -44,8 +46,8 @@ public abstract sealed class BaseArrayAction extends FlowAction implements Array
         }
 
         @Override
-        public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
-            return visitor.visit(block, this);
+        public <R> R accept(ActionVisitor<R> visitor) {
+            return visitor.visit(this);
         }
 
         @Override
@@ -74,6 +76,17 @@ public abstract sealed class BaseArrayAction extends FlowAction implements Array
         }
 
         @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            boolean result = mOutput.resolve(expected, newVersion);
+
+            for (BaseBinding dim : mDimensions) {
+                result &= dim.resolve(expected, newVersion);
+            }
+
+            return result;
+        }
+
+        @Override
         void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
             for (BaseBinding dim : mDimensions) {
                 dim.trackBlockLocalSource(map);
@@ -96,8 +109,8 @@ public abstract sealed class BaseArrayAction extends FlowAction implements Array
         }
 
         @Override
-        public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
-            return visitor.visit(block, this);
+        public <R> R accept(ActionVisitor<R> visitor) {
+            return visitor.visit(this);
         }
 
         @Override
@@ -121,6 +134,15 @@ public abstract sealed class BaseArrayAction extends FlowAction implements Array
         }
 
         @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            // Note that short-circuit && isn't used. Resolve as much as possible even when
+            // recompilation is required.
+            return mArray.resolve(expected, newVersion)
+                & mOutput.resolve(expected, newVersion)
+                & mIndex.resolve(expected, newVersion);
+        }
+
+        @Override
         void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
             mArray.trackBlockLocalSource(map);
             mIndex.trackBlockLocalSource(map);
@@ -141,8 +163,8 @@ public abstract sealed class BaseArrayAction extends FlowAction implements Array
         }
 
         @Override
-        public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
-            return visitor.visit(block, this);
+        public <R> R accept(ActionVisitor<R> visitor) {
+            return visitor.visit(this);
         }
 
         @Override
@@ -163,6 +185,15 @@ public abstract sealed class BaseArrayAction extends FlowAction implements Array
         @Override
         BaseArrayAction.Set copy() {
             return new BaseArrayAction.Set(position(), mArray, mIndex, mValue);
+        }
+
+        @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            // Note that short-circuit && isn't used. Resolve as much as possible even when
+            // recompilation is required.
+            return mArray.resolve(expected, newVersion)
+                & mIndex.resolve(expected, newVersion)
+                & mValue.resolve(expected, newVersion);
         }
 
         @Override

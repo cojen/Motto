@@ -79,11 +79,11 @@ final class Printer implements ActionVisitor<Object> {
             int lineNum = action.line();
 
             if (lineNum != 0 && lineNum != mLineNum) {
-                println("    .line " + lineNum);
+                println("    // line " + lineNum);
                 mLineNum = lineNum;
             }
 
-            action.accept(block, this);
+            action.accept(this);
         }
 
         if (!(action instanceof BaseTerminalAction)) {
@@ -97,7 +97,7 @@ final class Printer implements ActionVisitor<Object> {
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseArrayAction.New action) {
+    public Object visit(BaseArrayAction.New action) {
         var b = new StringBuilder().append("    ");
 
         if (!action.output().type().isVoid()) {
@@ -125,7 +125,7 @@ final class Printer implements ActionVisitor<Object> {
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseArrayAction.Get action) {
+    public Object visit(BaseArrayAction.Get action) {
         var b = new StringBuilder().append("    ");
 
         b.append(toString(action.output()) + " = ");
@@ -142,7 +142,7 @@ final class Printer implements ActionVisitor<Object> {
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseArrayAction.Set action) {
+    public Object visit(BaseArrayAction.Set action) {
         var b = new StringBuilder().append("    ");
 
         b.append(toString(action.array()));
@@ -159,14 +159,14 @@ final class Printer implements ActionVisitor<Object> {
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseBranchAction action) {
+    public Object visit(BaseBranchAction action) {
         println("    if (" + toString(action.condition()) + ") goto " +
                 toString(action.whenTrue()) + " else goto " + toString(action.whenFalse()));
         return null;
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseCallAction.Direct action) {
+    public Object visit(BaseCallAction.Direct action) {
         var b = new StringBuilder().append("    ");
 
         if (!action.output().type().isVoid()) {
@@ -189,7 +189,7 @@ final class Printer implements ActionVisitor<Object> {
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseCallAction.New action) {
+    public Object visit(BaseCallAction.New action) {
         var b = new StringBuilder().append("    ");
 
         if (!action.output().type().isVoid()) {
@@ -208,7 +208,7 @@ final class Printer implements ActionVisitor<Object> {
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseCallAction.Virtual action) {
+    public Object visit(BaseCallAction.Virtual action) {
         var b = new StringBuilder().append("    ");
 
         if (!action.output().type().isVoid()) {
@@ -233,37 +233,37 @@ final class Printer implements ActionVisitor<Object> {
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseCastAction action) {
+    public Object visit(BaseCastAction action) {
         // FIXME: visit BaseCastAction
         throw null;
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseConvertAction action) {
+    public Object visit(BaseConvertAction action) {
         // FIXME: visit BaseConvertAction
         throw null;
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseCopyAction action) {
+    public Object visit(BaseCopyAction action) {
         println("    " + toString(action.target()) + " = " + toString(action.source()));
         return null;
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseJumpAction action) {
+    public Object visit(BaseJumpAction action) {
         println("    goto " + toString(action.destination()));
         return null;
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseThrowAction action) {
+    public Object visit(BaseThrowAction action) {
         println("    throw " + toString(action.exception()));
         return null;
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseTupleAction.New action) {
+    public Object visit(BaseTupleAction.New action) {
         var b = new StringBuilder().append("    ");
 
         if (!action.output().type().isVoid()) {
@@ -280,21 +280,15 @@ final class Printer implements ActionVisitor<Object> {
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseTupleAction.Get action) {
+    public Object visit(BaseTupleAction.Get action) {
         // FIXME: visit BaseTupleAction.Get
         throw null;
     }
 
     @Override
-    public Object visit(BaseBlock block, BaseTupleAction.Set action) {
+    public Object visit(BaseTupleAction.Set action) {
         // FIXME: visit BaseTupleAction.Set
         throw null;
-    }
-
-    @Override
-    public Object visit(BaseBlock block, UnreachableAction action) {
-        println("    <unreachable>");
-        return null;
     }
 
     private int blockId(BaseBlock block) {

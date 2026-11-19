@@ -18,6 +18,8 @@ package org.cojen.motto.internal.model;
 
 import java.util.Map;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 import org.cojen.motto.model.ThrowAction;
 
 /**
@@ -34,8 +36,8 @@ public final class BaseThrowAction extends BaseTerminalAction implements ThrowAc
     }
 
     @Override
-    public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
-        return visitor.visit(block, this);
+    public <R> R accept(ActionVisitor<R> visitor) {
+        return visitor.visit(this);
     }
 
     @Override
@@ -46,6 +48,11 @@ public final class BaseThrowAction extends BaseTerminalAction implements ThrowAc
     @Override
     BaseThrowAction copy() {
         return this;
+    }
+
+    @Override
+    boolean resolve(CompilationEnv expected, int newVersion) {
+        return mException.resolve(expected, newVersion);
     }
 
     @Override

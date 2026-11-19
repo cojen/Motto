@@ -81,6 +81,8 @@ public final class CompilationEnv {
         }
     }
 
+    private int mResolveVersion;
+
     /**
      * @param sourceFile optional
      */
@@ -125,6 +127,26 @@ public final class CompilationEnv {
     public void release(boolean wasAcquired) {
         if (wasAcquired) {
             mOwner = null;
+        }
+    }
+
+    /**
+     * Returns a new version to use when blocks and bindings are resolved.
+     *
+     * @return a non-zero version
+     * @throws IllegalStateException if the version wraps around
+     */
+    public int nextResolveVersion() {
+        boolean acquired = acquire();
+        try {
+            int version = mResolveVersion + 1;
+            if (version < 0) {
+                throw new IllegalStateException();
+            }
+            mResolveVersion = version;
+            return version;
+        } finally {
+            release(acquired);
         }
     }
 

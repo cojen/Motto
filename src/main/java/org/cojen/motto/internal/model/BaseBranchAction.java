@@ -19,6 +19,8 @@ package org.cojen.motto.internal.model;
 import java.util.Map;
 import java.util.Objects;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 import org.cojen.motto.model.BranchAction;
 
 /**
@@ -40,8 +42,8 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
     }
 
     @Override
-    public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
-        return visitor.visit(block, this);
+    public <R> R accept(ActionVisitor<R> visitor) {
+        return visitor.visit(this);
     }
 
     @Override
@@ -106,6 +108,17 @@ public final class BaseBranchAction extends BaseTerminalAction implements Branch
     @Override
     BaseBranchAction copy() {
         return new BaseBranchAction(position(), mCondition, mWhenTrue, mWhenFalse);
+    }
+
+    @Override
+    boolean resolve(CompilationEnv expected, int newVersion) {
+        // TODO: This can cause a deep call stack.
+
+        // Note that short-circuit && isn't used. Resolve as much as possible even when
+        // recompilation is required.
+        return mCondition.resolve(expected, newVersion)
+            & mWhenTrue.resolve(expected, newVersion)
+            & mWhenFalse.resolve(expected, newVersion);
     }
 
     @Override

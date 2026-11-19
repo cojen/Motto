@@ -47,6 +47,11 @@ public abstract sealed class BaseBinding implements Binding {
     abstract CompilationEnv env();
 
     /**
+     * @see BaseBlock#resolve
+     */
+    abstract boolean resolve(CompilationEnv expected, int newVersion);
+
+    /**
      * If this is an anonymous binding or if it accesses any, then map.putIfAbsent(anonymous,
      * true) is called for each of them. If successful, then the anonymous bindings are tagged
      * as having a block interdependency. They depend on having a value assigned when the block
@@ -105,6 +110,11 @@ public abstract sealed class BaseBinding implements Binding {
         CompilationEnv env() {
             return null;
         }
+
+        @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            return true;
+        }
     }
 
     public static final class Null extends Unmodifiable {
@@ -121,6 +131,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         CompilationEnv env() {
             return null;
+        }
+
+        @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            return true;
         }
     }
 
@@ -145,6 +160,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         CompilationEnv env() {
             return null;
+        }
+
+        @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            return true;
         }
 
         public Object value() {
@@ -263,6 +283,16 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            // Note that short-circuit && isn't used. Resolve as much as possible even when
+            // recompilation is required.
+            return mValue.resolve(expected, newVersion)
+                & mTruePath.resolve(expected, newVersion)
+                & mFalsePath.resolve(expected, newVersion)
+                & mMerge.resolve(expected, newVersion);
+        }
+
+        @Override
         void trackBlockLocalSource(Map<Anonymous, Boolean> map) {
             mValue.trackBlockLocalSource(map);
         }
@@ -319,6 +349,11 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            return true;
+        }
+
+        @Override
         public boolean isStable() {
             return mField.isFinal();
         }
@@ -367,6 +402,11 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            return mInstance.resolve(expected, newVersion);
+        }
+
+        @Override
         public boolean isStable() {
             return mInstance.isStable() && mField.isFinal();
         }
@@ -411,6 +451,11 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            return mInstance.resolve(expected, newVersion);
+        }
+
+        @Override
         public boolean isStable() {
             return mInstance.isStable();
         }
@@ -452,6 +497,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         CompilationEnv env() {
             return null;
+        }
+
+        @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            return true;
         }
 
         @Override
@@ -510,6 +560,11 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            return mTuple.resolve(expected, newVersion);
+        }
+
+        @Override
         public boolean isStable() {
             return mTuple.isStable();
         }
@@ -541,6 +596,8 @@ public abstract sealed class BaseBinding implements Binding {
         private final CompilationEnv mEnv;
         final BaseType mType;
 
+        private int mVersion;
+
         /**
          * @param env required
          * @param type required
@@ -558,6 +615,17 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         final CompilationEnv env() {
             return mEnv;
+        }
+
+        @Override
+        final boolean resolve(CompilationEnv expected, int newVersion) {
+            BaseBlock.checkEnv(mEnv, expected);
+
+            if (BaseBlock.checkVersion(mVersion, newVersion)) {
+                mVersion = newVersion;
+            }
+
+            return true;
         }
 
         @Override
@@ -706,6 +774,12 @@ public abstract sealed class BaseBinding implements Binding {
         }
 
         @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            BaseBlock.checkEnv(mEnv, expected);
+            return true;
+        }
+
+        @Override
         public boolean isStable() {
             return mAccessMode != MODE_SHARED;
         }
@@ -744,6 +818,11 @@ public abstract sealed class BaseBinding implements Binding {
         @Override
         CompilationEnv env() {
             return mEntry.env();
+        }
+
+        @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            return mEntry.resolve(expected, newVersion);
         }
 
         public BaseBlock entry() {

@@ -19,6 +19,8 @@ package org.cojen.motto.internal.model;
 import java.util.Map;
 import java.util.Objects;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 import org.cojen.motto.model.JumpAction;
 
 /**
@@ -35,8 +37,8 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
     }
 
     @Override
-    public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
-        return visitor.visit(block, this);
+    public <R> R accept(ActionVisitor<R> visitor) {
+        return visitor.visit(this);
     }
 
     @Override
@@ -75,6 +77,12 @@ public final class BaseJumpAction extends BaseTerminalAction implements JumpActi
     @Override
     BaseJumpAction copy() {
         return new BaseJumpAction(position(), mDestination);
+    }
+
+    @Override
+    boolean resolve(CompilationEnv expected, int newVersion) {
+        // TODO: This can cause a deep call stack.
+        return mDestination.resolve(expected, newVersion);
     }
 
     @Override

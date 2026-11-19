@@ -16,9 +16,6 @@
 
 package org.cojen.motto.internal.model;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -27,7 +24,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 
 import java.util.function.Supplier;
 
@@ -89,6 +85,11 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
 
         if (code == null) {
             return;
+        }
+
+        if (!code.resolve()) {
+            // Will need to recompile the file and try again later.
+            env().recompile();
         }
 
         buildBlockStateMap(code);
@@ -202,7 +203,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
                     mMethodMaker.lineNum(lineNum);
                     mLineNum = lineNum;
                 }
-                BaseAction next = action.accept(block, this);
+                BaseAction next = action.accept(this);
                 if (next == null) {
                     break;
                 }
@@ -229,7 +230,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
     }
 
     @Override
-    public BaseAction visit(BaseBlock block, BaseArrayAction.New action) {
+    public BaseAction visit(BaseArrayAction.New action) {
         var params = new Object[action.numDimensions()];
         for (int i=0; i<params.length; i++) {
             params[i] = forLoad(action.dimension(i));
@@ -241,7 +242,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
     }
 
     @Override
-    public BaseAction visit(BaseBlock block, BaseArrayAction.Get action) {
+    public BaseAction visit(BaseArrayAction.Get action) {
         Variable result = variableFor(action.array()).aget(forLoad(action.index()));
 
         forStore(action.output()).set(result);
@@ -250,14 +251,14 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
     }
 
     @Override
-    public BaseAction visit(BaseBlock block, BaseArrayAction.Set action) {
+    public BaseAction visit(BaseArrayAction.Set action) {
         variableFor(action.array()).aset(forLoad(action.index()), forLoad(action.value()));
 
         return action.next;
     }
 
     @Override
-    public BaseAction visit(BaseBlock block, BaseBranchAction action) {
+    public BaseAction visit(BaseBranchAction action) {
         // FIXME: Convert to switch statements if possible. Pattern matching should probably
         // start with the eq/ne math intrinsic action. For now, only support int and Integer
         // cases. A special switch macro can be used to generate code for cases that don't map
@@ -287,19 +288,10 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
     }
 
     @Override
-    public BaseAction visit(BaseBlock block, BaseCallAction.Direct action) {
+    public BaseAction visit(BaseCallAction.Direct action) {
         BaseCallableItem callable = action.callable();
 
         if (callable.isMacro()) {
-            BaseBlock entry = applyMacroCall(block, action);
-
-            if (entry != null) {
-                return entry.firstAction();
-            }
-
-            // Will need to recompile this file and try again later.
-            env().recompile();
-
             // Throw an UnresolvedMacroException. Throwing it directly is simpler, but then the
             // remaining code would be treated as unreachable. Instead, throw the exception
             // indirectly and clear the output.
@@ -386,88 +378,8 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
         return true;
     }
 
-    /**
-     * @return an entry block or else return null if recompilation is required
-     */
-    private BaseBlock applyMacroCall(BaseBlock block, BaseCallAction.Direct action) {
-        BaseCallableItem callable = action.callable();
-        MethodHandle impl = callable.findMacroImpl(env());
-
-        if (impl == null) {
-            // Macro hasn't been compiled yet.
-            return null;
-        }
-
-        Class<?> macroImpl = MethodHandles.publicLookup().revealDirect(impl).getDeclaringClass();
-
-        var params = new Object[action.numInputs()];
-        for (int i=0; i<params.length; i++) {
-            Object input = action.input(i);
-            if (input instanceof BaseBinding.CodeBinding cb) {
-                input = cb.entry();
-            }
-            params[i] = input;
-        }
-
-        BaseType resultType = callable.signature().outputType();
-
-        if (resultType == BaseUnspecifiedType.THE) {
-            resultType = new BaseInferredType();
-        }
-
-        var context = new BlockContext.Yield(block.env(), resultType);
-
-        Supplier<BaseBlock> factory = () -> {
-            var newBlock = new BaseBlock(context);
-            newBlock.sourcePosition(action.position());
-            return newBlock;
-        };
-
-        BaseBlock entry;
-
-        try {
-            BaseMacroAccess.setLocal(new BaseMacroAccess(macroImpl));
-
-            entry = BaseBlock.inScope(factory, () -> {
-                return (BaseBlock) impl.invokeWithArguments(params);
-            });
-
-            // FIXME: report a proper exception
-            Objects.requireNonNull(entry);
-        } catch (UnresolvedMacroException e) {
-            return null;
-        } catch (Throwable e) {
-            // FIXME: Should call a method which accepts the called macro (for error reporting)
-            env().uncaught(e);
-            return null;
-        } finally {
-            BaseMacroAccess.removeLocal();
-        }
-
-        BaseBlock exit = entry.merge();
-
-        BaseAction next = action.next;
-
-        if (exit == null) {
-            if (next != null) {
-                // FIXME: report a proper exception
-                throw new IllegalStateException("unreachable; line=" + next.line());
-            }
-        } else {
-            // FIXME: copy the result to the call output (merge must handle the inferred stuff)
-
-            if (next != null) {
-                block.transfer(action, exit);
-            }
-        }
-
-        buildBlockStateMap(entry);
-
-        return entry;
-    }
-
     @Override
-    public BaseAction visit(BaseBlock block, BaseCallAction.New action) {
+    public BaseAction visit(BaseCallAction.New action) {
         var params = new Object[action.numInputs()];
         for (int i=0; i<params.length; i++) {
             params[i] = forLoad(action.input(i));
@@ -481,7 +393,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
     }
 
     @Override
-    public BaseAction visit(BaseBlock block, BaseCallAction.Virtual action) {
+    public BaseAction visit(BaseCallAction.Virtual action) {
         BaseBinding instanceBinding = action.input(0);
         BaseCallableItem callable = action.callable();
         BaseCallSignature signature = callable.signature();
@@ -524,20 +436,20 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
     }
 
     @Override
-    public BaseAction visit(BaseBlock block, BaseCastAction action) {
+    public BaseAction visit(BaseCastAction action) {
         //forStore(action.target()).set(variableFor(action.source()).cast(action.targetType().asMakerType()));
         // FIXME: BaseCastAction
         throw null;
     }
 
     @Override
-    public BaseAction visit(BaseBlock block, BaseConvertAction action) {
+    public BaseAction visit(BaseConvertAction action) {
         // FIXME: BaseConvertAction
         throw null;
     }
 
     @Override
-    public BaseAction visit(BaseBlock block, BaseCopyAction action) {
+    public BaseAction visit(BaseCopyAction action) {
         BaseBinding target = action.target();
 
         /* FIXME: return optimization
@@ -561,7 +473,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
     }
 
     @Override
-    public BaseAction visit(BaseBlock block, BaseJumpAction action) {
+    public BaseAction visit(BaseJumpAction action) {
         BaseBlock dest = action.destination();
 
         if (shouldInline(dest)) {
@@ -575,7 +487,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
     }
 
     @Override
-    public BaseAction visit(BaseBlock block, BaseThrowAction action) {
+    public BaseAction visit(BaseThrowAction action) {
         BaseBinding ex = action.exception();
 
         if (ex instanceof BaseBinding.Null ||
@@ -590,7 +502,7 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
     }
 
     @Override
-    public BaseAction visit(BaseBlock block, BaseTupleAction.New action) {
+    public BaseAction visit(BaseTupleAction.New action) {
         var params = new Object[action.numInputs()];
         for (int i=0; i<params.length; i++) {
             params[i] = forLoad(action.input(i));
@@ -612,20 +524,15 @@ final class CodeGenerator implements ActionVisitor<BaseAction>, Comparator<BaseB
     }
 
     @Override
-    public BaseAction visit(BaseBlock block, BaseTupleAction.Get action) {
+    public BaseAction visit(BaseTupleAction.Get action) {
         // FIXME
         throw null;
     }
 
     @Override
-    public BaseAction visit(BaseBlock block, BaseTupleAction.Set action) {
+    public BaseAction visit(BaseTupleAction.Set action) {
         // FIXME
         throw null;
-    }
-
-    @Override
-    public BaseAction visit(BaseBlock block, UnreachableAction action) {
-        throw new AssertionError();
     }
 
     private CompilationEnv env() {

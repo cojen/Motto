@@ -18,6 +18,8 @@ package org.cojen.motto.internal.model;
 
 import java.util.Map;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 import org.cojen.motto.model.Action;
 
 /**
@@ -39,7 +41,7 @@ public abstract sealed class BaseAction implements Action permits FlowAction, Ba
     /**
      * @param block the block the action resides in
      */
-    public abstract <R> R accept(BaseBlock block, ActionVisitor<R> visitor);
+    public abstract <R> R accept(ActionVisitor<R> visitor);
 
     @Override
     public int line() {
@@ -56,8 +58,8 @@ public abstract sealed class BaseAction implements Action permits FlowAction, Ba
     }
 
     /**
-     * If this is a jump or branch action, then call addPredecessor on the destination blocks.
-     * This must be called when an action is appended to a block.
+     * If this is a jump or branch action, then it calls addPredecessor on the destination
+     * blocks. This method must be called when an action is appended to a block.
      *
      * @param owner the block that this action resides in
      */
@@ -65,8 +67,8 @@ public abstract sealed class BaseAction implements Action permits FlowAction, Ba
     }
 
     /**
-     * If this is a jump or branch action, then call removePredecessor on the destination
-     * blocks. This must be called when an action is removed from a block.
+     * If this is a jump or branch action, then it calls removePredecessor on the destination
+     * blocks. This method must be called when an action is removed from a block.
      *
      * @param owner the block that this action resides in
      */
@@ -85,6 +87,11 @@ public abstract sealed class BaseAction implements Action permits FlowAction, Ba
      * Return a shallow copy of this action, unless it's a singleton.
      */
     abstract BaseAction copy();
+
+    /**
+     * @see BaseBlock#resolve
+     */
+    abstract boolean resolve(CompilationEnv expected, int newVersion);
 
     /**
      * For each binding used by this action, calls BaseBinding#trackBlockLocalSource or

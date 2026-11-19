@@ -19,6 +19,8 @@ package org.cojen.motto.internal.model;
 import java.util.Map;
 import java.util.Objects;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 import org.cojen.motto.model.Binding;
 import org.cojen.motto.model.TupleAction;
 import org.cojen.motto.model.TupleType;
@@ -46,8 +48,8 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         }
 
         @Override
-        public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
-            return visitor.visit(block, this);
+        public <R> R accept(ActionVisitor<R> visitor) {
+            return visitor.visit(this);
         }
 
         @Override
@@ -73,6 +75,17 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         @Override
         BaseTupleAction.New copy() {
             return new BaseTupleAction.New(position(), mType, mOutput, mInputs);
+        }
+
+        @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            boolean result = mOutput.resolve(expected, newVersion);
+
+            for (BaseBinding input : mInputs) {
+                result &= input.resolve(expected, newVersion);
+            }
+
+            return result;
         }
 
         @Override
@@ -102,8 +115,8 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         }
 
         @Override
-        public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
-            return visitor.visit(block, this);
+        public <R> R accept(ActionVisitor<R> visitor) {
+            return visitor.visit(this);
         }
 
         @Override
@@ -124,6 +137,15 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         @Override
         BaseTupleAction.Get copy() {
             return new BaseTupleAction.Get(position(), mTuple, mOutput, mIndex);
+        }
+
+        @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            // Note that short-circuit && isn't used. Resolve as much as possible even when
+            // recompilation is required.
+            return mTuple.resolve(expected, newVersion)
+                & mOutput.resolve(expected, newVersion)
+                & mIndex.resolve(expected, newVersion);
         }
 
         @Override
@@ -151,8 +173,8 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         }
 
         @Override
-        public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
-            return visitor.visit(block, this);
+        public <R> R accept(ActionVisitor<R> visitor) {
+            return visitor.visit(this);
         }
 
         @Override
@@ -173,6 +195,15 @@ public abstract sealed class BaseTupleAction extends FlowAction implements Tuple
         @Override
         BaseTupleAction.Set copy() {
             return new BaseTupleAction.Set(position(), mTuple, mIndex, mValue);
+        }
+
+        @Override
+        boolean resolve(CompilationEnv expected, int newVersion) {
+            // Note that short-circuit && isn't used. Resolve as much as possible even when
+            // recompilation is required.
+            return mTuple.resolve(expected, newVersion)
+                & mIndex.resolve(expected, newVersion)
+                & mValue.resolve(expected, newVersion);
         }
 
         @Override

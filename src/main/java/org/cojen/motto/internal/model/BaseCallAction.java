@@ -19,6 +19,8 @@ package org.cojen.motto.internal.model;
 import java.util.Map;
 import java.util.Objects;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 import org.cojen.motto.model.CallAction;
 
 /**
@@ -61,6 +63,17 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
     }
 
     @Override
+    final boolean resolve(CompilationEnv expected, int newVersion) {
+        boolean result = mOutput.resolve(expected, newVersion);
+
+        for (BaseBinding input : mInputs) {
+            result &= input.resolve(expected, newVersion);
+        }
+
+        return result;
+    }
+
+    @Override
     final void trackBlockLocalBindings(Map<BaseBinding.Anonymous, Boolean> map) {
         for (BaseBinding input : mInputs) {
             input.trackBlockLocalSource(map);
@@ -77,8 +90,8 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
         }
 
         @Override
-        public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
-            return visitor.visit(block, this);
+        public <R> R accept(ActionVisitor<R> visitor) {
+            return visitor.visit(this);
         }
 
         @Override
@@ -100,8 +113,8 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
         }
 
         @Override
-        public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
-            return visitor.visit(block, this);
+        public <R> R accept(ActionVisitor<R> visitor) {
+            return visitor.visit(this);
         }
 
         @Override
@@ -122,8 +135,8 @@ public sealed abstract class BaseCallAction extends FlowAction implements CallAc
         }
 
         @Override
-        public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
-            return visitor.visit(block, this);
+        public <R> R accept(ActionVisitor<R> visitor) {
+            return visitor.visit(this);
         }
 
         @Override

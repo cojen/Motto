@@ -19,6 +19,8 @@ package org.cojen.motto.internal.model;
 import java.util.Map;
 import java.util.Objects;
 
+import org.cojen.motto.internal.compiler.CompilationEnv;
+
 import org.cojen.motto.model.CopyAction;
 
 /**
@@ -36,8 +38,8 @@ public final class BaseCopyAction extends FlowAction implements CopyAction {
     }
 
     @Override
-    public <R> R accept(BaseBlock block, ActionVisitor<R> visitor) {
-        return visitor.visit(block, this);
+    public <R> R accept(ActionVisitor<R> visitor) {
+        return visitor.visit(this);
     }
 
     @Override
@@ -53,6 +55,13 @@ public final class BaseCopyAction extends FlowAction implements CopyAction {
     @Override
     BaseCopyAction copy() {
         return new BaseCopyAction(position(), mTarget, mSource);
+    }
+
+    @Override
+    boolean resolve(CompilationEnv expected, int newVersion) {
+        // Note that short-circuit && isn't used. Resolve as much as possible even when
+        // recompilation is required.
+        return mTarget.resolve(expected, newVersion) & mSource.resolve(expected, newVersion);
     }
 
     @Override
