@@ -220,9 +220,18 @@ public final class BaseBlock implements Block {
     }
 
     private BaseBlock doMerge(BaseBlock block, BaseBlock common, SimpleSet<BaseBlock> visited) {
+        int version = this.mVersion;
+
         // Note: The block being processed can match the common block when following a path
         // which was already merged.
         while (block != common && visited.add(block)) {
+            // If merge is being called by the resolve method after a macro has been expanded,
+            // all blocks it provided must have the old version in order for resolution to flow
+            // through those blocks.
+            if (block.mVersion != version) {
+                block.mVersion = version;
+            }
+
             BaseAction last = block.mLastAction;
 
             if ((last == null || !(last instanceof TerminalAction)) && !block.isReturnBlock()) {
@@ -230,7 +239,7 @@ public final class BaseBlock implements Block {
                     // Use the context of the block that initiated the merge, not the block
                     // participating in the merge.
                     common = new BaseBlock(this.mContext);
-                    common.mVersion = this.mVersion;
+                    common.mVersion = version;
                 }
                 block.jump(common);
                 break;
@@ -870,7 +879,7 @@ public final class BaseBlock implements Block {
 
                 BaseAction next = flow.next;
 
-                if (!(action instanceof BaseCallAction call) || !call.callable().isMacro()) {
+                if (!(flow instanceof BaseCallAction call) || !call.callable().isMacro()) {
                     prev = flow;
                     action = next;
                     continue;
@@ -882,7 +891,7 @@ public final class BaseBlock implements Block {
                     // Recompilation is required. CodeGenerator will see the macro call and
                     // will generate code to throw an UnresolvedMacroException instead.
                     result = false;
-                    prev = flow;
+                    prev = call;
                     action = next;
                     continue;
                 }
@@ -898,9 +907,6 @@ public final class BaseBlock implements Block {
                     throw new IllegalStateException
                         ("unreachable; line=" + next.line() + ", column=" + next.column());
                 }
-
-                // Indicate that the exit block is resolved.
-                exit.mVersion = newVersion;
 
                 // FIXME: copy the result to the call output (merge must handle the inferred
                 // stuff)
